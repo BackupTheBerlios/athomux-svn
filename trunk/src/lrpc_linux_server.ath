@@ -234,6 +234,8 @@ static_init {
 
   if(IS_ERR((void *)(unsigned long)register_athomux_syscall_handler(athomux_lrpc_handler, THIS_MODULE))) {
     printf(BASEFILE ": could not register syscall handler\n");
+  } else {
+    printf(BASEFILE ": registered ATHOMUX syscall handler\n");
   }
 }
 
