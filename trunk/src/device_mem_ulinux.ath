@@ -1,5 +1,5 @@
   Author: Thomas Schoebel-Theuer
-  Copyright: University of Stuttgart
+  Copyright: Thomas Schoebel-Theuer
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
 brick #device_mem_ulinux
@@ -13,13 +13,16 @@ enddesc
 
 static_data {
 #include <stdlib.h>
+#include <stdio.h>
 }
+
+input :<hook
 
 output :>out
 
 operation $gadr,$gadrcreateget
 {
-  @log_addr = (addr_t)(long)malloc(@log_len);
+  @log_addr = (addr_t)(unsigned long)malloc(@log_len);
   @phys_addr = @log_addr;
   @phys_len = @log_len;
   @success = @log_addr != 0;
@@ -33,19 +36,27 @@ operation $get,$gettranswait
   @success = TRUE;
 }
 
-operation $padr,$putdeletepadr
+operation $delete,$putdelete
 {
   free((void*)(long)@log_addr);
   @success = TRUE;
 }
 
+operation $trans,$transwait,$transwaitput
+{
+  if (@direction==direct_read) memcpy(MAKE_PTR(@phys_addr), MAKE_PTR((paddr_t)@log_addr), @log_len);
+  if (@direction==direct_write) memcpy(MAKE_PTR((paddr_t)@log_addr), MAKE_PTR(@phys_addr), @log_len);
+  @phys_len = @log_len;
+  @success = TRUE;
+}
+
 // dummy ops
-operation $trans,$wait,$put,$transwait,$transwaitput,$putwait
+operation $wait,$put,$putwait
 {
   @success = TRUE;
 }
 
-operation $create,$createget,$delete,$putdelete
+operation $create,$createget
 {
-  @success = FALSE;
+  @success = TRUE;
 }
