@@ -14,13 +14,8 @@
 #define BASEFILE "testbed.c"
 #include "control_simple.h"
 
-int call_level = 0;
-char blanks[32];
-
 int main(int argc, char * argv[])
 {
-  memset(blanks, ' ', 31);
-  blanks[31] = '\0';
   init_static_control_simple();
   bool cmd(addr_t addr, char * str, char * param)
     {

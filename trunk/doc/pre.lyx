@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.29, 1 Dec 2004
+Version 0.30, 5 Dec 2004
 \layout Standard
 
 
@@ -75,6 +75,14 @@ Invocation
 
 \family typewriter 
 pre.pl 
+\family default 
+[
+\emph on 
+options
+\emph default 
+]
+\family typewriter 
+ 
 \family default 
 \emph on 
 filename
@@ -149,16 +157,47 @@ filename2
  instead.
  Input and output files may reside in different directories by specification
  of absolute or relative paths.
-\layout Standard
+\layout Subsection
 
-Currently there are no options.
- Future versions shall support generation of multiple versions from a single
- 
+Options
+\layout List
+\labelwidthstring 00.00.0000
+
+
 \family typewriter 
-*.ath
+-d
 \family default 
- source file, by binding certain version attribute variables to particular
- values (NYI).
+ generate debug code
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+-l
+\family default 
+ generate 
+\family typewriter 
+#line
+\family default 
+ directives
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+-i
+\family default 
+ indent the trace produced by the C compiler flag 
+\family typewriter 
+-DTRACE
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+macroname=value
+\family default 
+ define a parameterless macro on the command line
 \layout Section
 
 Structure of an ATHOMUX brick

@@ -13,9 +13,12 @@
 
 // compiling mode dependent things
 
-#ifdef TRACE
+#ifdef DEBUG
 extern int call_level;
 extern char blanks[32];
+#endif
+
+#ifdef TRACE
 #define trace(str,myargs...) printf("%smand(%d) %s(%s): " str, blanks+31-call_level, _brick->_mand, OPERATION, op_names[_args->op_code], ##myargs)
 #define rawtrace(str,args...) printf("%s%s: " str, blanks+31-call_level, OPERATION, ##args)
 #define DEBUG_EXIT exit(-1)

@@ -9,10 +9,6 @@ extern bool athomux_init(const struct output * on, const bool constr, char *init
 
 #ifdef ATHOMUX_BOOTSTRAP
 struct brick_init initbrick;
-#ifdef TRACE
-int call_level = 0;
-char blanks[32];
-#endif
 
 #define ATHOMUX_INIT_INIT() memset(&initbrick, 0, sizeof(struct brick_init)); init_init(&initbrick, NULL, 0)
 #define ATHOMUX_INIT(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, TRUE, ai_brick, ai_param)

@@ -6,6 +6,13 @@
 
 #define BASEFILE "common.c"
 
+#ifdef DEBUG
+int call_level = 0;
+char blanks[32] = "                               ";
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////
+
 #define MISSING(name)                                                         \
 void missing_##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \

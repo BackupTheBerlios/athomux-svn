@@ -21,19 +21,32 @@ my $indent_trace = 0;
 
 %::base_macros = ();
 
+my $entry_debug;
+
+#############################################################################
+
 # parameter parsing: allow predefined macros from the command line
 
 sub get_param {
   for(;;) {
     my $param = shift @ARGV;
     return undef unless defined($param);
-    if($param =~ m/^(\w+)\s*=\s*(.*)$/) {
+    if($param eq '-d') {
+      $debug_level++;
+    } elsif($param eq '-l') {
+      $write_line_directives++;
+print ":: $write_line_directives\n";
+    } elsif($param eq '-i') {
+      $indent_trace++;
+    } elsif($param =~ m/^(\w+)\s*=\s*(.*)$/) {
       create_subst($1, $2, \%::base_macros);
     } else {
       return $param;
     }
   }
 }
+
+#############################################################################
 
 # global vars
 
@@ -285,12 +298,10 @@ sub parse_def {
     $params =~ s/^,//;
 
     $name = make_macroname($name);
-    print "// macro $name\n" if($debug_level >= 1);
     my $search = $name;
     if($params) {
       $search .= "$ws\\(";
       foreach my $param (split /,/, $inparams) {
-	print"//      param $param\n" if($debug_level >= 1);
 	if($param eq "\\.\\.\\.") {
 	  $search =~ s/,\Z//m;
 	  $search .= "(,$ws(?:$wsargmatch$ws,$ws)*$wsargmatch)?$ws,";
@@ -303,7 +314,6 @@ sub parse_def {
       if(defined($outparams)) {
 	$search .= "$ws=>$ws\\(";
 	foreach my $param (split /,/, $outparams) {
-	  print"//   outparam $param\n" if($debug_level >= 1);
 	  $search .= "$ws($wsargmatch)$ws,";
 	}
 	$search =~ s/,\Z/\\\)/m;
@@ -1689,7 +1699,6 @@ sub make_ops {
   $body =~ s/SECT_NAME/$section/gm;
   $body =~ s/OP_NAME/$op/gm;
   $::ops_spec{$::current} = $body;
-  print "//   operation $::current\n" if($debug_level >= 1);
 }
 
 sub parse_lit {
@@ -2012,7 +2021,6 @@ sub parse_1 {
 	#print "ENH: $enhanced_spec | $short_spec\n";
 	$::sub_conns{$short_spec} = $enhanced_spec;
       }
-      print "// $type $::current\n" if($debug_level >= 1);
       $text = parse_2($text, $macros);
       next;
     }
@@ -2022,7 +2030,7 @@ sub parse_1 {
 
 sub parse_all {
   my ($text,$prefix,$suffix,$macros) = @_;
-  if($text =~ m/\A(?:\s*Author:\s[^\n]+\n)+\s*Copyright:\s[^\n]+\n\s*License: see files ([\w-]+(?:, [\w-]+)*)\s*\n/m) {
+  if($text =~ m/\A(?:\s*Author:\s[^\n]+\n(?:#line.*\n)?)+\s*Copyright:\s[^\n]+\n(?:#line.*\n)?\s*License: see files ([\w-]+(?:, [\w-]+)*)\s*\n/m) {
     $copyright = "/*\n$MATCH*/\n";
     my $licenses = $1;
     $text = $POSTMATCH;
@@ -2119,7 +2127,6 @@ sub parse_all {
       last;
     }
   }
-  print "// brick $::current\n" if($debug_level >= 1);
   return parse_1($text, $brick, $macros);
 }
 
@@ -2280,6 +2287,7 @@ sub make_pointers {
   my ($code, $spec, $direct) = @_;
   my $brick = sp_name($spec, 1);
   my $conn = sp_name($spec, 2);
+  insert_pseudoparam($code, $entry_debug) if $debug_level >= 1;
   if($direct) {
     insert_pseudoparam($code, "struct brick_${brick} * const _brick = brick; (void)_brick; ");
   } elsif($spec =~ m/\[/) {
@@ -2301,18 +2309,18 @@ sub gen_ops {
   my @outputs = (@::funcs_outputs);
   foreach my $proc (@::funcs) {
     my $out = shift @outputs;
-    eval_code(\$proc, $out);
     make_pointers(\$proc, $out, 1);
+    eval_code(\$proc, $out);
     purge(\$proc);
     print OUT "$proc\n";
   }
   # print body of all operations
   while(my ($spec, $code) = each %::ops_spec) {
-    eval_code(\$code, $spec);
     my $name = sp_name($spec);
     print OUT "#undef OPERATION\n#define OPERATION \"$name\"\n\n";
     print OUT "void $name(const union connector * on, struct args * _args, const char * _param)\n";
     make_pointers(\$code, $spec, 0);
+    eval_code(\$code, $spec);
     purge(\$code);
     print OUT "$code\n\n";
   }
@@ -2548,7 +2556,7 @@ sub readfile {
     $text = <IN>;
   } else {
     my $nr = 1;
-    my $normalline = 1;
+    my $normalline = 0;
     while(my $line = <IN>) {
       $text .= "#line $nr \"$filename\"\n" if $normalline;
       $text .= $line;
@@ -2560,10 +2568,17 @@ sub readfile {
   return $text;
 }
 
+# read common macros
 my $common = readfile("common.ath", 0);
 eval_macros(\$common, 1, 1, \%::base_macros);
 my %macros = %::base_macros;
 
+# pre-expand debugging code
+$entry_debug = "\@.warn(\@success, \"\@success has unexpected initial value %d upon operation call\", \@success);";
+$entry_debug =~ s/warn/fatal/ if $debug_level >= 2;
+eval_macros(\$entry_debug, 9999, 1, \%::base_macros);
+
+# parse the input file
 my ($rest, $preprocessed) = parse_file($infile, "", "", \%macros);
 
 open(OUT, "> $prefile") or die "cannot create output file";
@@ -2576,6 +2591,8 @@ if($rest) {
 }
 
 test_twice();
+
+# start the output phase
 
 open(OUT, "> $hfile") or die "cannot create output file";
 my $brick = sp_part($::current, 1, 0);

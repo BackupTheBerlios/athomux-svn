@@ -59,7 +59,7 @@ sub check_context {
       next unless $elem;
       my $res = not ($elem =~ s/^!//);
       $nr_negative++ unless $res;
-      if($forwhat =~ m/^$elem$/) {
+      if($forwhat =~ m/\A$elem\Z/) {
 	return $res;
       }
     }
