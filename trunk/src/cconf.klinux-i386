@@ -1,24 +1,11 @@
 #context pconf klinux
 #context uname -i i386
 
-$(cconf)_LINSRC=$(LINSRC)
-$(cconf)_MODPOST=$($(cconf)_LINSRC)/scripts/mod/modpost
+include cconf-include.klinux
+
 $(cconf)_LDEMULATION=elf_i386
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m32 -march=i586 -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -I$($(cconf)_LINSRC)/arch/i386/mach-default -D__KERNEL__ -DMODULE
 
 $(pconf)/$(cconf)/asm:
 	ln -s $($(cconf)_LINSRC)/include/asm-i386 $@
 
-$(pconf)/$(cconf)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
-	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
-
-.PRECIOUS: $(pconf)/%-$(cconf).mod.c
-$(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)
-	$($(cconf)_MODPOST) -i $($(cconf)_LINSRC)/Module.symver $<
-	@mv -f $(patsubst %.o,%.mod.c,$<) $@
-
-$(pconf)/$(cconf)/%.linked.o:
-	$(LD) -m $($(cconf)_LDEMULATION) -r -o $@ $(filter %.o,$^)
-
-$(pconf)/$(cconf)/%.ko: $(pconf)/$(cconf)/%.linked.o $(if $(USE_MODPOST),$(pconf)/$(cconf)/%-$(cconf).mod.o,$(pconf)/$(cconf)/generic.mod.o)
-	$(LD) -m $($(cconf)_LDEMULATION) -r -o $@ $^

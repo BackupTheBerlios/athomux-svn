@@ -2,5 +2,4 @@
 
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS)
 
-$(pconf)/$(cconf)/%.o : $(pconf)/%.c common.h strat.h Makefile
-	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) $< -o $@
+include cconf-include.default

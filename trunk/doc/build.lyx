@@ -650,7 +650,147 @@ $
 Sub-Configurations
 \layout Standard
 
-NYI
+Often different 
+\family typewriter 
+cconf.*
+\family default 
+ versions share a lot of common macro definitions or make rules.
+ In order to remove redundancy, you are advised to put common things in
+ include files.
+ Whenever a 
+\family typewriter 
+include
+\family default 
+ statement is found in one of the configuation files on a separate line,
+ the inclusion is performed by 
+\family typewriter 
+makegen.pl
+\family default 
+ such that the pseudo-macros valid at the calling file are also substituted
+ in the included file.
+ 
+\layout Standard
+
+This way, you can not only save redundancy, but also produce sub-configurations
+ in a 
+\emph on 
+systematic
+\emph default 
+ way if you obey the following conventions:
+\layout Standard
+
+
+\family typewriter 
+cconf-include.
+\emph on 
+commonname
+\family default 
+\emph default 
+ should denote a common include file for 
+\family typewriter 
+cconf.
+\emph on 
+commonname
+\emph default 
+-subversion1
+\family default 
+ and 
+\family typewriter 
+cconf.
+\emph on 
+commonname
+\emph default 
+-subversion2
+\family default 
+ and so on; for 
+\family typewriter 
+pconf
+\family default 
+s and 
+\family typewriter 
+target
+\family default 
+s you should do the same analogously.
+ This means, you should produce subversions of configurations by means of
+ hierarchical 
+\family typewriter 
+pconf
+\family default 
+, 
+\family typewriter 
+cconf
+\family default 
+ and 
+\family typewriter 
+target
+\family default 
+ names, where each hierarchy level is separated by dashes in the name.
+ For example, if you want to discriminate different machine architectures
+ for a common runtime environment type, you should create names like 
+\family typewriter 
+cconf.klinux-i386
+\family default 
+ and 
+\family typewriter 
+cconf.klinux-x86_64
+\family default 
+ with a common name part 
+\family typewriter 
+klinux
+\family default 
+ and a common include file 
+\family typewriter 
+cconf-include.klinux
+\family default 
+.
+\layout Standard
+
+This schema should be analogously extended to multiple hierarchy levels,
+ e.g.
+ when sub-versioning the 
+\family typewriter 
+i386
+\family default 
+ architecture into 
+\family typewriter 
+i386-pentium
+\family default 
+ and 
+\family typewriter 
+i386-athlon
+\family default 
+ or the like.
+ This way, you can create arbitrarily fine-grained hierarchical subversions
+ of configurations (even with different numbers of hierarchy levels at different
+ parts of the tree) without introducing redundancy, just by putting common
+ parts into 
+\family typewriter 
+cconf-include.
+\family default 
+\emph on 
+shorter-version-name
+\emph default 
+.
+\layout Standard
+
+In case you need a stronger binding between different parts of a name, you
+ can use the dot instead of a dash for separating a hierarchical group as
+ a whole from another group as a whole.
+ Examples would be version names like 
+\family typewriter 
+klinux-i386-athlon.debug
+\family default 
+ or even 
+\family typewriter 
+klinux-i386-athlon.debug-gdb3
+\family default 
+ when different debuggers come into play (or the like).
+ In such a case, please consider the use of multiple 
+\family typewriter 
+include
+\family default 
+ statements for independent inclusion of independent things, in order to
+ keep things as orthogonal as possible.
 \layout Section
 
 Internals

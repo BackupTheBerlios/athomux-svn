@@ -48,7 +48,6 @@ sub check_context {
     my $list = $2;
     my $name = `uname $1`;
     chomp $name;
-print"uname $1 = $name ($list)\n";
     return 0 unless process_list($list, $name);
   }
   if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
@@ -139,6 +138,14 @@ sub add_file {
   local $/;
   my $text = <IN>;
   close IN;
+  my $done = "";
+  while($text =~ m/^-?include\s+([^\s]+)\s*\n/m) {
+    my $subname = $1;
+    $done .= $PREMATCH;
+    $text = $POSTMATCH;
+    $done .= add_file($subname, @_);
+  }
+  $text = $done . $text;
   my $sub = "substitution ";
   while(1) {
     my $search = shift or last;
