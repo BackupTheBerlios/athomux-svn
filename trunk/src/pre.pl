@@ -910,11 +910,11 @@ sub sp_var {
   $correction = "" unless defined($correction);
   die "specifier '$spec' has wrong syntax" unless sp_check($spec);
   my $len = length($start);
-  return "" unless substr($spec, 0, $len) eq $start;
+  die "bad prefix '$start' for specifier '$spec'" unless substr($spec, 0, $len) eq $start;
   substr($spec, 0, $len) = "";
   # starting #
   $spec =~ s/\A\#//;
-  # handlue sub-instances
+  # handle sub-instances
   $spec =~ s/\#/\._sub_/g;
   # handle operations
   if($spec =~ m/:([<>])(\w+)\(:([^:]+):\)\$(\w+)\Z/) {
@@ -927,6 +927,27 @@ sub sp_var {
   # handle remaining inputs/outputs
   $spec =~ s/:[<>]/\._conn_/g;
   return $spec;
+}
+
+##########################################################################
+
+sub sp_conn_instance {
+  my ($spec) = @_;
+  my $res = sp_part($spec, 1, 1);
+  if(defined $res) {
+    $res =~ s/(^|[#.])/$1_sub_/g;
+    $res =~ s/\#/\./g;
+    $res .= ".";
+  } else {
+    $res = "";
+  }
+  my $array = sp_part($spec, 2, 1);
+  $array = "" unless defined($array);
+  $res .= "_conn_" . sp_part($spec, 2, 0) . $array;
+#my $stripped = sp_complete(sp_part($spec, 2));
+#my $test = sp_var($stripped, sp_part($stripped, 1));
+#print"'$test' != '$res'\n" if ".$res" ne $test;
+  return $res;
 }
 
 ##########################################################################
@@ -1328,7 +1349,6 @@ sub add_connector {
   $external_name = sp_part($replace, 2, 0) if defined($replace);
   die "input/output name '$external_name' too long" if length($external_name) > 7;
   my ($fullname, $count) = spec_conn_instance($namespec);
-  $count = "" unless defined($count);
   $::static =~ s/\^//;
   $::static =~ s/\^/  ${brick}_${type} ${fullname}${count}={\n^  }\n^/;
   my $typecode = $type eq "input" ? 0 : 1;
@@ -1457,8 +1477,8 @@ sub gen_call {
     die "NYI";
   } elsif($optype eq "input") {
     if($target =~ m/:</) { # call on input
-      my ($inst, $array) = spec_conn_instance($target);
-      $call .= "const union connector * _other_ = (void*)&_brick->$inst$array._input_; ";
+      my $inst = sp_conn_instance($target);
+      $call .= "const union connector * _other_ = (void*)&_brick->$inst._input_; ";
       if($op eq "op") {
 	$call .= "_other_->input.ops[$section][$arg->op_code - opcode_output_max - 1](_other_, $arg, $param); ";
       } else {
@@ -1467,10 +1487,10 @@ sub gen_call {
 	$call .= "$directname(_other_, $arg, $param); ";
       }
     } else { # call on output
-      my ($inst, $array) = spec_conn_instance($target);
+      my $inst = sp_conn_instance($target);
       $call .= "const struct input * _other_; ";
       $call .= "success_t __success = TRUE; ";
-      $call .= "for(_other_ = _brick->$inst$array._output_.rev_chain; _other_; _other_ = _other_->rev_next) { ";
+      $call .= "for(_other_ = _brick->$inst._output_.rev_chain; _other_; _other_ = _other_->rev_next) { ";
       $call .= "($arg)->success = FALSE; ";
       $call .= "_other_->ops[$section][$opcode - opcode_output_max - 1]((void*)_other_, $arg, $param); ";
       $call .= "__success &= ($arg)->success; } ";
@@ -1479,8 +1499,8 @@ sub gen_call {
   # $optype eq "output"
   } elsif($target =~ m/:</) { # call on input
     #TODO: check section bounds
-    my ($inst, $array) = spec_conn_instance($target);
-    $call .= "const union connector * _other_ = (void*)_brick->$inst$array._input_.connect; ";
+    my $inst = sp_conn_instance($target);
+    $call .= "const union connector * _other_ = (void*)_brick->$inst._input_.connect; ";
     $call .= "_other_->output.ops[$section][$opcode](_other_, $arg, $param); ";
   } else { # call on output
     my $other = "_other_";
@@ -1488,8 +1508,8 @@ sub gen_call {
       # shortcut: don't do any address arithmetic, just pass on
       $other = "on";
     } elsif($target =~ m/:>/) { # output
-      my ($inst, $array) = spec_conn_instance($target);
-      $call .= "const union connector * _other_ = (void*)&_brick->$inst$array._output_; ";
+      my $inst = sp_conn_instance($target);
+      $call .= "const union connector * _other_ = (void*)&_brick->$inst._output_; ";
     } else {
       die "bad input/output specifier in '$target'";
     }
@@ -2174,9 +2194,9 @@ sub gen_header {
   print OUT "  // connector instances\n";
   foreach my $spec (keys %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
-    my ($conn,$array) = spec_conn_instance($spec);
+    my $conn = sp_conn_instance($spec);
     my $name = sp_name($spec, 2);
-    print OUT "  struct local_$name $conn$array;\n";
+    print OUT "  struct local_$name $conn;\n";
   }
   # gen PC fields
   print OUT "  // PC fields\n";
@@ -2257,7 +2277,7 @@ sub make_pointers {
     return;
   } else {
     # compute static offset (this is more efficient)
-    my ($field) = spec_conn_instance($spec);
+    my $field = sp_conn_instance($spec);
     insert_pseudoparam($code, "struct brick_${brick} * const _brick = BASE(_on, struct brick_${brick}, $field); (void)_brick; ");
   }
   insert_pseudoparam($code, "struct local_${conn} * const _on = (void*)on; (void)_on; ");
@@ -2340,6 +2360,62 @@ sub subst_brickvars { # this is provisionary and should vanish
   return $code;
 }
 
+sub gen_initexit {
+  local *OUT = shift;
+  my $optype = shift;
+  my $brick = sp_part($::current, 1, 0);
+  print OUT "#undef OPERATION\n#define OPERATION \"${optype}_$brick\"\n\n";
+  if($optype eq "init") {
+    print OUT "mand_t init_$brick (void * _ini_, const char * _param, mand_t _mand)\n{\n";
+  } else {
+    print OUT "void exit_$brick (void * _ini_, const char * _param)\n{\n";
+  }
+  print OUT "struct brick_$brick * ini = _ini_; (void)ini; int _i_; (void)_i_;\n";
+  if($optype eq "init") {
+    print OUT "ini->_mand = _mand;\n  ini->ops = ops_${brick}_BRICK;\n";
+  }
+  print OUT "  // $optype connectors\n";
+  while(my ($spec, $tuple) = each %::conn_spec) {
+    next if $spec =~ m/\[\]/; # skip dynamic arrays
+    print OUT "  // $optype $spec\n";
+    my ($shortname, $array) = spec_conn_instance($spec);
+    $array =~ s/\[(.*)\]/$1/;
+    my $index = "";
+    if($array ne "") {
+      print OUT "for(_i_ = 0; _i_ < $array; _i_++) {\n";
+      $index = "[_i_]";
+    }
+    my ($def, $initcode, $exitcode) = @$tuple;
+    my $code = $optype eq "init" ? $initcode : $exitcode;
+    if($code =~ m/\A$ws\{$ws\}$ws\Z/) { # inline expansion only in trivial case
+      if($optype eq "init") {
+	my $inittext = gen_conn_init($spec, $tuple, 0);
+	indent(\$inittext, "    ");
+	print OUT "  { void * _conn = &ini->$shortname$index; void * _brick = ini; (void)_brick;\n$inittext  }\n";
+      } else {
+	print OUT "  // not called\n";
+      }
+    } else {
+      my $funcname = "${optype}_conn_" . sp_name($spec, 2);
+      print OUT "  $funcname(&ini->$shortname$index, ini);\n";
+    }
+    if($array ne "") {
+      print OUT"}\n";
+    }
+  }
+  # process sub-instances
+  print OUT "\n  // $optype sub-instances\n";
+  while(my ($name, $spec) = each %::instances) {
+    my $br = sp_part($spec, 1, 0);
+    if($optype eq "init") {
+      print OUT "  _mand = init_$br (&ini->_sub_$name, _param, _mand);\n";
+    } else {
+      print OUT "  exit_$br (&ini->_sub_$name, _param);\n";
+    }
+  }
+  print OUT "\n";
+}
+
 sub gen_init {
   local *OUT = shift;
   my $brick = sp_part($::current, 1, 0);
@@ -2395,7 +2471,7 @@ sub gen_init {
     }
     print OUT "};\n\n";
   }
-  # create init routine for each connector
+  # create init and exit routines for each connector
   while(my ($spec, $tuple) = each %::conn_spec) {
     my $cname = sp_name($spec, 2);
     my $initcode = gen_conn_init($spec, $tuple, 0);
@@ -2404,38 +2480,8 @@ sub gen_init {
     print OUT "void exit_conn_$cname(void * _conn, void * _brick)\n$exitcode\n";
   }
   # create init routine for the brick instance
-  print OUT "#undef OPERATION\n#define OPERATION \"init_$brick\"\n\n";
-  print OUT "mand_t init_$brick (void * _ini_, const char * _param, mand_t _mand)\n{\n  struct brick_$brick * ini = _ini_;\n  ini->_mand = _mand;\n  ini->ops = ops_${brick}_BRICK;\n  int _i_; (void)_i_;\n";
-  print OUT "  // init connectors\n";
-  while(my ($spec, $tuple) = each %::conn_spec) {
-    next if $spec =~ m/\[\]/; # skip dynamic arrays
-    print OUT "// init $spec\n";
-    my $funcname = "init_conn_" . sp_name($spec, 2);
-    my ($shortname, $array) = spec_conn_instance($spec);
-    $array =~ s/\[(.*)\]/$1/;
-    my $index = "";
-    if($array ne "") {
-      print OUT "for(_i_ = 0; _i_ < $array; _i_++) {\n";
-      $index = "[_i_]";
-    }
-    my ($def, $initcode) = @$tuple;
-    if($initcode =~ m/\A$ws\{$ws\}$ws\Z/) { # inline expansion only in trivial case
-      my $inittext = gen_conn_init($spec, $tuple, 0);
-      indent(\$inittext, "    ");
-      print OUT "  { void * _conn = &ini->$shortname$index; void * _brick = ini; (void)_brick;\n$inittext  }\n";
-    } else {
-      print OUT "  $funcname(&ini->$shortname$index, ini);\n";
-    }
-    if($array ne "") {
-      print OUT"}\n";
-    }
-  }
-  # create and connect sub-instances
-  print OUT "  // init sub-instances\n";
-  while(my ($name, $spec) = each %::instances) {
-    my $br = sp_part($spec, 1, 0);
-    print OUT "  _mand = init_$br (&ini->_sub_$name, _param, _mand);\n";
-  }
+  gen_initexit(*OUT, "init");
+  # wire sub-instances
   print OUT "  // wire sub-instances\n";
   while(my ($input, $output) = each %::wires) {
     my ($in_instance,$in_array) = spec_conn_instance($input);
@@ -2478,36 +2524,15 @@ sub gen_init {
   purge(\$code);
   indent(\$code);
   print OUT "$code\nraw_exit:\n  return _mand + 1;\n  goto raw_exit;\n}\n\n";
-  # create dynamic exit routine
+
+  # --- create dynamic exit routine
+  gen_initexit(*OUT, "exit");
   $code = $::exit_brick;
   $code = "{\n}" unless defined($code);
   $code = subst_brickvars($code);
   $code =~ s/\@param/_param/mg;
   purge(\$code);
   indent(\$code);
-  print OUT "#undef OPERATION\n#define OPERATION \"exit_$brick\"\n\n";
-  print OUT "void exit_$brick (void * _ini_, const char * _param)\n{\n  struct brick_$brick * ini = _ini_; (void)ini; int _i_; (void)_i_;\n";
-  while(my ($spec, $tuple) = each %::conn_spec) {
-    next if $spec =~ m/\[\]/; # skip dynamic arrays
-    print OUT "  // exit $spec\n";
-    my ($def, $initcode, $exitcode) = @$tuple;
-    if ($exitcode =~ m/\A$ws\{$ws\}$ws\Z/) {
-      print OUT "  // not called\n";
-      next;
-    }
-    my $funcname = "exit_conn_" . sp_name($spec, 2);
-    my ($shortname, $array) = spec_conn_instance($spec);
-    $array =~ s/\[(.*)\]/$1/;
-    my $index = "";
-    if($array ne "") {
-      print OUT "for(_i_ = 0; _i_ < $array; _i_++) {\n";
-      $index = "[_i_]";
-    }
-    print OUT "  $funcname(&ini->$shortname$index, ini);\n";
-    if($array ne "") {
-      print OUT"}\n";
-    }
-  }
   print OUT "  // brick exit code\n$code\n}\n\n";
   # create static init/exit routines
   gen_routine(*OUT, "init_static_$brick", $::pre_init);
