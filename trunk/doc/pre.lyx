@@ -2144,7 +2144,7 @@ brick_type
  as 
 \family default 
 \emph on 
-instance_namc 
+instance_name 
 \family typewriter 
 \emph default 
 ;
@@ -2163,19 +2163,19 @@ The Inputs and Outputs of a nested instance can be accessed via the following
 mybrick_name
 \family typewriter 
 \emph default 
-.
+#
 \family default 
 \emph on 
 instance_name
 \emph default 
- or shortform 
+ or 
 \family typewriter 
-#.
+##
 \family default 
 \emph on 
 instance_name
 \emph default 
-.
+ for short.
  You may directly call an operation on an output or input of the nested
  instance just by using the extended specifier syntax.
  When calling an operation of the nested instance from code of the outer
@@ -2240,7 +2240,7 @@ alias #
 mybrick_name
 \family typewriter 
 \emph default 
-.
+#
 \family default 
 \emph on 
 instance_name
@@ -2307,7 +2307,7 @@ alias #
 mybrick_name
 \family typewriter 
 \emph default 
-.
+#
 \family default 
 \emph on 
 instance_name
