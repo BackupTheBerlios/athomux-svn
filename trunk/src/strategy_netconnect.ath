@@ -55,6 +55,12 @@ static_data {
     sname_t dst_name;
     addr_t  dst_addr;
   };
+
+  struct g_vpart_t {
+    struct link link;
+    addr_t vaddr;
+    addr_t addr;
+  };
 }
 
 
@@ -63,6 +69,7 @@ static_data {
 data {
   addr_t lb_hook;
   addr_t lc_hook;
+  addr_t lv_hook;
 }
 
 
@@ -110,6 +117,7 @@ operation $output_init
     PC_FLUSH(ASNC_PC);
     PC_FREE(ASNC_PC, @#.lb_hook, sizeof(struct g_brick_t));
     PC_FREE(ASNC_PC, @#.lc_hook, sizeof(struct g_conn_t));
+    PC_FREE(ASNC_PC, @#.lv_hook, sizeof(struct g_vpart_t));
   }
   else if (@constr) {
     // instantiate brick
@@ -118,6 +126,9 @@ operation $output_init
 
     PC_ALLOC(ASNC_PC, sizeof(struct g_conn_t)) => (@#.lc_hook);
     LI_INIT(ASNC_PC, @#.lc_hook);
+
+    PC_ALLOC(ASNC_PC, sizeof(struct g_vpart_t)) => (@#.lv_hook);
+    LI_INIT(ASNC_PC, @#.lv_hook);
   }
 
   @success = TRUE;
@@ -140,15 +151,12 @@ local output :>lostrat
 
 @.func clear_bc()
 {
-  struct g_brick_t *_clearbcprefix_b;
-  struct g_conn_t *_clearbcprefix_c;
   addr_t _clearbcprefix_elem_ptr;
 
   LI_NEXT(ASNC_PC, @#.lb_hook) => (_clearbcprefix_elem_ptr);
   while (_clearbcprefix_elem_ptr != @#.lb_hook) {
     addr_t _clearbcprefix_next_ptr;
     LI_NEXT(ASNC_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
-    _clearbcprefix_b = LI_GET(ASNC_PC, _clearbcprefix_elem_ptr, FALSE);
     LI_REMOVE(ASNC_PC, _clearbcprefix_elem_ptr);
     PC_FREE(ASNC_PC, _clearbcprefix_elem_ptr, sizeof(struct g_brick_t));
 
@@ -159,7 +167,16 @@ local output :>lostrat
   while (_clearbcprefix_elem_ptr != @#.lc_hook) {
     addr_t _clearbcprefix_next_ptr;
     LI_NEXT(ASNC_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
-    _clearbcprefix_c = LI_GET(ASNC_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(ASNC_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(ASNC_PC, _clearbcprefix_elem_ptr, sizeof(struct g_conn_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+
+  LI_NEXT(ASNC_PC, @#.lv_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.lv_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
     LI_REMOVE(ASNC_PC, _clearbcprefix_elem_ptr);
     PC_FREE(ASNC_PC, _clearbcprefix_elem_ptr, sizeof(struct g_conn_t));
 
@@ -518,6 +535,15 @@ local output :>lostrat
           getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_crid_str, STRBUFLEN);
           if (strcmp(_mergencprefix_crid_str, _mergencprefix_rid_str) == 0) {
             rewire_nc(_mergencprefix_b->addr, _mergencprefix_raddr);
+ 
+            // memorize original part address
+            addr_t _mergencprefix_velem_ptr;
+            struct g_vpart_t *_mergencprefix_v = PC_ALLOC(ASNC_PC, sizeof(struct g_vpart_t)) => (_mergencprefix_velem_ptr);
+            _mergencprefix_v->vaddr=_mergencprefix_raddr;
+            _mergencprefix_v->addr=_mergencprefix_b->addr;
+            LI_PREPEND(ASNC_PC, @#.lv_hook, _mergencprefix_velem_ptr);
+
+            // remove part from view
             LI_REMOVE(ASNC_PC, _mergencprefix_elem_ptr);
             PC_FREE(ASNC_PC, _mergencprefix_elem_ptr, sizeof(struct g_brick_t));
           }
@@ -582,6 +608,15 @@ local output :>lostrat
           getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_crid_str, STRBUFLEN);
           if (strcmp(_mergencprefix_crid_str, _mergencprefix_rid_str) == 0) {
             rewire_nc(_mergencprefix_b->addr, _mergencprefix_raddr);
+ 
+            // memorize original part address
+            addr_t _mergencprefix_velem_ptr;
+            struct g_vpart_t *_mergencprefix_v = PC_ALLOC(ASNC_PC, sizeof(struct g_vpart_t)) => (_mergencprefix_velem_ptr);
+            _mergencprefix_v->vaddr=_mergencprefix_raddr;
+            _mergencprefix_v->addr=_mergencprefix_b->addr;
+            LI_PREPEND(ASNC_PC, @#.lv_hook, _mergencprefix_velem_ptr);
+
+            // remove part from view
             LI_REMOVE(ASNC_PC, _mergencprefix_elem_ptr);
             PC_FREE(ASNC_PC, _mergencprefix_elem_ptr, sizeof(struct g_brick_t));
           }
@@ -703,17 +738,43 @@ operation $wait
 
 operation $deinstbrick
 {
-  @.errmsg("FIXME: deinstbrick not yet implemented correctly!\n");
-  // If the brick is a virtual remote or mirror brick:
-  //   -> deinstantiate all corresponding server and client parts in input nest.
+  addr_t elem_ptr;
+  addr_t baddr = @log_addr;
 
+  LI_NEXT(ASNC_PC, @#.lv_hook) => (elem_ptr);
+  while (elem_ptr != @#.lv_hook) {
+    addr_t next_ptr;
+    LI_NEXT(ASNC_PC, elem_ptr) => (next_ptr);
+    struct g_vpart_t *v = LI_GET(ASNC_PC, elem_ptr, FALSE);
+
+    if (v->vaddr==@log_addr) {
+      // deinstantiate part of virtual brick
+      @log_addr = v->addr;
+//      printf("deinstantiating %lld\n", @log_addr);
+      @=call :<istrat$op [@mandate] (@args);
+//      printf("done deinstantiating %lld\n", @log_addr);
+      @.check(@success!=TRUE, "deinstbrick of vpart failed");
+
+      // remove entry
+      LI_REMOVE(ASNC_PC, elem_ptr);
+      PC_FREE(ASNC_PC, elem_ptr, sizeof(struct g_conn_t));
+    }
+
+    elem_ptr = next_ptr;
+  }
+
+  @log_addr = baddr;
+  printf("deinstantiating %lld\n", @log_addr);
   @=call :<istrat$op [@mandate] (@args);
+  printf("done deinstantiating %lld\n", @log_addr);
 }
 
 
 
 
-operation $instbrick,$get,$put,$create,$delete,$instconn,$deinstconn,$connect,$disconnect,$getconn,$findconn
+operation $gadr,$padr,$instbrick,$get,$put,$create,$delete,$instconn,$deinstconn,$connect,$disconnect,$getconn,$findconn
 {
+  printf("snc: OP_NAME [%d] \n", @mandate);
   @=call :<istrat$OP_NAME [@mandate] (@args);
+  printf("snc: done OP_NAME [%d] \n", @mandate);
 }

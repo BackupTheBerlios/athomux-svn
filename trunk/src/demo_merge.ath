@@ -22,6 +22,8 @@ static_data {
   #include "param_scanner.h"
   #include <limits.h>
   #include <errno.h>
+
+  #include <unistd.h>
 }
 
 
@@ -59,6 +61,27 @@ data {
   plen_t plen;
   char buf[DEFAULT_TRANSFER];
   memset(buf, 0, DEFAULT_TRANSFER);
+
+  sleep(10);
+  addr_t a;
+  printf("dm: gadr [%d]\n", @mandate);
+  @=call :<mstrat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, a);
+  @.check(succ!=TRUE, "gadr failed");
+  printf("instbrick1 [%d] \n", @mandate);
+  @=call :<mstrat$instbrick [@mandate] (a, "device_mem_ulinux", FALSE, FALSE) => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+  printf("instbrick2 [%d]\n", @mandate);
+  @=call :<mstrat$instbrick [@mandate] (a, "device_mem_ulinux", TRUE, FALSE) => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+  printf("instbrick3\n");
+
+/*
+  sleep(10);
+  printf("deinst...\n");
+  @=call :<mstrat$deinstbrick(3*DEFAULT_TRANSFER) => (succ);
+  @.check(succ!=TRUE, "deinstbrick failed");
+  printf("deinst done.\n");
+*/
 
   printf("-> ");
   while (fgets(buf, DEFAULT_TRANSFER-1, stdin)!=NULL) {
@@ -351,7 +374,9 @@ operation $brick_init
     @=call :<strat$connect [@mandate] (&gd3_strat, &am2_out) => (succ);
     @.check(succ!=TRUE, "connect failed");
 
-    @=call :<strat$connect [@mandate] (&dm_mstrat, &merge3_ostrat) => (succ);
+    //@=call :<strat$connect [@mandate] (&dm_mstrat, &merge3_ostrat) => (succ);
+    //@.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&dm_mstrat, &asnc_ostrat) => (succ);
     @.check(succ!=TRUE, "connect failed");
     //@=call :<strat$connect [@mandate] (&dm_mstrat, &asnt_ostrat) => (succ);
     //@.check(succ!=TRUE, "connect failed");

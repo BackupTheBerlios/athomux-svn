@@ -582,6 +582,7 @@ operation $gadr
     b.bparam[0]=0;
 
     insert_brick(&b);
+    printf("sm:gadr returned %llx [%d]\n", b.addr, @mandate);
   }
 }
 
@@ -636,6 +637,9 @@ operation $instbrick
 
   vaddr=@log_addr;
   @log_addr = b->addr;
+
+  printf("sm:calling instbrick at %llx in %d [%d]\n", b->addr, b->source, @mandate);
+
   if (b->source==0) @=call :<istrat1$OP_NAME [@mandate] (@args);
   else @=call :<istrat2$OP_NAME [@mandate] (@args);
   @log_addr = vaddr;
@@ -678,6 +682,7 @@ operation $connect
   else {
     // connection crosses views
     // using remote brick...
+    
     @.err("connection across views not yet implemented\n");
   }
 
