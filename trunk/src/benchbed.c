@@ -132,5 +132,8 @@ int main(int argc, char * argv[])
   printf("inst   time=%11lld\n", ((long long)t1.tv_sec-(long long)t0.tv_sec)*1000LL + ((long long)t1.tv_nsec-(long long)t0.tv_nsec)/1000000LL);
   printf("------------------------------------\n");
   cmd(map, "brick/=map_dummy", "");
+#ifdef DEBUG
+  close_debug();
+#endif
   return 0;
 }

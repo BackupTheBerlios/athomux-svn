@@ -321,11 +321,14 @@ close DEFS;
 
 # debug config
 
-open DEBUG, "> debug.init" or die "cannot created debugging config file";
 open DEBUGNAMES, "> debug.names" or die "cannot created debugging config file";
+open DEBUGINIT, "> debug.init" or die "cannot created debugging config file";
+open DEBUGEXIT, "> debug.exit" or die "cannot created debugging config file";
 foreach my $name (keys %debugnames) {
-  print DEBUG "DEBUG_OPEN($name)\n";
+  print DEBUGINIT "DEBUG_OPEN($name)\n";
+  print DEBUGEXIT "DEBUG_CLOSE($name)\n";
   print DEBUGNAMES "FILE * _debug_$name = NULL;\n";
 }
-close DEBUG;
 close DEBUGNAMES;
+close DEBUGINIT;
+close DEBUGEXIT;

@@ -96,5 +96,8 @@ int main(int argc, char * argv[])
 #endif
   cmd(meta, "brick/=adapt_meta", "");
   cmd(map, "brick/=map_dummy", "");
+#ifdef DEBUG
+  close_debug();
+#endif
   return 0;
 }

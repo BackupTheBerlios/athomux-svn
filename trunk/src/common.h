@@ -15,6 +15,7 @@
 
 #ifdef DEBUG
 void open_debug();
+void close_debug();
 extern int call_level;
 extern char blanks[32];
 #endif

@@ -73,5 +73,9 @@ int main(int argc, char * argv[])
     }
   }
 
-  return do_shutdown();
+  int res = do_shutdown();
+#ifdef DEBUG
+  close_debug();
+#endif
+  return res;
 }

@@ -12,11 +12,20 @@
 
 // debugging
 
-@.define @.trace(name, str...)
+@.define @.rawtrace(name, str...)
 {
 #ifdef DEBUG
   extern FILE * _debug_@@name;
   fprintf(_debug_@@name, str...);
+  fflush(_debug_@@name);
+#endif
+}
+
+@.define @.trace(name, str...)
+{
+#ifdef DEBUG
+  extern FILE * _debug_@@name;
+  fprintf(_debug_@@name, "OP "OPERATION" file "BASEFILE" line %d op(%s) sect(%d) mand(%d): " str "\n",  __LINE__, op_names[@op_code], @sect_code, @#._mand ...);
   fflush(_debug_@@name);
 #endif
 }

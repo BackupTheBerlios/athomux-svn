@@ -21,9 +21,17 @@ char blanks[32] = "                               ";
 #define DEBUG_OPEN(name) \
   _debug_##name = fopen("debug."#name, "w");
 
+#define DEBUG_CLOSE(name) \
+  fclose(_debug_##name);
+
 void open_debug()
 {
 #include "../debug.init"
+}
+
+void close_debug()
+{
+#include "../debug.exit"
 }
 
 //////////////////////////////////////////////////////////////////////////
