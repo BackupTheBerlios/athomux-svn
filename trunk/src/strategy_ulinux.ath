@@ -699,25 +699,25 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   // connect device to fs out
   addr_t test_addr = 0;
   @=call :<fs$gadr (DEFAULT_TRANSFER) => (@success, test_addr);
-  @.fatal(!@success, "test_linux address generation failed");
-  @=call :<strat$instbrick (test_addr, "test_linux") : linux_name => (@success);
-  @.fatal(!@success, "test_linux instantiation failed");
+  @.fatal(!@success, "test_linux_flo address generation failed");
+  @=call :<strat$instbrick (test_addr, "test_linux_flo") : linux_name => (@success);
+  @.fatal(!@success, "test_linux_flo instantiation failed");
 
   struct conn_info conn2 = { .conn_addr = test_addr, .conn_name = "in" };
   @=call :<fs$connect (&conn2, &conn) => (@success);
-  @.fatal(!@success, "test_linux connect failed");
+  @.fatal(!@success, "test_linux_flo connect failed");
 
   struct conn_info conn3 = { .conn_addr = test_addr, .conn_name = "out" };
   @=call :<fs$instconn (&conn3) : "0" => (@success);
-  @.fatal(!@success, "test_linux init failed");
+  @.fatal(!@success, "test_linux_flo init failed");
 
   // disconnect device
   @=call :<fs$disconnect (&conn2) => (@success);
-  @.fatal(!@success, "test_linux disconnect failed");
+  @.fatal(!@success, "test_linux_flo disconnect failed");
 
   // deinstantiate device
   @=call :<fs$deinstbrick (test_addr) => (@success);
-  @.fatal(!@success, "test_linux deinstantiation failed");
+  @.fatal(!@success, "test_linux_flo deinstantiation failed");
 }
 
 @.func mk_dir(char *path) {
