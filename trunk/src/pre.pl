@@ -1058,7 +1058,7 @@ sub wire_out2in {
     my $core = $short;
     $core =~ s/$brackmatch//;
     if(my $subst_l = ($::out2in{$short} || $::out2in{$core})) {
-      my @sublist = alias_out2in(@$subst_l);
+      my @sublist = wire_out2in(@$subst_l);
       foreach my $subst (@sublist) {
 	my $new = $spec;
 	$new =~ s/$short/$subst/;
@@ -1534,6 +1534,10 @@ sub gen_call {
   my $brick = sp_part($caller_spec, 1, 0);
   if($optype eq "output") {
     $target = wire_in2out($target);
+  } elsif($optype eq "input") {
+    my @list = wire_out2in($target);
+    die "currently multiple wires cannot be handled by @=inputcall, sorry" if scalar(@list) > 1;
+    $target = $list[0];
   }
   my ($targetbrick, $conn_name, $array, $section, $op) = sp_parts($target);
   if($section ne "(:0:)" and $target =~ m/\$\w+_init\Z/) {
