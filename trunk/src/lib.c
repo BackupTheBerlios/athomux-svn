@@ -357,7 +357,6 @@ void missing_deletepadr(const union connector * on, struct args * args, const ch
     return;
   }
   args->success = FALSE;
-  args->where = FALSE;
   args->op_code = opcode_padr;
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }

@@ -1445,7 +1445,7 @@ sub add_attr {
   "gadrgettranswait" => ["log_len,exclu:=TRUE,action:=action_wait,forwrite:=FALSE,prio:=prio_normal,try_len:=_tmp_.log_len", "success,log_addr,log_len,phys_addr,phys_len", "where,forwrite,direction,action,version"],
   "putpadr" => ["log_addr,log_len,prio:=prio_background", "success", "where" ],
   "putdelete" => ["log_addr,log_len", "success", "prio" ],
-  "deletepadr" => ["log_addr,log_len", "success", "where"],
+  "deletepadr" => ["log_addr,log_len,where:=FALSE", "success" ],
   "putdeletepadr" => ["log_addr,log_len", "success", "where,prio"],
   "gadrtranswaitdeletepadr" => ["phys_addr,phys_len,action:=action_wait", "success,log_len", "log_addr,direction"],
   "gadrcreatetranswaitpadr" => ["phys_addr,phys_len,action:=action_wait,melt:=TRUE", "success,log_len", "log_addr,clear,direction"],
