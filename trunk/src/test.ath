@@ -64,6 +64,7 @@ init { // my brick init
 
 instance #test1 as subtest_instance;
 alias :<t2_in as :<t1_in;
+alias :>bb as :>cc;
 
 alias :>out1 as :>sub_out;
 alias :<in2 as :<sub_in;

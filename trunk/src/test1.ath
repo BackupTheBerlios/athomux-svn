@@ -34,6 +34,7 @@ init { // my brick init
 
 instance #test2 as sub2;
 alias :<in2 as :<t2_in;
+alias :>aa as :>bb;
 
 input :<in1(:2:)
 attr5 attrname4 = 17
