@@ -1422,8 +1422,7 @@ sub add_instance {
 }
 
 sub add_connector {
-  my ($type, $namespec, $subbrick, $replace, $alloc_space, $export, $preinit, $autoinit) = @_;
-  $subbrick =~ s/#//;
+  my ($type, $namespec, $replace, $alloc_space, $export, $preinit, $autoinit) = @_;
   my ($brick, $name) = sp_parts($namespec);
   my $external_name = $name;
   $external_name = sp_part($replace, 2, 0) if defined($replace);
@@ -1444,9 +1443,11 @@ sub add_connector {
     $offset = "(addr_t)STATIC_OFFSET(struct brick_${brick}, $fullname)";
   }
   my $sect_count = sp_part($namespec, 3, 0);
-  my $cname = sp_name(spec_bricktype($namespec), 2);
+  my $bricktype = spec_bricktype($namespec);
+  my $cname = sp_name($bricktype, 2);
   my $gen_type = "type_$cname";
   $::conn_init =~ s/\^//;
+  my $subbrick = sp_name($bricktype, 1);
   $::conn_init .= "  {\n    \"$external_name\",\n    \"^\",\n    $gen_type,\n    init_conn_$cname,\n    exit_conn_$cname,\n    ${cname}_0_${type}_init,\n    $typecode,\n    $export,\n    $preinit,\n    $autoinit,\n    $::conn_totalcount,\n    $count,\n    $offset,\n    $sect_count,\n    sizeof(struct local_${subbrick}_$name)\n  },\n";
   $::conn_count++;
   $::conn_totalcount .= " + $count" if $alloc_space;
@@ -2009,7 +2010,7 @@ sub parse_subinstances {
 	  }
 	  if($remember) {
 	    my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
-	    add_connector($conn_type, $full_spec, $type, $loc_complete, 1, "TRUE", "FALSE", "FALSE");
+	    add_connector($conn_type, $full_spec, $loc_complete, 1, "TRUE", "FALSE", "FALSE");
 	  }
 	  my $xname = sp_name(spec_bricktype($sub_complete), 2);
 	  my $yname = sp_name(spec_bricktype($loc_complete), 2);
@@ -2025,7 +2026,7 @@ sub parse_subinstances {
 }
 
 sub parse_1 {
-  my ($text,$subbrick,$macros) = @_;
+  my ($text,$macros) = @_;
   my $remember = not defined(sp_part($::current,1,1));
   $text = parse_subinstances($text, $remember);
   $::current = sp_part($::current,1) . ":<BRICK(:0:)";
@@ -2069,7 +2070,7 @@ sub parse_1 {
       $text = $POSTMATCH;
       my $do_export = ($remember and not defined($local));
       my $export_string = $do_export ? "TRUE" : "FALSE";
-      add_connector($type, $enhanced_spec, $subbrick, undef, $do_export, $export_string, "TRUE", $export_string);
+      add_connector($type, $enhanced_spec, undef, $do_export, $export_string, "TRUE", $export_string);
       make_ops("$::current\$${type}_init", "{\@success = TRUE;}") if $remember;
       my $xname = sp_name(spec_bricktype($enhanced_spec), 2);
       $::extern_type_defs{$xname} = "";
@@ -2243,7 +2244,7 @@ sub parse_all {
     }
     last;
   }
-  return parse_1($text, $brick, $macros);
+  return parse_1($text, $macros);
 }
 
 sub parse_file {
