@@ -20,15 +20,13 @@ input :<hook
 
 output :>out
 
-operation $gadr,$gadrcreateget
+operation $gadr,$gadrcreate
 {
   @log_addr = (addr_t)(unsigned long)malloc(@log_len);
-  @phys_addr = @log_addr;
-  @phys_len = @log_len;
   @success = @log_addr != 0;
 }
 
-operation $get,$gettranswait
+operation $createget,$get,$gettranswait
 {
   @phys_addr = @log_addr;
   @phys_len = @log_len;
@@ -36,7 +34,7 @@ operation $get,$gettranswait
   @success = TRUE;
 }
 
-operation $delete,$putdelete
+operation $padr,$deletepadr,$putdeletepadr
 {
   free((void*)(long)@log_addr);
   @success = TRUE;
@@ -56,7 +54,7 @@ operation $wait,$put,$putwait
   @success = TRUE;
 }
 
-operation $create,$createget
+operation $create,$delete
 {
   @success = TRUE;
 }
