@@ -1,4 +1,4 @@
-#context pconf: ulinux-debug
+#context pconf: !.*, ulinux-debug
 
 $(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG
 

@@ -21,32 +21,84 @@ my $stringmatch = qr"(?:$singlestringmatch(?:$ws$singlestringmatch)*)"m;
 # create additional Makefile rules out of the existing sources
 # also, create defs.h and loaders.h automatically
 
-# single filter
+################################################################
 
-my %contexts = ();
-my %buildrules = ();
-my %debugnames = ();
+# name lists
 
-sub build_contexts {
-  foreach my $source (@_) {
+my %filenames = ();
+my %names = ();
+
+sub build_names {
+  my ($type, $pattern) = @_;
+  my @files = `ls $pattern | grep -v "~" | grep -v "common\\."`;
+  map chomp, @files;
+  $filenames{$type} = \@files;
+  my @copy = @files;
+  if($type eq "ath") {
+    map { s/\.\w+\Z// } @copy;
+  } else {
+    map { s/\A\w+\.// } @copy;
+  }
+  $names{$type} = \@copy;
+}
+
+build_names("pconf", "pconf.*");
+build_names("cconf", "cconf.*");
+build_names("target", "target.*");
+build_names("ath", "*.ath");
+
+################################################################
+
+my %exceptions = ();
+
+sub check_exception {
+  my ($first, $second) = sort @_;
+  return $exceptions{"$first:$second"};
+}
+
+sub make_exception {
+  my $code = shift;
+  my ($first, $second) = sort @_;
+  $exceptions{"$first:$second"} = $code;
+  #print "$first:$second = $code\n";
+}
+
+my %build_rules = ();
+my %debug_names = ();
+
+sub build_exceptions {
+  my $basetype = shift;
+  my @copy_names = @{$names{$basetype}};
+  foreach my $source (@{$filenames{$basetype}}) {
+    my $shortname = shift @copy_names;
     open IN, "< $source" or die "cannot open file '$source'";
     local $/;
     my $text = <IN>;
     close IN;
-    $contexts{$source} = "";
     for(;;) {
-      if($text =~ m/^#?\s*(?:context|defaultbuild).*\n/m) {
-	$contexts{$source} .= $MATCH;
+      if($text =~ m/^#?\s*(context)\s+(pconf|cconf|target|ath)\s*:\s*(.*)\n/m) {
 	$text = $POSTMATCH;
+	my $type = $2;
+	my $list = $3;
+	$list =~ s/\s//g;
+	foreach my $pattern (split /,/, $list) {
+	  my $code = 0;
+	  $code = 1 if $pattern =~ s/\A!//;
+	  foreach my $candidate (@{$names{$type}}) {
+	    if($candidate =~ m/\A$pattern\Z/) {
+	      make_exception($code, "$basetype.$shortname", "$type.$candidate")
+	    }
+	  }
+	}
 	next;
       }
       if($text =~ m/^\s*buildrules\s+(\w+)\s*:\s*\n?((?:.*\n)*?)\s*endrules/m) {
-	$buildrules{"$source:$1"} = $2;
+	$build_rules{"$source:$1"} = $2;
 	$text = $POSTMATCH;
 	next;
       }
       if($text =~ m/@\.trace\s*\(\s*(\w+)/g) {
-	$debugnames{$1} = 1;
+	$debug_names{$1} = 1;
 	$text = $POSTMATCH;
 	next;
       }
@@ -55,103 +107,31 @@ sub build_contexts {
   }
 }
 
-sub check_context {
-  sub process_list {
-    my ($found, $forwhat) = @_;
-    my @list = split /\s*,\s*/, $found;
-    my $nr_negative = 0;
-    foreach my $elem (@list) {
-      $elem =~ s/\s//g;
-      next unless $elem;
-      my $res = not ($elem =~ s/^!//);
-      $nr_negative++ unless $res;
-      if($forwhat =~ m/\A$elem\Z/) {
-	return $res;
-      }
-    }
-    return $nr_negative;
-  }
-  my ($src, $type, $forwhat) = @_;
-  my $do_build = $type =~ s/^#//; # when prefixed by #, consider 'defaultbuild'
-  my $context = $contexts{$src};
-  die "internal error: source '$src' not indexed" unless defined($context);
-  my $try = $context;
-  while($try =~ m/^#?\s*(context|defaultbuild)\s+cmd\s*($singlestringmatch)\s*:\s*(.*)\n/m) {
-    $try = $POSTMATCH;
-    next if (not $do_build and $1 eq "defaultbuild");
-    my $list = $3;
-    my $cmd = $2;
-    $cmd =~ s/^"//; $cmd =~ s/"$//;
-    my $name = `$cmd` or warn "file '$src': context cmd '$cmd' returned exit status $?";
-    chomp $name;
-    return 0 unless process_list($list, $name);
-  }
-  if($context =~ m/^#?\s*(?:context|defaultbuild)\s+$type(\s*:)?\s+(.+)\n/m) {
-    warn "file '$src': please insert a ':' into the context statement" unless defined($1);
-    return process_list($2, $forwhat);
-  }
-  return 1;
-}
+build_exceptions("pconf");
+build_exceptions("cconf");
+build_exceptions("target");
+build_exceptions("ath");
 
-# list filter
-
-sub filter_all {
-  my ($prefix, $type, $forwhat, $list) = @_;
-  my @res = ();
-  foreach my $src (@$list) {
-    next unless check_context("$prefix$src", $type, $forwhat);
-    push @res, $src;
-  }
-  return \@res;
-}
-
-# first, get all the relevant file names
-
-my @pconf_files = `ls pconf.* | grep -v "~"`;
-map chomp, @pconf_files;
-build_contexts(@pconf_files);
-my @pconfs = @pconf_files;
-map { s/pconf\.// } @pconfs;
-
-my @cconf_files = `ls cconf.* | grep -v "~"`;
-map chomp, @cconf_files;
-build_contexts(@cconf_files);
-my @cconfs = @cconf_files;
-map { s/cconf\.// } @cconfs;
-my %cconf_pconf = ();
-foreach my $pconf (@pconfs) {
-  $cconf_pconf{$pconf} = filter_all("cconf.", "pconf", $pconf, \@cconfs);
-}
-
-my @target_files = `ls target.* | grep -v "~"`;
-map chomp, @target_files;
-build_contexts(@target_files);
-my @targets = @target_files;
-map { s/target\.// } @targets;
-my %target_pcconf = ();
-my %buildtarget_pcconf = ();
-foreach my $pconf (@pconfs) {
-  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
-    my $tmplist = filter_all("target.", "pconf", $pconf, \@targets);
-    $target_pcconf{"$pconf.$cconf"} = filter_all("target.", "cconf", $cconf, $tmplist);
-    # same, but consider the 'defaultbuild' statement in addition to 'context'
-    $tmplist = filter_all("target.", "#pconf", $pconf, \@targets);
-    $buildtarget_pcconf{"$pconf.$cconf"} = filter_all("target.", "#cconf", $cconf, $tmplist);
-  }
-}
-
-my @sources = `ls *.ath | grep -v common`;
-map chomp, @sources;
-build_contexts(@sources);
+################################################################
 
 # create subdirs
 
-foreach my $pconf (@pconfs) {
+foreach my $pconf (@{$names{"pconf"}}) {
   system "mkdir -p $pconf && (cd $pconf && ln -sf ../*.h ../*.c .)"
     and die "cannot create subdirs / symlinks for $pconf";
-  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
+  my $pconf_part = "pconf.$pconf";
+  foreach my $cconf (@{$names{"cconf"}}) {
+    my $cconf_part = "cconf.$cconf";
+    next if check_exception($pconf_part, $cconf_part);
     system "mkdir -p $pconf/$cconf"
       and die "cannot create cconf subdir $pconf/$cconf";
+    foreach my $target (@{$names{"target"}}) {
+      my $target_part = "target.$target";
+      next if check_exception($pconf_part, $target_part);
+      next if check_exception($cconf_part, $target_part);
+      system "mkdir -p $pconf/$cconf/extra_$target"
+	and die "cannot create cconf subdir $pconf/$cconf/extra_$target";
+    }
   }
 }
 
@@ -160,13 +140,13 @@ foreach my $pconf (@pconfs) {
 open DEFS, ">defs.make" or die "cannot create defs.make";
 
 my $pconfs = "pconf_list=";
-foreach my $pconf (@pconfs) {
+foreach my $pconf (@{$names{"pconf"}}) {
   $pconfs .= "$pconf ";
 }
 print DEFS "$pconfs\n";
 
 my $cconfs = "cconf_list=";
-foreach my $cconf (@cconfs) {
+foreach my $cconf (@{$names{"cconf"}}) {
   $cconfs .= "$cconf ";
 }
 print DEFS "$cconfs\n";
@@ -208,7 +188,7 @@ sub add_sourcelist {
   my $type = shift;
   my $res = "";
   foreach my $source (@$list) {
-    my $text = $buildrules{"$source:$type"};
+    my $text = $build_rules{"$source:$type"};
     if($text) {
       $res .= process_makerules($source, $text, @_);
     }
@@ -226,23 +206,21 @@ sub add_both {
 #################
 
 my $all_bricks = "bricks=";
-my $all_headers = "headers=";
-my $all_objs = "objs=";
 my $all_targets = "target_list=";
 
 my $text = "";
 
-foreach my $pconf (@pconfs) {
+foreach my $pconf (@{$names{"pconf"}}) {
+  my $pconf_part = "pconf.$pconf";
   $text .= "\n# pconf $pconf\n";
   $all_bricks .= "\$(${pconf}_bricks) ";
-  $all_headers .= "\$(${pconf}_headers) ";
-  $all_objs .= "\$(${pconf}_objs) ";
   my $text1 .= "${pconf}_bricks=";
   my $text2 .= "${pconf}_headers=";
-  my @pconf_sources = ();
-  foreach my $name (@sources) {
-    next unless check_context($name, "pconf", $pconf);
-    push @pconf_sources, $name;
+  foreach my $name (@{$filenames{"ath"}}) {
+    my $basename = $name;
+    $basename =~ s/\.ath\Z//;
+    my $ath_part = "ath.$basename";
+    next if check_exception($pconf_part, $ath_part);
     my $name1 = $name;
     $name1 =~ s/\.ath/.c/;
     $text1 .= "$pconf/$name1 ";
@@ -252,55 +230,66 @@ foreach my $pconf (@pconfs) {
   }
   $text .= "$text1\n\n";
   $text .= "$text2\n\n";
-  my $all_cconf_objs = "${pconf}_objs=";
-  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
-    $all_cconf_objs .= "\$(${pconf}_${cconf}_objs) ";
-    my $text3 = "${pconf}_${cconf}_objs=";
-    open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
-    open LOADERS, ">$pconf/$cconf/loaders.h" or die "cannot create loaders.h";
-    foreach my $name (@pconf_sources) {
-      next unless check_context($name, "cconf", $cconf);
-      my $name3 = $name;
-      $name3 =~ s/\.ath/.o/;
-      $text3 .= "$pconf/$cconf/$name3 ";
-      my $body = $name;
-      $body =~ s/\.ath//;
-      print H "#include \"../$body.h\"\n";
-      print LOADERS "  \&loader_$body,\n";
-      my @dep = `grep '^instance' $name`;
-      if(@dep) {
-	map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
-	$text .= "$pconf/$body.c $pconf/$body.h : @dep \n";
-	map {s/(\w+)\.ath/$pconf\/$1.c/g} @dep;
-	$text .= "$pconf/$cconf/$body.o $pconf/$body.c : @dep \n";
-      }
-    }
-    $text .= "$text3\n\n";
-    close H;
-    close LOADERS;
-    next unless check_context("cconf.$cconf", "#pconf", $pconf);
-    foreach my $target (@{$buildtarget_pcconf{"$pconf.$cconf"}}) {
+  foreach my $cconf (@{$names{"cconf"}}) {
+    my $cconf_part = "cconf.$cconf";
+    next if check_exception($pconf_part, $cconf_part);
+    foreach my $target (@{$names{"target"}}) {
+      my $target_part = "target.$target";
+      next if check_exception($pconf_part, $target_part);
+      next if check_exception($cconf_part, $target_part);
       $all_targets .= "${pconf}/${cconf}/$target ";
+      my $objs_text = "${pconf}_${cconf}_${target}_objs=";
+      open H, ">$pconf/$cconf/extra_$target/defs.h" or die "cannot create defs.h";
+      open LOADERS, ">$pconf/$cconf/extra_$target/loaders.h" or die "cannot create loaders.h";
+      foreach my $name (@{$filenames{"ath"}}) {
+	my $basename = $name;
+	$basename =~ s/\.ath\Z//;
+	my $ath_part = "ath.$basename";
+	next if check_exception($pconf_part, $ath_part);
+	next if check_exception($cconf_part, $ath_part);
+	next if check_exception($target_part, $ath_part);
+	# this test is provisionary!
+	if($basename =~ m/\Acontrol/) {
+	  $objs_text .= "${pconf}/${cconf}/extra_${target}/$basename.o ";
+	} else {
+	  $objs_text .= "${pconf}/${cconf}/$basename.o ";
+	}
+	print H "#include \"../$basename.h\"\n";
+	print LOADERS "  \&loader_$basename,\n";
+	my @dep = `grep '^instance' $name`;
+	if(@dep) {
+	  map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
+	  $text .= "$pconf/$basename.c $pconf/$basename.h : @dep \n";
+	  map {s/(\w+)\.ath/$pconf\/$1.c/g} @dep;
+	  $text .= "$pconf/$cconf/$basename.o $pconf/$basename.c : @dep \n";
+	}
+      }
+      close H;
+      close LOADERS;
+      $text .= "\n$objs_text\n\n";
     }
   }
-  $text .= "\n$all_cconf_objs\n\n";
   $text .= "\n# end pconf $pconf\n\n";
 }
 print DEFS "\n$all_bricks\n";
-print DEFS "\n$all_headers\n";
-print DEFS "\n$all_objs\n";
 print DEFS "\n$all_targets\n";
 
 print DEFS "\n$text\n";
 
-$text = add_sourcelist(\@sources, "global");
+$text = add_sourcelist($filenames{"ath"}, "global");
 
-foreach my $pconf (@pconfs) {
-  $text .= add_both("pconf.$pconf", \@sources, "pconf", qr"\$[({]pconf[)}]", "$pconf");
-  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
-    $text .= add_both("cconf.$cconf", \@sources, "cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
-    foreach my $target (@{$target_pcconf{"$pconf.$cconf"}}) {
-      $text .= add_both("target.$target", \@sources, "target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
+foreach my $pconf (@{$names{"pconf"}}) {
+  my $pconf_part = "pconf.$pconf";
+  $text .= add_both("pconf.$pconf", $filenames{"ath"}, "pconf", qr"\$[({]pconf[)}]", "$pconf");
+  foreach my $cconf (@{$names{"cconf"}}) {
+    my $cconf_part = "cconf.$cconf";
+    next if check_exception($pconf_part, $cconf_part);
+    $text .= add_both("cconf.$cconf", $filenames{"ath"}, "cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
+    foreach my $target (@{$names{"target"}}) {
+      my $target_part = "target.$target";
+      next if check_exception($pconf_part, $target_part);
+      next if check_exception($cconf_part, $target_part);
+      $text .= add_both("target.$target", $filenames{"ath"}, "target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }
 }
@@ -326,7 +315,7 @@ close DEFS;
 open DEBUGNAMES, "> debug.names" or die "cannot created debugging config file";
 open DEBUGINIT, "> debug.init" or die "cannot created debugging config file";
 open DEBUGEXIT, "> debug.exit" or die "cannot created debugging config file";
-foreach my $name (keys %debugnames) {
+foreach my $name (keys %debug_names) {
   print DEBUGINIT "DEBUG_OPEN($name)\n";
   print DEBUGEXIT "DEBUG_CLOSE($name)\n";
   print DEBUGNAMES "FILE * _debug_$name = NULL;\n";

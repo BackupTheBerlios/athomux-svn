@@ -1,7 +1,9 @@
-#context pconf: klinux
+#context pconf: !.*, klinux
+
+include target-include.klinux
 
 $(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/printf.o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o
 
-$(pconf)/$(cconf)/athomux.linked.o: $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras)
+$(pconf)/$(cconf)/athomux.linked.o: $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras)
 
 $(pconf)/$(cconf)/$(target).o: $(target).c

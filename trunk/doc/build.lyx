@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.06, 25 Nov 2004
+Version 0.07, 14 Dec 2004
 \layout Standard
 
 
@@ -164,18 +164,6 @@ pconf_name
 cconf_name
 \emph default 
 ).
-\layout Standard
-
-Hint: you may use shell wildcards for specifying multiple targets, e.g.
- 
-\family typewriter 
-default/*/*
-\family default 
- or 
-\family typewriter 
-*/debug/*
-\family default 
- or similar.
 \layout Subsection
 
 Target specific Options
@@ -243,7 +231,7 @@ make
 \align left 
 Example:
 \family typewriter 
- make klinux-i386_LINSRC=/usr/src/linux USE_MODPOST=1
+ make klinux-i386 LINSRC=/usr/src/linux USE_MODPOST=1
 \layout Section
 
 Configuration
@@ -723,10 +711,22 @@ target.*
  can be restricted by filtering.
 \layout Subsubsection
 
-Filtering at Brick Level
+General Filters
 \layout Standard
 
 In a 
+\family typewriter 
+pconf.*
+\family default 
+, 
+\family typewriter 
+cconf.*
+\family default 
+, 
+\family typewriter 
+target.*
+\family default 
+ oder 
 \family typewriter 
 *.ath
 \family default 
@@ -735,83 +735,138 @@ In a
 \noindent 
 
 \family typewriter 
-context pconf: mypconfname1, mypconfname2, mypconfname3
+#context pconf: 
+\family default 
+\emph on 
+regex-list
 \layout Standard
 \noindent 
 
 \family typewriter 
-context cconf: mycconfname1, mycconfname2, mycconfname3
+#context cconf: 
+\family default 
+\emph on 
+regex-list
+\layout Standard
+\noindent 
+
+\family typewriter 
+#context target: 
+\family default 
+\emph on 
+regex-list
+\layout Standard
+\noindent 
+
+\family typewriter 
+#context ath: 
+\family default 
+\emph on 
+regex-list
 \layout Standard
 
 (see also the Athomux Preprocessor Guide).
- This way, you can explicitly specify in which pconfs and cconfs the brick
- should appear.
-\layout Standard
-
-This kind of specification is also called a positive-list, because any pconf
- or cconf not mentioned in the list will be excluded.
- A negative-list is also possible by prefixing each name with an exclamation
- mark.
- As soon as at lease one exclamation mark appears in a list, the brick will
- be 
+ The 
 \emph on 
-included
+regex-list
 \emph default 
- in any pconf or cconf 
+ is a comma-separated list of Perl regular expressions, each of them potentially
+ matching the 
 \emph on 
-not
+name
 \emph default 
- appearing in the list.
+ part of a 
+\family typewriter 
+pconf.
+\family default 
+\emph on 
+name
+\emph default 
+, 
+\family typewriter 
+cconf.
+\family default 
+\emph on 
+name
+\emph default 
+, 
+\family typewriter 
+target.
+\family default 
+\emph on 
+name
+\emph default 
+, or 
+\emph on 
+name
+\family typewriter 
+\emph default 
+.ath
+\family default 
+ as a whole.
+ When a regex is preceded by 
+\family typewriter 
+!
+\family default 
+ (exclamation mark), the corresponding combination of the current source
+ file with the matching source file will be excluded from, otherwise it
+ will be included to the combinations which should be built.
+ The rules are processed 
+\emph on 
+in sequence
+\emph default 
+, such that later regexes will override the effects of earlier regexes.
 \layout Standard
 
-When a brick is not built for a pconf, the corresponding pconf rules will
- not be included in 
+HINT: if you want to exclude everything except a specific configuration,
+ you can write a rule like 
 \family typewriter 
-defs.make
+context pconf: !.*, ulinux
 \family default 
- (so the preprocessor will not be called for it), and it will not appear
- in the list of instantiable bricks at 
+ which first excludes all existing pconfs, and then selectively adds exactly
+ 
 \family typewriter 
-control_*
+pconf.ulinux
 \family default 
- implementations.
- When it is not built for a cconf, the cconf rules for invoking the C compiler
- will not be included, and it will also not appear in 
-\family typewriter 
-control_*
-\family default 
-.
-\layout Subsubsection
-
-Filtering at Config-File Level
+ to the combinations which should be built.
 \layout Standard
 
-In a 
+IMPORTANT: when you specifiy contradictory rules (e.g.
+ in 
+\family typewriter 
+target.A
+\family default 
+ you exclude 
+\family typewriter 
+B.ath
+\family default 
+ while and in 
+\family typewriter 
+B.ath
+\family default 
+ you include 
+\family typewriter 
+target.A
+\family default 
+), the following precedence rules apply: 
+\family typewriter 
+pconf.*
+\family default 
+ < 
 \family typewriter 
 cconf.*
 \family default 
- file, you can use comment lines of the form
-\layout Standard
-\noindent 
-
-\family typewriter 
-# context pconf: 
-\family default 
-\emph on 
-namelist...
-\layout Standard
-
-In 
+ < 
 \family typewriter 
 target.*
 \family default 
- files, you can analogously specify both pconf and cconf filters for restricting
- the cartesian product of pconfs, cconfs and targets which will be considered
- for creation of makefile rules.
-\layout Standard
-
-Filtering at config-file level yields a kind of global restriction, valid
- for all bricks.
+ < 
+\family typewriter 
+*.ath
+\family default 
+.
+ A regex rule in a higher file will always supersede a rule from a lower
+ one.
 \layout Subsubsection
 
 Generic Shell Filters
@@ -871,76 +926,6 @@ As an example, you may check for a particular processor type by
 n
 \family default 
 .
-\layout Subsubsection
-
-Filtering the Default Build Targets
-\layout Standard
-
-By using the keyword 
-\family typewriter 
-defaultbuild
-\family default 
- in place of the keyword 
-\family typewriter 
-context
-\family default 
- in any of the above cases, you can specify that the corresponding filter
- rule will only affect the 
-\emph on 
-default
-\emph default 
- target 
-\emph on 
-list
-\emph default 
- when you just type 
-\family typewriter 
-make
-\family default 
- without parameters.
- For creation of all other parts of 
-\family typewriter 
-defs.make
-\family default 
-, the 
-\family typewriter 
-defaultbuild
-\family default 
- statement has no effect.
- 
-\layout Standard
-
-This means, you can explicitly specify anything filtered out by 
-\family typewriter 
-defaultbuild
-\family default 
- as an explicit target as long as you did not filter it out by the normal
- 
-\family typewriter 
-context
-\family default 
- filters.
-\layout Subsubsection
-
-Regular Expressions for Filtering
-\layout Standard
-
-(Currently experimental) In the name lists, you can use Perl regular expressions
- for matching a set of pconf or cconf names.
- However notice that the regular expression must match the 
-\emph on 
-whole
-\emph default 
- name, i.e.
- it is treated as having an implicit 
-\family typewriter 
-^
-\family default 
- at the start and a 
-\family typewriter 
-$
-\family default 
- at the end.
 \layout Subsection
 
 Sub-Configurations

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#undef __x86_64__
 #include <linux/elf.h>
 #include <sys/mman.h>
 #include <sys/stat.h>

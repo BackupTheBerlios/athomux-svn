@@ -2,7 +2,7 @@
   Copyright: Florian Niebling
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: ulinux
+context pconf: !.*, ulinux
 
 brick #file_syscalls_ulinux
 purpose Linux syscall implementation for Athomux processes in Linux userspace implementation of "read" and "write" syscalls on file descriptors

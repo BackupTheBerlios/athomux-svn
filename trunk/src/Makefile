@@ -37,7 +37,7 @@ endif
 */common.c : common.ath
 	# no real dependency
 
-%/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h %/*/defs.h %/*/loaders.h
+%/*/*/*.o: %/control*.c %/control*.h %/*/*/defs.h %/*/*/loaders.h
 
 .PHONY: clean
 clean:

@@ -1,11 +1,13 @@
-#context pconf: ulinux
+#context pconf: !.*, ulinux
+
+include target-include.ulinux
 
 GCC_LIB = `gcc -print-libgcc-file-name`
 
 $(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o /usr/local/lib/libfuse.a
 
-$(pconf)/$(cconf)/athomux_ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras) $(pconf)/$(cconf)/loader_exec $(pconf)/$(cconf)/loader_fork
-	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<
+$(pconf)/$(cconf)/athomux-ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) $(pconf)/$(cconf)/loader_exec $(pconf)/$(cconf)/loader_fork
+	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<
 
 $(pconf)/$(cconf)/%.o: %.S
 	$(CC) -c $< -o $@

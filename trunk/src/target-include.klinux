@@ -1,0 +1,3 @@
+$(pconf)/$(cconf)/extra_$(target)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
+	$(CC) -c -I$(pconf)/$(cconf) -I$(pconf)/$(cconf)/extra_$(target) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
+

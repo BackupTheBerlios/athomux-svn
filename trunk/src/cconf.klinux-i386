@@ -1,4 +1,4 @@
-#context pconf: klinux
+#context pconf: !.*, klinux
 
 include cconf-include.klinux
 
