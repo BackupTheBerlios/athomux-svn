@@ -1,0 +1,96 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+strategy brick #adapt_strat
+purpose convert $transfer operations into strategy operations
+desc
+  Provisionary implementation
+enddesc
+
+input :<strat
+
+output :>control
+
+operation $op
+{
+  @=call :<strat$op @args;
+}
+
+operation $transfer
+{
+  if(@direction == direct_read) {
+    // NYI .....
+    @=call :<strat$op @args;
+  } else if(@direction == direct_write) {
+    const char * buf = MAKE_PTR(@phys_addr);
+    struct conn_info conn1 = { .conn_addr = @log_addr, };
+    struct conn_info conn2 = {};
+    @conn1 = &conn1;
+    @conn2 = &conn2;
+    for(;;) {
+      @success = FALSE;
+      int code = scan_multi(&buf, strat_keywords, strat_keylens, scod_max);
+      char op;
+      switch(code) {
+      case scod_brick:
+        op = scan_op(&buf);
+        scan_table_copy(&buf, id_table, @name, sizeof(@name));
+        if(op == ':') {
+          @=call :<strat$instbrick @args;
+          if(!@success) {
+            return;
+          }
+        } else if(op == '/') { // delete it
+          @=call :<strat$deinstbrick @args;
+          return;
+        }
+        skip_line(&buf);
+        continue;
+      case scod_input:
+        //@.warn("input translation NYI");
+      case scod_output:
+        op = scan_op(&buf);
+        if(!scan_connstr(&buf, &conn1)) {
+          return;
+        }
+        if(op == ':') {
+          @=call $instconn @args;
+        } else if(op == '/') {
+          @=call $deinstconn @args;
+        } else {
+          goto skip;
+        }
+      test:
+        if(!@success)
+          return;
+      skip:
+        skip_line(&buf);
+        continue;
+      case scod_connect:
+        if(!scan_connstr(&buf, &conn1)) {
+          return;
+        }
+        op = scan_op(&buf);
+        if(op == '/') { // delete
+	  @=call $disconnect @args;
+          goto test;
+        }
+        if(op != ':') {
+          goto skip;
+        }
+        while(scan_connstraddr(&buf, &conn2)) {
+          @success = FALSE;
+	  @=call $connect @args;
+          if(!@success) {
+            return;
+          }
+        }
+        goto skip;
+      default:
+        @success = TRUE;
+      }
+      return;
+    }
+  }
+}

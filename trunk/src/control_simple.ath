@@ -635,6 +635,9 @@ init {
 
 ///////////////////////////////////////////////////////////////////////////
 
+instance #adapt_strat as adapt;
+wire :<strat as :>control;
+
 input :<hook
 
 output :>control
@@ -892,6 +895,11 @@ operation $transfer
       @success = TRUE;
     }
   } else if(@direction == direct_write) {
+    trace("interpreting '%s'\n", (char*)MAKE_PTR(@phys_addr));
+#if 1
+    @=call #.adapt:>control$transfer @args;
+#else
+    // this should disappear!
     char * buf = MAKE_PTR(@phys_addr);
     int len = (int)@log_len;
     int pos;
@@ -953,6 +961,7 @@ operation $transfer
       if(!@success)
         return;
     }
+#endif
   }
   @success = TRUE;
 }
