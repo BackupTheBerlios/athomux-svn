@@ -17,13 +17,31 @@ my $write_line_directives = 0;
 my $debug_level = 0;
 my $indent_trace = 0;
 
+# macros
+
+%::base_macros = ();
+
+# parameter parsing: allow predefined macros from the command line
+
+sub get_param {
+  for(;;) {
+    my $param = shift @ARGV;
+    return undef unless defined($param);
+    if($param =~ m/^(\w+)\s*=\s*(.*)$/) {
+      create_subst($1, $2, \%::base_macros);
+    } else {
+      return $param;
+    }
+  }
+}
+
 # global vars
 
-my $infile = shift;
+my $infile = get_param();
 die "input file missing" unless defined($infile);
-my $cfile = $infile;
-die "wrong filename format" unless ($cfile  =~ s/\.ath/\.c/);
-$cfile = shift if $ARGV[0];
+my $cfile = get_param();
+$cfile = $infile unless defined($cfile);
+$cfile  =~ s/\.ath/\.c/;
 $cfile =~ m/\/[^\/]+$/;
 my $basedir = $PREMATCH;
 $basedir = "." unless $basedir;
@@ -35,7 +53,6 @@ die "wrong filename format" unless ($prefile  =~ s/\.c/\.pre/);
 my $copyright = "/* generated from $infile\n*/\n";
 my $typetable_max = 64;
 
-%::base_macros = ();
 
 #############################################################################
 

@@ -24,7 +24,7 @@ example
   Cannot be used at all.
 endexample
 
-attr attrname1=1
+attr attrname1=PCONF
 attr attrname2=16:24
 attr attrname3=16:32:8
 

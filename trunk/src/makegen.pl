@@ -43,7 +43,7 @@ sub check_context {
 return 1;
   my ($src, $type, $forwhat) = @_;
   my $context = $contexts{$src} or return 1;
-  if($context =~ m/^#?context\s+$type(?:\s*:)?\s+(.+)\n/m) {
+  if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
     my $found = $1;
     my @list = split /\s*,\s*/, $found;
     my $nr_negative = 0;
@@ -142,6 +142,7 @@ foreach my $pconf (@pconfs) {
   $text .= "$text2\n\n";
   my $all_cconf_objs = "${pconf}_objs=";
   foreach my $cconf (@cconfs) {
+    next unless check_context("cconf.$cconf", "pconf", $pconf);
     $all_cconf_objs .= "\$(${pconf}_${cconf}_objs) ";
     my $text3 = "${pconf}_${cconf}_objs=";
     open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
