@@ -1,0 +1,45 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #userfs_mux_ulinux
+purpose virtual directory of the userspace filesystem
+desc
+
+enddesc
+
+static_header {
+#include <stdio.h>
+#include "types.h" 
+}
+
+input :<state
+
+input :<image[IMAGE_MAX](:2:)
+
+// multiplexer
+output :>mux(:2:)
+
+section (:0:)
+
+
+operation $gettranswait
+{
+  int index = atoi(@param);
+  @=call :<image[index]$gettranswait @args;
+  /*
+  @.check(!@success, "userfs_dir_mux_ulinux:>mux$gettranswait failed\n");
+  */
+}
+
+operation $put
+{
+  int index = atoi(@param);
+  @=call :<image[index]$put @args;
+  /*
+  @.check(!@success, "userfs_dir_mux_ulinux:>mux$put failed\n");
+  */
+}
+

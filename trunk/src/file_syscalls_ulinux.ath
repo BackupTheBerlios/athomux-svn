@@ -1,0 +1,207 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #file_syscalls_ulinux
+purpose Linux syscall implementation for Athomux processes in Linux userspace implementation of "read" and "write" syscalls on file descriptors
+desc
+enddesc
+
+static_header { 
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <time.h>
+
+#include <sys/utsname.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <dirent.h>
+
+#include "types.h"
+#include "sysnum.h"
+}
+
+data {
+  task_struct *task;
+}
+
+/* inputs for posix filedescriptors. possibly connected here
+ * are files, pipes, character devices, network sockets (NYI) */
+input :<fd[FD_MAX]
+
+input :<state
+use PC state;
+
+output :>dummy
+
+operation $output_init
+{
+  @#.task = PC_GET(state, atoi(@param), sizeof(task_struct));
+}
+
+output :>syscall(:3:)
+
+define export TYPE syscall_t "int pid, int syscall, int result, int error";
+define export TYPE read_t from syscall_t "int fd, addr_t buf, size_t count";
+define export TYPE write_t from syscall_t "int fd, addr_t buf, size_t count";
+
+section(:2:)
+
+@.func get_file_size(int fd) => (int filesize) {
+
+  plen_t phys_len;
+  char sbuf[DEFAULT_TRANSFER] = {};
+  @=call :<fd[fd](:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_read) => (@success, phys_len);
+  if (!@success)
+    return;
+  
+  filesize = ((struct ath_stat_t *) sbuf)->stat.size;
+  @success = TRUE;
+}
+
+@.func write_file_size(int fd, int filesize) {
+
+  plen_t phys_len;
+  char sbuf[DEFAULT_TRANSFER] = {};
+  @=call :<fd[fd](:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_read) => (@success, phys_len);
+  if (!@success)
+    return;
+
+  ((struct ath_stat_t *) sbuf)->stat.size = filesize;
+  ((struct ath_stat_t *) sbuf)->desc.desc_attrlen = 32 + sizeof(struct entry_desc);
+  @=call :<fd[fd](:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_write) => (@success, phys_len);
+  if (!@success)
+    return;
+
+  @success = TRUE;
+}
+
+
+@.func athomux_syscall_read(int fd, void *buf, size_t count) => (int res, int err) {
+  paddr_t phys_addr;
+  plen_t phys_len;
+
+  if (!@#.task->fd[fd].addr) {
+    res = -1;
+    err = -EBADF;
+    return;
+  }
+
+  if (@#.task->fd[fd].type == FILE_FILE) {
+
+    int size;
+    get_file_size(fd) => (size);
+    if (!@success) {
+      res = -1;
+      err = EINVAL;
+      return;
+    }
+    if (@#.task->fd[fd].filepos >= size) {
+      res = 0;
+      err = 0;
+      return;
+    }
+    @=call :<fd[fd](:0:)$gettranswait (@#.task->fd[fd].filepos, DEFAULT_TRANSFER, FALSE) => (@success, phys_addr, phys_len);
+
+    if (@success) {
+      if (@#.task->fd[fd].filepos + count > size) {
+	res = size - @#.task->fd[fd].filepos;
+      } else {
+	res = phys_len;
+      }
+      memcpy(buf, MAKE_PTR(phys_addr), res);
+      @=call :<fd[fd](:0:)$put (@#.task->fd[fd].filepos, DEFAULT_TRANSFER) => (@success);
+      @#.task->fd[fd].filepos += res;
+    } else {
+      res = 0;
+    }
+  } else if (@#.task->fd[fd].type == FILE_CHAR) {
+    @=call :<fd[fd](:0:)$gettranswait (@#.task->fd[fd].filepos, count, FALSE) => (@success, phys_addr, phys_len);
+    if (@success) {
+      res = phys_len;
+      memcpy(buf, MAKE_PTR(phys_addr), res);
+      @=call :<fd[fd](:0:)$put (@#.task->fd[fd].filepos, count) => (@success);
+      @#.task->fd[fd].filepos += res;
+    } else {
+      res = 0;
+    }    
+  }
+  
+}
+
+@.func athomux_syscall_write(int fd, const void *buf, size_t count) => (int res, int err) {
+  plen_t phys_len;
+  paddr_t phys_addr;
+  if (!@#.task->fd[fd].addr)
+    return;
+
+  if (@#.task->fd[fd].type == FILE_CHAR) {
+    @=call :<fd[fd](:0:)$get (0, count, TRUE) => (@success, phys_addr, phys_len);
+    if (@success == TRUE) {
+      memcpy(MAKE_PTR(phys_addr), buf, phys_len);
+      @=call :<fd[fd](:0:)$put (0, phys_len) => (@success);
+      res = phys_len;
+    } else {
+      res = 0;
+    }
+  } else if (@#.task->fd[fd].type == FILE_FILE) {
+    @=call :<fd[fd](:0:)$createget (@#.task->fd[fd].filepos, DEFAULT_TRANSFER, FALSE) => (@success, phys_addr, phys_len);
+    void *ptr = MAKE_PTR(phys_addr);
+    memcpy(ptr, buf, count);
+    res = count;
+    @=call :<fd[fd](:0:)$put (@#.task->fd[fd].filepos, DEFAULT_TRANSFER, prio_background) => (@success);
+    @#.task->fd[fd].filepos += count;
+
+    // update stat entry
+    int size;
+    get_file_size(fd) => (size);
+    if (@#.task->fd[fd].filepos > size) {
+      write_file_size(fd, @#.task->fd[fd].filepos);
+      if (!@success)
+	return;
+    }
+  }
+}
+
+operation $trans
+{
+  void *ptr = PC_GET(state, @log_addr, @log_len);
+  int res, err;
+
+  switch (ptr@*syscall_t->syscall) {
+  case __NR_read: {
+    int fd = ptr@*read_t->fd;
+    int count = ptr@*read_t->count;
+    addr_t buf_addr = ptr@*read_t->buf;
+    void * buf = PC_GET(state, buf_addr, count);
+
+    athomux_syscall_read(fd, buf, count) => (res, err);
+    ptr@*read_t->result = res;
+    ptr@*read_t->error = err;
+    return;
+  }
+
+  case __NR_write: {
+    int fd = ptr@*write_t->fd;
+    int count = ptr@*write_t->count;
+    addr_t buf_addr = ptr@*write_t->buf;
+    void * buf = PC_GET(state, buf_addr, count);
+
+    athomux_syscall_write(fd, buf, count) => (res, err);
+    
+    ptr@*write_t->result = res;
+    ptr@*write_t->error = err;
+    return;
+  }
+
+  default: 
+    break;
+  }
+}

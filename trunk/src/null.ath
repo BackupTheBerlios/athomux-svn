@@ -1,0 +1,24 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #null
+purpose discard all input
+desc
+enddesc
+
+output :>out(:2:)
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+operation $op
+{
+  @success = FALSE;
+}
+
+input :<in(:2:)

@@ -1,0 +1,172 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #copy_on_write
+purpose provide two copies of the input nest. when one copy is changed, the other is not affected.
+desc
+    The input nest is divided into blocks that are stored in a hashtable.
+    This implementation is vastly inefficient and wastes space.
+    get_block_addr(1|2) and add_block_addr(1|2) should be converted to use macros.
+enddesc
+
+static_header {
+#include "types.h"
+
+static inline int block_hash_func(addr_t addr) {
+  return ((addr >> 16) % 4096);
+}
+}
+
+data {
+  addr_t hash1[4096];
+  addr_t hash2[4096];
+}
+
+init {
+  memset(@#.hash1, 0, 4096 * sizeof(addr_t));
+  memset(@#.hash2, 0, 4096 * sizeof(addr_t));
+}
+
+instance #device_mem_ulinux as mem;
+wire ##mem:>out as :<tmp;
+
+input :<tmp
+use PC mem;
+
+input :<in
+
+output :>out1(:2:)
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+@.func get_block_addr1(addr_t a) => (addr_t b) {
+
+  int hash = block_hash_func(a);
+  if (!@#.hash1[hash])
+    return;
+
+  block_hash_entry *e = PC_GET(mem, @#.hash1[hash], sizeof(block_hash_entry));
+  for (; e && (e->log_addr != a); e = PC_GET(mem, e->next, sizeof(block_hash_entry)));
+  if (e && e->log_addr == a) {
+    b = e->block_addr;
+    @success = TRUE;
+  }
+}
+
+@.func add_block_addr1(addr_t log_addr, addr_t block_addr) {
+
+  addr_t addr;
+  int hash = block_hash_func(log_addr);
+  block_hash_entry *new_entry = PC_ALLOC(mem, sizeof(block_hash_entry)) => (addr);
+  new_entry->log_addr = log_addr;
+  new_entry->block_addr = block_addr;
+  new_entry->next = @#.hash1[hash];
+  @#.hash1[hash] = addr;
+  @success = TRUE;
+}
+
+operation $gettranswait
+{
+  addr_t addr;
+  @phys_len = @log_len;
+  if (@forwrite == FALSE) {
+    get_block_addr1(@log_addr) => (addr);
+    if (@success) {
+      void *ptr = PC_GET(mem, addr, @log_len);
+      @phys_addr = MAKE_PADDR(ptr);
+    } else {
+      @=call :<in$gettranswait @args : @param;
+    }
+  } else {
+    addr_t addr;
+    get_block_addr1(@log_addr) => (addr);
+    if (@success) {
+      void *ptr = PC_GET_DIRTY(mem, addr, @log_len);
+      @phys_addr = MAKE_PADDR(ptr);
+    } else {
+      addr_t new_block;
+      void *ptr = PC_ALLOC(mem, 4096) => (new_block);
+      add_block_addr1(@log_addr, new_block);
+      @phys_addr = MAKE_PADDR(ptr);
+      @success = TRUE;
+    }
+  }
+}
+
+operation $put
+{
+  @success = TRUE;
+}
+
+output :>out2(:2:)
+
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+@.func get_block_addr2(addr_t a) => (addr_t b) {
+
+  int hash = block_hash_func(a);
+  if (!@#.hash2[hash])
+    return;
+
+  block_hash_entry *e = PC_GET(mem, @#.hash2[hash], sizeof(block_hash_entry));
+  for (; e && (e->log_addr != a); e = PC_GET(mem, e->next, sizeof(block_hash_entry)));
+  if (e && e->log_addr == a) {
+    b = e->block_addr;
+    @success = TRUE;
+  }
+}
+
+@.func add_block_addr2(addr_t log_addr, addr_t block_addr) {
+
+  addr_t addr;
+  int hash = block_hash_func(log_addr);
+  block_hash_entry *new_entry = PC_ALLOC(mem, sizeof(block_hash_entry)) => (addr);
+  new_entry->log_addr = log_addr;
+  new_entry->block_addr = block_addr;
+  new_entry->next = @#.hash2[hash];
+  @#.hash2[hash] = addr;
+  @success = TRUE;
+}
+
+operation $gettranswait
+{
+  addr_t addr;
+  @phys_len = @log_len;
+  if (@forwrite == FALSE) {
+    get_block_addr2(@log_addr) => (addr);
+    if (@success) {
+      void *ptr = PC_GET(mem, addr, @log_len);
+      @phys_addr = MAKE_PADDR(ptr);
+    } else {
+      @=call :<in$gettranswait @args : @param;
+    }
+  } else {
+    addr_t addr;
+    get_block_addr2(@log_addr) => (addr);
+    if (@success) {
+      void *ptr = PC_GET_DIRTY(mem, addr, @log_len);
+      @phys_addr = MAKE_PADDR(ptr);
+    } else {
+      addr_t new_block;
+      void *ptr = PC_ALLOC(mem, 4096) => (new_block);
+      add_block_addr2(@log_addr, new_block);
+      @phys_addr = MAKE_PADDR(ptr);
+      @success = TRUE;
+    }
+  }
+}
+
+operation $put
+{
+  @success = TRUE;
+}

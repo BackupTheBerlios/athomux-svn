@@ -1,0 +1,239 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #fuse_ulinux
+purpose implementation of the FUSE interface to provide a user space filesystem that contains Athomux "nest"s as files.
+desc
+    The address space of a uLinux process (which is an Athomux "nest") is represented as
+    a pseudo file in the Linux filesystem. These files can be mmap()ed into a Linux 
+    process. read() and write() on the mmap()ed files is redirected through the 
+    userspace filesystem to call $trans on an Athomux "nest".
+enddesc
+
+static_header { 
+#include <unistd.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include "fuse.h"
+#include "types.h"
+}
+
+data {
+  userfs_struct *userfs_data;
+}
+
+input :<lock
+
+input :<state
+use PC state;
+
+input :<image(:2:)
+
+output :>main
+
+operation $output_init
+{
+  int fuse_readlink(const char *path, char *buf, size_t size) {
+    @.rawtrace(fuse, "fuse_readlink [%s]\n", path);
+    return 0;
+  }
+	
+  int fuse_mkdir(const char *path, mode_t mode) {
+    @.rawtrace(fuse, "fuse_mkdir [%s]\n", path);
+    return 0;
+  }
+	
+  int fuse_unlink(const char *path) {
+    @.rawtrace(fuse, "fuse_unlink [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_rmdir(const char *path) {
+    @.rawtrace(fuse, "fuse_rmdir [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_symlink(const char *from, const char *to) {
+    @.rawtrace(fuse, "fuse_symlink [%s] [%s]\n", from, to);
+    return 0;
+  }
+
+  int fuse_rename(const char *from, const char *to) {
+    @.rawtrace(fuse, "fuse_rename [%s] [%s]\n", from, to);
+    return 0;
+  }
+
+  int fuse_link(const char *from, const char *to) {
+    @.rawtrace(fuse, "fuse_link [%s] [%s]\n", from, to);
+    return 0;
+  }
+
+  int fuse_chmod(const char *path, mode_t mode) {
+    @.rawtrace(fuse, "fuse_chmod [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_chown(const char *path, uid_t uid, gid_t gid) {
+    @.rawtrace(fuse, "fuse_chown [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_truncate(const char *path, off_t size) {
+    @.rawtrace(fuse, "fuse_truncate [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_utime(const char *path, struct utimbuf *buf) {
+    @.rawtrace(fuse, "fuse_utime [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_statfs(struct fuse_statfs *fst) {
+    @.rawtrace(fuse, "fuse_statfs\n");
+    return 0;
+  }
+
+  int fuse_release(const char *path, int flags) {
+    @.rawtrace(fuse, "fuse_release [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_fsync(const char *path, int isdatasync) {
+    @.rawtrace(fuse, "fuse_fsync [%s]: %d\n", path, isdatasync);
+    return 0;
+  }
+
+  int fuse_getattr(const char *path, struct stat *stbuf) {
+
+    @.rawtrace(fuse, "fuse_getattr [%s]\n", path);
+
+    memset(stbuf, 0, sizeof(struct stat));
+
+    if (strcmp(path, "/") == 0) {
+
+      stbuf->st_mode = S_IFDIR | 0777;
+      stbuf->st_nlink = 2;
+      @.rawtrace(fuse, "found /\n");
+      return 0;
+    } 
+
+    stbuf->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    stbuf->st_size = IMAGE_SIZE;
+    stbuf->st_nlink = 1;
+    return 0;
+  }
+
+
+  /**
+   * get the directory entries
+   */
+  int fuse_getdir(const char *path, fuse_dirh_t h,
+		     fuse_dirfil_t filler) {
+
+    @.rawtrace(fuse, "fuse_getdir\n");
+
+    if (strcmp(path, "/") != 0)
+      return -ENOENT;
+
+    filler(h, ".", 0);
+    filler(h, "..", 0);
+
+    return 0;
+  }
+
+  int fuse_open(const char *path, int flags) {
+
+    @.rawtrace(fuse, "fuse_open [%s]\n", path);
+    return 0;
+  }
+
+  int fuse_read(const char *path, char *buf,
+		size_t size, off_t offset) {
+    @.rawtrace(fuse, "fuse_read [%s] [%08x]\n", path, (int) offset + IMAGE_START);
+    if (size != DEFAULT_TRANSFER)
+      @.abort("fuse_read: size = %d\n", size);
+
+    memset(buf, 0, size);
+    success_t success;
+    paddr_t phys_addr;
+    plen_t phys_len;
+
+    @=call :<image$gettranswait ((addr_t) offset + IMAGE_START, size, FALSE) : (path + 1) => (success, phys_addr, phys_len);
+    if (!success) {
+      @.rawtrace(fuse, "fuse_read failed\n");
+      return -ENOENT;
+    }
+
+    memcpy(buf, MAKE_PTR(phys_addr), phys_len);
+    @=call :<image$put ((addr_t) offset + IMAGE_START, size, prio_none) : (path + 1) => (success);
+
+    return size;
+    return phys_len;
+  }
+
+  int fuse_write(const char *path, const char *buf,
+		    size_t size, off_t offset) {
+    @.rawtrace(fuse, "fuse_write [%s] [%08x]\n", path, (int) offset + IMAGE_START);
+
+    success_t success;
+    paddr_t phys_addr;
+    plen_t phys_len;
+
+    @=call :<image$gettranswait ((addr_t) offset + IMAGE_START, size, TRUE) : (path + 1) => (success, phys_addr, phys_len);
+    if (!success) {
+      @.rawtrace(fuse, "fuse_write failed\n");
+      return size;
+      return -ENOENT;
+    }
+    memcpy(MAKE_PTR(phys_addr), buf, phys_len);
+    @=call :<image$put ((addr_t) offset + IMAGE_START, size, prio_normal) : (path + 1) => (success);
+
+    return size;
+  }
+
+  int fuse_mknod(const char *path, mode_t mode, dev_t rdev) {
+
+    @.rawtrace(fuse, "fuse_mknod\n");
+    return 0;
+  }
+
+  struct fuse_operations fuse_ulinux_operations = {
+
+    .readlink     = fuse_readlink,
+    .getdir	  = fuse_getdir,
+    .getattr      = fuse_getattr,
+    .mknod	  = fuse_mknod,
+    .mkdir	  = fuse_mkdir,
+    .symlink      = fuse_symlink,
+    .unlink	  = fuse_unlink,
+    .rmdir	  = fuse_rmdir,
+    .rename	  = fuse_rename,
+    .link	  = fuse_link,
+    .chmod	  = fuse_chmod,
+    .chown	  = fuse_chown,
+    .truncate     = fuse_truncate,
+    .utime	  = fuse_utime,
+    .open	  = fuse_open,
+    .read	  = fuse_read,
+    .write	  = fuse_write,
+    .statfs	  = fuse_statfs,
+    .release      = fuse_release,
+    .fsync	  = fuse_fsync
+  };
+
+  @#.userfs_data = PC_GET(state, atoi(@param), sizeof(userfs_struct));
+
+  char *argv[3] = { "", @#.userfs_data->path, NULL };
+  fuse_main(2, argv, &fuse_ulinux_operations);
+
+  // FUSE has started, continue the boot process
+  // @=call :<lock(:0:)$unlock [0] ((paddr_t) @#.userfs_data, 1) => (@success);
+
+  @success = TRUE;
+}

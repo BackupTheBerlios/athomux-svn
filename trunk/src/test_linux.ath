@@ -2,8 +2,6 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
-
 brick #test_linux
 purpose Some basic testing of filesystem operations
 desc
@@ -21,21 +19,24 @@ static_data {
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "types.h"
 }
 
 data {
   int unix_file;
+  char file_name[256];
 }
 
 init {
+
+  snprintf(@#.file_name, 256, @param);
   @#.unix_file = open(@param, O_RDONLY, S_IRUSR|S_IWUSR);
   if(@#.unix_file < 0) {
-    //@.abort("file '%s' open error: %s\n", @param, strerror(errno));
-    exit(-1);
   }
 }
 
-input :<in
+input :<in(:3:)
 
 output :>out
 
@@ -50,11 +51,10 @@ operation $output_init
     return;
   }
   int repeat = 0;
-  int compare = 0;
   addr_t log_addr = 0;
-  int i;
   char buf[DEFAULT_TRANSFER];
   lseek(@#.unix_file, 0, SEEK_SET);
+
   for(;;) {
     void * ptr;
     int count;
@@ -81,16 +81,31 @@ operation $output_init
       break;
     }
   }
-  printf("wrote %d blocks\n", repeat);
+  struct stat stat_buf;
+  stat(@#.file_name, &stat_buf);
+  ath_stat_t ath_buf = { { .desc_attrlen = 256 + sizeof(struct entry_desc) } , { .type = FILE_FILE, .mode = 0666 | S_IFREG, .size = stat_buf.st_size } };
+
+  int len = strlen(@#.file_name);
+  for (; @#.file_name[len] != '/'; len --);
+
+  snprintf(ath_buf.stat.name, 64, &@#.file_name[len + 1]);
+  plen_t phys_len;
+  @=call :<in(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(&ath_buf), direct_write) => (@success, phys_len);
+  @.check (!@success, " could not write stat of file [%s]\n", @#.file_name);
+
+  char sbuf[DEFAULT_TRANSFER] = {};
+  @=call :<in(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_read) => (@success, phys_len);
+  @.check(!@success, " could not read stat of file [%s]\n", @#.file_name);
+  //printf(" file [%s] size [%08lx]\n", ((struct ath_stat *) sbuf)->stat.name, ((struct ath_stat *) sbuf)->stat.size);
 
 #if 0
+  printf("wrote %d blocks\n", repeat);
   { success_t success;
     @=call :<in$move (0, DEFAULT_TRANSFER*10, DEFAULT_TRANSFER*200) => (success);
     @.check(!success, "first move failed");
     @=call :<in$move (DEFAULT_TRANSFER*200, DEFAULT_TRANSFER*10, -DEFAULT_TRANSFER*200) => (success);
     @.check(!success, "second move failed");
   }
-#endif
 
   lseek(@#.unix_file, 0, SEEK_SET);
   log_addr = 0;
@@ -125,7 +140,9 @@ operation $output_init
     }
   }
   printf("correct blocks: %d\n", compare);
+#endif
 
+#if 0
   if(atoi(@param)) {
     struct timespec t0, t1;
     printf("------------------------------------\n");
@@ -152,6 +169,7 @@ operation $output_init
     printf("get   time=%11lld\n", ((long long)t1.tv_sec-(long long)t0.tv_sec)*1000LL + ((long long)t1.tv_nsec-(long long)t0.tv_nsec)/1000000LL);
     printf("------------------------------------\n");
   }
+#endif
   @success = TRUE;
 }
 

@@ -1,0 +1,146 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #mmu_ulinux
+purpose dummy mmu for linux mmu "hardware"
+desc
+  Create a new linux process by forking the athomux process. The athomux process is then
+  unmapped and the new athomux user process mapped in from the userspace filesystem.
+enddesc
+
+static_header { 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include "static_loader.h"
+
+#include "types.h"
+}
+
+data {
+  task_struct *task;
+}
+
+input :<lock
+
+input :<task
+use PC task;
+
+input :<image(:2:)
+
+output :>img_out(:2:)
+
+section (:ALL:)
+
+operation $gettranswait,$transwait,$put
+{  
+  //printf("mmu_ulinux operation [%s]\n", op_names[@op_code]);
+  @=call :<image(:@sect_code:)$op @args : @param;
+}
+
+output :>dummy
+
+
+// fork a process, mmap the image into the address space, goto start
+operation $output_init
+{
+  //printf("mmu_ulinux aram %x\n", @param);
+  @#.task = PC_GET(task, atoi(@param), sizeof(task_struct));
+
+  @.rawtrace(strategy, "mmu_ulinux: exec [%s], userfs: %d, entry: [%08ld]\n", @#.task->name, @#.task->userfs_index, @#.task->entry);
+
+  // wait for syscall_ulinux to create the syscall pipes
+  @=call :<lock(:0:)$lock [1] (@#.task->lock, 1) => (@success);
+  @=call :<lock(:0:)$unlock [1] (@#.task->lock, 1) => (@success);
+
+  int id = fork();
+  if (!id) {
+    //sleep(2);
+    if (@#.task->type == PROCESS_EXEC) {
+
+      int userfs_id = @#.task->userfs_index;
+      int argc = 5 + @#.task->argc;
+      char *argv[argc + 1];
+      argv[0] = malloc(12);
+      sprintf(argv[0], "athomux");     // the name of the calling program
+      argv[1] = malloc(12);
+      sprintf(argv[1], "loader_exec"); // the name of the image loader
+      argv[2] = (char *) malloc(10);
+      sprintf(argv[2], "%ld", @#.task->entry); // the entry point of the image
+      argv[3] = (char *) malloc(256);
+      sprintf(argv[3], "%s/%012d", ATHOMUX_ULINUX_USERFS, userfs_id); // image name (index in the userfs image table)
+      argv[4] = (char *) malloc(strlen(@#.task->name) + 1);
+      sprintf(argv[4], "%s", @#.task->name);   // the name (argv[0]) of the process
+      // copy argv, strip argv[0], the name of the process
+      int index;
+      for (index = 5; index < argc; index ++)
+	argv[index] = PC_GET(task, @#.task->argv[index - 5], 256);
+
+      argv[argc] = 0;
+
+      int envc = 1;
+      char *env[2] = { "PATH=/usr/bin", 0 };
+      
+      close(3);
+      close(4);
+      
+      char sys[256];
+      char ret[256];
+      sprintf(sys, "%s/%012d/athomux_syscall", ATHOMUX_ULINUX_SYSCALLS, userfs_id);
+      sprintf(ret, "%s/%012d/athomux_return", ATHOMUX_ULINUX_SYSCALLS, userfs_id);
+      @.rawtrace(strategy, "mmu_ulinux process syscall: [%s]\n", sys);
+
+      int syscall_pipe = open(sys, O_WRONLY, 0);
+      int return_pipe = open(ret, O_RDONLY, 0);
+
+      load_static(argc, argv, envc, env);
+    } else if (@#.task->type == PROCESS_FORK) {
+
+      int userfs_id = @#.task->userfs_index;
+      int argc = 6;
+      char *argv[argc + 1];
+      argv[0] = malloc(12);
+      sprintf(argv[0], "athomux");     // the name of the calling program
+      argv[1] = malloc(12);
+      sprintf(argv[1], "loader_fork"); // the name of the image loader
+      argv[2] = (char *) malloc(10);
+      sprintf(argv[2], "%ld", @#.task->bp); // the base pointer
+      argv[3] = (char *) malloc(10);
+      sprintf(argv[3], "%ld", @#.task->sp); // the stack pointer
+      argv[4] = (char *) malloc(10);
+      sprintf(argv[4], "%ld", @#.task->entry); // the entry point 
+      argv[5] = (char *) malloc(256);
+      sprintf(argv[5], "%s/%012d", ATHOMUX_ULINUX_USERFS, userfs_id); // image name (process id)
+
+      argv[argc] = 0;
+
+      int envc = 1;
+      char *env[2] = { "PATH=/usr/bin", 0 };
+
+      close(3);
+      close(4);
+
+      char sys[256];
+      char ret[256];
+      sprintf(sys, "%s/%012d/athomux_syscall", ATHOMUX_ULINUX_SYSCALLS, userfs_id);
+      sprintf(ret, "%s/%012d/athomux_return", ATHOMUX_ULINUX_SYSCALLS, userfs_id);
+      @.rawtrace(strategy, "mmu_ulinux process syscall: [%s]\n", sys);
+
+      int syscall_pipe = open(sys, O_WRONLY, 0);
+      int return_pipe = open(ret, O_RDONLY, 0);
+
+      load_static(argc, argv, envc, env);
+    }
+  }
+
+  @#.task->linux_pid = id;
+  @success = TRUE;
+}
+
+operation $op
+{
+}

@@ -1,0 +1,20 @@
+#context pconf: ulinux
+
+GCC_LIB = `gcc -print-libgcc-file-name`
+
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o /usr/local/lib/libfuse.a
+
+$(pconf)/$(cconf)/athomux_ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras) $(pconf)/$(cconf)/loader_exec $(pconf)/$(cconf)/loader_fork
+	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<
+
+$(pconf)/$(cconf)/%.o: %.S
+	$(CC) -c $< -o $@
+
+$(pconf)/$(cconf)/loader_%.o: $(pconf)/loader_%.c types.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(pconf)/$(cconf)/loader_%: $(pconf)/$(cconf)/loader_%.o $(pconf)/$(cconf)/go_to_start_%.o
+	$(LD) -Bstatic -Ttext=0x04000000 -o $@ $^ /usr/lib/libc.a $(GCC_LIB)
+
+$(pconf)/$(cconf)/static_loader.o: $(pconf)/static_loader.c
+	$(CC) -c $< -o $@

@@ -1,0 +1,274 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+    
+/* TODO: increase stack segment at pagefault
+ * increase data segment at "brk" syscall
+ */
+context pconf: ulinux
+
+brick #process_image
+purpose provide the address space of a process
+desc
+    union brick that combines code, data and stack segments into a nest 
+    that represents the address space of a process.
+enddesc
+
+static_header {
+#include "types.h"
+}
+
+
+data {
+  process_struct *image;
+  char buffer[DEFAULT_TRANSFER];
+}
+
+input :<state
+use PC mem;
+
+input :<code(:2:)
+
+input :<data(:2:)
+
+output :>image(:2:)
+
+section (:0:)
+
+operation $output_init
+{
+  memset(@#.buffer, 0, DEFAULT_TRANSFER);
+  @#.image = PC_GET(mem, atoi(@param), sizeof(process_struct));
+
+  if (!@#.image->init) {
+    // allocate heap and stack segment
+    // heap
+    @#.image->heap_segment.start = IMAGE_HEAP;
+    @#.image->heap_segment.length = 0x200000;
+    @#.image->heap_segment.type = SEG_HEAP;
+    @#.image->heap_segment.flags = 0;
+    PC_ALLOC(mem, 0x200000) => (@#.image->heap_segment.content);
+    // stack
+    @#.image->stack_segment.start = IMAGE_START + IMAGE_SIZE - 0x8000;
+    @#.image->stack_segment.length = 0x8000;
+    @#.image->stack_segment.type = SEG_STACK;
+    @#.image->stack_segment.flags = 0;
+    PC_ALLOC(mem, 0x8000) => (@#.image->stack_segment.content);
+    // get code and data segment description
+    @#.image->num_code_segments = 0;
+    success_t success;
+    plen_t len;
+    @=call :<code(:1:)$trans (0, 64 * sizeof(segment), MAKE_PADDR(@#.image->code_segment), direct_read) => (success, len);
+    
+    @#.image->num_code_segments = len / sizeof(segment);
+
+    @=call :<data(:1:)$trans (0, 64 * sizeof(segment), MAKE_PADDR(@#.image->data_segment), direct_read) => (success, len);
+    
+    @#.image->num_data_segments = len / sizeof(segment);
+    @#.image->init = 1;
+
+  } else {
+    printf("copying old process_image\n");
+  }
+
+  /*
+  int index;
+  printf("segments:\n");
+  printf(" type | start    | length   | flags | filepos  |\n");
+  printf("---------------------------------------------------------\n");
+  for (index = 0; index < @#.image->num_code_segments; index ++)
+    printf(" code | %08lx | %08lx | %05x | %08lx\n", @#.image->code_segment[index].start, @#.image->code_segment[index].length, @#.image->code_segment[index].flags, @#.image->code_segment[index].content);
+  for (index = 0; index < @#.image->num_data_segments; index ++)
+    printf(" data | %08lx | %08lx | %05x | %08lx\n", @#.image->data_segment[index].start, @#.image->data_segment[index].length, @#.image->data_segment[index].flags, @#.image->data_segment[index].content);
+  
+  printf(" heap | %08lx | %08lx | %05x | %08lx | %08llx\n", @#.image->heap_segment.start, @#.image->heap_segment.length, @#.image->heap_segment.flags, @#.image->heap_segment.start, @#.image->heap_segment.content);
+  printf(" stack| %08lx | %08lx | %05x | %08lx | %08llx\n", @#.image->stack_segment.start, @#.image->stack_segment.length, @#.image->stack_segment.flags, @#.image->stack_segment.start, @#.image->stack_segment.content);
+  printf("----------------------------------------------\n");
+  */
+  @success = TRUE;
+}
+
+
+
+@.func _gettranswait(addr_t log_addr, len_t log_len, bool forwrite) => (paddr_t phys_addr, plen_t phys_len) {
+
+  int index;
+
+  //printf("_gettranswait(%d): %llx, %llx\n", forwrite, log_addr, log_len);
+
+  addr_t start = @#.image->heap_segment.start;
+  addr_t end = @#.image->heap_segment.start + @#.image->heap_segment.length;
+
+  if ((start <= log_addr) && (end > log_addr)) {
+    if ((log_addr + log_len) <= end)
+      phys_len = log_len;
+    else
+      phys_len = end - log_addr;
+
+    void *ptr;
+    if (forwrite)
+      ptr = PC_GET_DIRTY(mem, @#.image->heap_segment.content, 0x100000);
+    else
+      ptr = PC_GET(mem, @#.image->heap_segment.content, 0x100000);
+
+    phys_addr = MAKE_PADDR(ptr + ((int) (log_addr - start))); // FIXME, might not be in same page
+    //printf("in heap: %lx\n", phys_addr);
+    @success = TRUE;
+    return;
+  }
+
+  start = @#.image->stack_segment.start;
+  end = @#.image->stack_segment.start + @#.image->stack_segment.length;
+  if ((start <= log_addr) && (end > log_addr)) {
+    if ((log_addr + log_len) <= end)
+      phys_len = log_len;
+    else
+      phys_len = end - log_addr;
+    
+    void *ptr;
+    if (forwrite)
+      ptr = PC_GET_DIRTY(mem, @#.image->stack_segment.content, 0x8000);
+    else
+      ptr = PC_GET(mem, @#.image->stack_segment.content, 0x8000);
+
+    phys_addr = MAKE_PADDR(ptr + ((int) (log_addr - start))); // FIXME, same page
+    //printf("in stack: %lx\n", phys_addr);
+    @success = TRUE;
+    return;
+  }
+
+
+  for (index = 0; index < @#.image->num_code_segments; index ++) {
+
+    start = @#.image->code_segment[index].start;
+    end = @#.image->code_segment[index].start + @#.image->code_segment[index].length;
+    
+    if ((start <= log_addr) && (end > log_addr)) {
+
+      if ((log_addr + log_len) <= end)
+	phys_len = log_len;
+      else
+	phys_len = end - log_addr;
+
+      len_t blubber;
+      addr_t a = @#.image->code_segment[index].content - start + log_addr;
+      @=call :<code$gettranswait (a, DEFAULT_TRANSFER, forwrite) => (@success, phys_addr, blubber);
+      
+      //printf("in code segment(%d): segment: %llx, addr: %llx, log_addr: %llx\n", forwrite, @#.image->code_segment[index].content, a, log_addr);
+      return;
+    }
+  }
+
+  for (index = 0; index < @#.image->num_data_segments; index ++) {
+
+    start = @#.image->data_segment[index].start;
+    end = @#.image->data_segment[index].start + @#.image->data_segment[index].length;
+
+    if ((start <= log_addr) && (end > log_addr)) {
+      if ((log_addr + log_len) <= end)
+	phys_len = log_len;
+      else
+	phys_len = end - log_addr;
+
+      void *ptr;
+      if (forwrite)
+	ptr = PC_GET_DIRTY(mem, @#.image->data_segment[index].content, @#.image->data_segment[index].length);
+      else
+	ptr = PC_GET(mem, @#.image->data_segment[index].content, @#.image->data_segment[index].length);
+
+      phys_addr = MAKE_PADDR(ptr + ((int) (log_addr - start))); // FIXME, same page, data segment size
+      //printf("in data segment: %lx\n", phys_addr);
+      @success = TRUE;
+      return;
+    }
+  }
+
+  // accessing memory in the image that does not belong to a segment should be a segmentation fault!
+  // FIXME
+  //printf("process_image _gettranswait_malloc: no segment log_addr: %llx\n", log_addr);
+  phys_len = log_len;
+  memset(@#.buffer, 0, DEFAULT_TRANSFER);
+  phys_addr = MAKE_PADDR(@#.buffer);
+  @success = TRUE;
+}
+
+
+@.func _put(addr_t log_addr, len_t log_len, prio_t prio) {
+
+  int index;
+
+  //printf("get_addr: %llx, %llx\n", log_addr, log_len);
+
+  addr_t start = @#.image->heap_segment.start;
+  addr_t end = @#.image->heap_segment.start + @#.image->heap_segment.length;
+
+  if ((start <= log_addr) && (end > log_addr)) {
+
+    /*PC_UNSET(mem, @#.image->heap_segment.content);*/
+    @success = TRUE;
+    return;
+  }
+
+  start = @#.image->stack_segment.start;
+  end = @#.image->stack_segment.start + @#.image->stack_segment.length;
+  if ((start <= log_addr) && (end > log_addr)) {
+    /*PC_UNSET(mem, @#.image->stack_segment.content);*/
+    @success = TRUE;
+    return;
+  }
+
+  for (index = 0; index < @#.image->num_code_segments; index ++) {
+
+    start = @#.image->code_segment[index].start;
+    end = @#.image->code_segment[index].start + @#.image->code_segment[index].length;
+    
+    if ((start <= log_addr) && (end > log_addr)) {
+      addr_t a = @#.image->code_segment[index].content - start + log_addr;
+      @=call :<code$put (a, log_len) => (@success);
+      
+      printf("put in code segment: segment: %llx, addr: %llx\n", @#.image->code_segment[index].content, a);
+      return;
+    }
+  }
+
+  for (index = 0; index < @#.image->num_data_segments; index ++) {
+
+    start = @#.image->data_segment[index].start;
+    end = @#.image->data_segment[index].start + @#.image->data_segment[index].length;
+
+    if ((start <= log_addr) && (end > log_addr)) {
+      /*PC_UNSET(mem, @#.image->data_segment[index].content);*/
+      @success = TRUE;
+      return;
+    }
+  }
+
+  // accessing memory in the image that does not belong to a segment should be a segmentation fault!
+  printf("process image put: no segment log_addr: %llx\n", log_addr);
+  @success = TRUE;
+}
+
+operation $gettranswait
+{
+  //printf("process_image:>image$gettranswait\n");
+  //printf("log_addr: %llx, log_len : %llx, phys_addr: %lx\n", @log_addr, @log_len, @phys_addr);
+
+  _gettranswait(@log_addr, @log_len, @forwrite) => (@phys_addr, @phys_len);
+  if (@success) {
+    
+    //printf("get_addr => %lx, %lx\n", @phys_addr, @phys_len);
+  }
+  /*
+  if (@forwrite)
+    printf("write process_image: %llx\n", @log_addr);
+  */
+}
+
+operation $put
+{
+  //printf("image: put %llx\n", @log_addr);
+  //_put(@log_addr, @log_len, @prio);
+}
+
+section (:1:)
+

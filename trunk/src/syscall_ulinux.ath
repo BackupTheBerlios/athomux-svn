@@ -1,0 +1,782 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #syscall_ulinux
+purpose Linux syscall implementation for Athomux processes in Linux userspace
+desc
+    This is the Athomux-side part of the system call interface for Athomux 
+    ulinux. 
+    It receives system calls that were written on a pipe by ulinux processes.
+    The system calls are then processed by other bricks. The results are 
+    written back to another pipe where they are received by the ulinux process.
+    This brick is highly system-dependant, as it uses POSIX pipes to 
+    communicate with the ulinux process. The implementation of the system calls
+    _have_ to be in sync with the userspace-side C-library (uClibc-athomux).
+enddesc
+
+// TODO: PC_DIRTY when task_struct is modified
+//       syscall in athomux struct
+
+static_header { 
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <time.h>
+
+#include <sys/utsname.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <dirent.h>
+
+#include "types.h"
+#include "sysnum.h"
+}
+
+static_data {
+
+  #include "syscall.h"
+
+  static int sig_catcher(int signo) {
+    
+    printf(" ! signal %d caught\n", signo);
+    return signo;
+  }
+}
+
+data {
+  int done;
+  task_struct *task;
+  
+  int syscall_pipe;
+  int return_pipe;
+  
+  int dentry;
+}
+
+init {
+  @#.done = 0;
+  @#.dentry = 0;
+}
+
+input :<lock
+
+/* posix syscalls that refer to processes (e.g. fork, exec, exit)
+ * are handled here */
+input :<process(:3:)
+
+/* posix syscalls that refer to file operations (e.g. open, close, dup)
+ * are handled here */
+input :<fs(:3:)
+
+/* file descriptor syscalls (read, write) are handled here */
+input :<fd(:3:)
+
+/* syscalls that are read from the syscall pipes are stored inside the "state" nest */
+input :<state
+use PC state;
+
+output :>main
+
+define TYPE syscall_t "int pid, int syscall, int result, int error";
+define TYPE exit_t from syscall_t "int status";
+define TYPE open_t from syscall_t "addr_t path, int flags, mode_t mode";
+define TYPE close_t from syscall_t "int fd";
+define TYPE execve_t from syscall_t "addr_t filename, addr_t argv";
+define TYPE fork_t from syscall_t "unsigned bp, unsigned sp, unsigned ip";
+define TYPE dup_t from syscall_t "int oldfd";
+define TYPE dup2_t from syscall_t "int oldfd, int newfd";
+define TYPE wait4_t from syscall_t "pid_t waitpid, addr_t status, int options";
+define TYPE pipe_t from syscall_t "int * filedes";
+define TYPE stat_t from syscall_t "addr_t filename, addr_t stat";
+define TYPE getdents_t from syscall_t "unsigned int fd, addr_t stat";
+
+define TYPE read_t from syscall_t "unsigned int fd, addr_t buf, size_t count";
+define TYPE write_t from syscall_t "unsigned int fd, addr_t buf, size_t count";
+
+/* create a buffer in the "state" nest */
+@.func create_buffer(int size) => (void * buf, addr_t addr) {
+    
+  buf = (void *) PC_ALLOC(state, size) => (addr);
+  memset(buf, 0, size);
+}
+
+/* read bytes containing a syscall form the syscall pipe */
+@.func read_buffer(int * size) => (void * buf, addr_t addr) {
+
+  int s;
+  
+  // read size of buffer
+  s = read(@#.syscall_pipe, size, sizeof(int)); 
+  if (*size == 0) {
+    buf = 0;
+    return;
+  }
+  
+  buf = (char *) PC_ALLOC(state, *size) => (addr);
+
+  // read the buffer
+  s = read(@#.syscall_pipe, buf, sizeof(char) * (*size));
+}
+
+/* send bytes containing the result of a syscall back to the return pipe */
+@.func send_buffer(addr_t buf, int size) {
+  
+  char *buffer = PC_GET(state, buf, size);
+  // send buffer size
+  write(@#.return_pipe, &size, sizeof(int));
+  // send buffer
+  write(@#.return_pipe, buffer, sizeof(char) * size);
+  PC_FREE(state, buf, size);
+}
+
+
+/*
+ * process syscalls: - exit
+ *                   - execve
+ *                   - fork
+ *                   - vfork (NYI)
+ *                   - brk   (NYI)
+ *                   - wait4
+ */
+@.func athomux_syscall_exit(int status) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: exit\n", @#.task->pid);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(exit_t)) => (syscall_addr);
+  ptr@*exit_t->pid = @#.task->pid;
+  ptr@*exit_t->syscall = __NR_exit;
+  ptr@*exit_t->status = status;
+  @=call :<process(:2:)$trans (syscall_addr, @.sizeof(exit_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*exit_t->result;
+  err = ptr@*exit_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(exit_t));;
+}
+
+@.func athomux_syscall_fork(unsigned bp, unsigned sp, unsigned ip) => (int res, int err) {
+  @.rawtrace(syscall, " | pid %d: fork\n", @#.task->pid);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(fork_t)) => (syscall_addr);
+  ptr@*fork_t->pid = @#.task->pid;
+  ptr@*fork_t->syscall = __NR_fork;
+  ptr@*fork_t->bp = bp;
+  ptr@*fork_t->sp = sp;
+  ptr@*fork_t->ip = ip;
+  @=call :<process(:2:)$trans (syscall_addr, @.sizeof(fork_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*fork_t->result;
+  err = ptr@*fork_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(fork_t));;
+}
+
+@.func athomux_syscall_vfork(unsigned bp, unsigned sp, unsigned ip) => (int res, int err) {
+  @.rawtrace(syscall, " | vfork\n");
+  res = 0;
+}
+
+@.func athomux_syscall_execve(addr_t filename, addr_t argv) => (int res, int err) {
+  @.rawtrace(syscall, " | pid %d: execve\n", @#.task->pid);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(execve_t)) => (syscall_addr);
+  ptr@*execve_t->pid = @#.task->pid;
+  ptr@*execve_t->syscall = __NR_execve;
+  ptr@*execve_t->filename = filename;
+  ptr@*execve_t->argv = argv;
+  @=call :<process(:2:)$trans (syscall_addr, @.sizeof(execve_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*execve_t->result;
+  err = ptr@*execve_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(execve_t));
+}
+
+/* brk is not properly implemented atm, misses call to process_image to actually increase
+ * the data segment */
+@.func athomux_syscall_brk(int addr) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: brk '%x'\n", @#.task->pid, addr);
+  if (addr == 0) {
+    //begin, FIXME to image_size
+    addr = IMAGE_HEAP;
+  }
+  res = addr;
+}
+
+
+@.func athomux_syscall_wait4(pid_t waitpid, addr_t status, int options) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: wait4 %d, options %d\n", @#.task->pid, waitpid, options);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(wait4_t)) => (syscall_addr);
+  ptr@*wait4_t->pid = @#.task->pid;
+  ptr@*wait4_t->syscall = __NR_wait4;
+  ptr@*wait4_t->waitpid = waitpid;
+  ptr@*wait4_t->status = status;
+  ptr@*wait4_t->options = options;
+  @=call :<process(:2:)$trans (syscall_addr, @.sizeof(wait4_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*wait4_t->result;
+  err = ptr@*wait4_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(wait4_t));;
+}
+
+
+/*
+ * file syscalls: - read
+ *                - write
+ *                - open
+ *                - close
+ *                - unlink (NYI)
+ *                - pipe   (NYI)
+ *                - access (NYI)
+ *                - ioctl  (NYI)
+ *                - fcntl  (NYI)
+ *                - dup
+ *                - dup2
+ *                - stat
+ *                - getdents
+ */
+
+@.func athomux_syscall_read(int fd, addr_t buf, size_t count) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: read fd %d, length %d\n", @#.task->pid, fd, count);
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(read_t)) => (syscall_addr);
+  plen_t phys_len;
+  ptr@*read_t->pid = @#.task->pid;
+  ptr@*read_t->syscall = __NR_read;
+  ptr@*read_t->fd = fd;
+  ptr@*read_t->buf = buf;
+  ptr@*read_t->count = count;
+  @=call :<fd(:2:)$trans (syscall_addr, @.sizeof(read_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*read_t->result;
+  err = ptr@*read_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(read_t));
+}
+
+@.func athomux_syscall_write(int fd, addr_t buf, size_t count) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: write fd %d, length %d\n", @#.task->pid, fd, count);
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(write_t)) => (syscall_addr);
+  plen_t phys_len;
+  ptr@*write_t->pid = @#.task->pid;
+  ptr@*write_t->syscall = __NR_write;
+  ptr@*write_t->fd = fd;
+  ptr@*write_t->buf = buf;
+  ptr@*write_t->count = count;
+  @=call :<fd(:2:)$trans (syscall_addr, @.sizeof(write_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*write_t->result;
+  err = ptr@*write_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(write_t));
+}
+
+@.func athomux_syscall_open(addr_t pathname, int flags, mode_t mode) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: open, flags %o, mode %d\n", @#.task->pid, flags, (int) mode);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(open_t)) => (syscall_addr);
+  ptr@*open_t->pid = @#.task->pid;
+  ptr@*open_t->syscall = __NR_open;
+  ptr@*open_t->path = pathname;
+  ptr@*open_t->flags = flags;
+  ptr@*open_t->mode = mode;
+  @=call :<process(:2:)$trans (syscall_addr, @.sizeof(open_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*open_t->result;
+  err = ptr@*open_t->error;
+  PC_FREE(state, syscall_addr, @.sizeof(open_t));;
+}
+
+@.func athomux_syscall_close(int fd) => (int res, int err) {
+  
+  @.rawtrace(syscall, " | pid %d: close %d\n", @#.task->pid, fd);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(close_t)) => (syscall_addr);
+  ptr@*close_t->pid = @#.task->pid;
+  ptr@*close_t->syscall = __NR_close;
+  ptr@*close_t->fd = fd;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(close_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*close_t->result;
+  err = ptr@*close_t->error;
+
+  PC_FREE(state, syscall_addr, @.sizeof(close_t));;
+}
+
+@.func athomux_syscall_unlink(char *pathname) => (int res, int err) {
+  
+  @.rawtrace(syscall, " | unlink '%s'\n", pathname);
+  res = 0;
+}
+
+@.func athomux_syscall_pipe(int * filedes) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: pipe\n", @#.task->pid);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(pipe_t)) => (syscall_addr);
+  ptr@*pipe_t->pid = @#.task->pid;
+  ptr@*pipe_t->syscall = __NR_pipe;
+  ptr@*pipe_t->filedes = filedes;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(pipe_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*pipe_t->result;
+  err = ptr@*pipe_t->error;
+
+  PC_FREE(state, syscall_addr, @.sizeof(pipe_t));;
+}
+
+@.func athomux_syscall_access(char *pathname, int mode) => (int res, int err) {  
+
+  @.rawtrace(syscall, " | access '%s', %d\n", pathname, mode);
+  res = 0;
+  
+}
+
+@.func athomux_syscall_ioctl(int fd, int request) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: ioctl fd %d, request %x [NYI]\n", @#.task->pid, fd, request);
+  res = 0;
+}
+
+@.func athomux_syscall_fcntl(int fd, int cmd) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: fcntl fd %d, cmd %d\n", @#.task->pid, fd, cmd);
+  res = 0;
+}
+
+@.func athomux_syscall_dup(int oldfd) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: dup oldfd %d", @#.task->pid, oldfd);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(dup_t)) => (syscall_addr);
+  ptr@*dup_t->pid = @#.task->pid;
+  ptr@*dup_t->syscall = __NR_dup;
+  ptr@*dup_t->oldfd = oldfd;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(dup_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*dup_t->result;
+  err = ptr@*dup_t->error;
+
+  PC_FREE(state, syscall_addr, @.sizeof(dup_t));;
+}
+
+@.func athomux_syscall_dup2(int oldfd, int newfd) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: dup2 oldfd %d, newfd %d\n", @#.task->pid, oldfd, newfd);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(dup2_t)) => (syscall_addr);
+  ptr@*dup2_t->pid = @#.task->pid;
+  ptr@*dup2_t->syscall = __NR_dup2;
+  ptr@*dup2_t->oldfd = oldfd;
+  ptr@*dup2_t->newfd = newfd;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(dup2_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*dup2_t->result;
+  err = ptr@*dup2_t->error;
+
+  PC_FREE(state, syscall_addr, @.sizeof(dup2_t));;
+}
+
+@.func athomux_syscall_stat(addr_t filename, addr_t statbuf) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: stat\n", @#.task->pid);
+
+  addr_t stat_addr;
+  stat_t * stat = PC_ALLOC(state, sizeof(stat_t)) => (stat_addr);
+
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(stat_t)) => (syscall_addr);
+  ptr@*stat_t->pid = @#.task->pid;
+  ptr@*stat_t->syscall = __NR_stat;
+  ptr@*stat_t->filename = filename;
+  ptr@*stat_t->stat = stat_addr;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(stat_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*stat_t->result;
+  err = ptr@*stat_t->error;
+
+  PC_FREE(state, syscall_addr, @.sizeof(stat_t));;
+  struct stat *buf = PC_GET(state, statbuf, sizeof(struct stat));
+  memset(buf, 0, sizeof(struct stat));
+  buf->st_rdev = stat->type;
+  buf->st_mode = stat->mode;
+  buf->st_size = stat->size;
+  
+  buf->st_atime = 0;
+  buf->st_mtime = 0;
+  buf->st_ctime = 0;
+
+  buf->st_nlink = 0;
+  buf->st_ino = 0;
+  buf->st_blocks = 0;
+  buf->st_uid = 0;
+  buf->st_gid = 0;
+}
+
+@.func athomux_syscall_getdents(int fd, addr_t dirent, int count) => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: getdents %d, length %d\n", @#.task->pid, fd, count);
+  addr_t stat_addr;
+  stat_t * stat = PC_ALLOC(state, sizeof(stat_t)) => (stat_addr);
+  plen_t phys_len;
+  addr_t syscall_addr;
+  void * ptr = PC_ALLOC(state, @.sizeof(getdents_t)) => (syscall_addr);
+  ptr@*getdents_t->pid = @#.task->pid;
+  ptr@*getdents_t->syscall = __NR_getdents;
+  ptr@*getdents_t->fd = fd;
+  ptr@*getdents_t->stat = stat_addr;
+  @=call :<fs(:2:)$trans (syscall_addr, @.sizeof(getdents_t), MAKE_PADDR(ptr), direct_write) => (@success, phys_len);
+  res = ptr@*getdents_t->result;
+  err = ptr@*getdents_t->error;
+
+  struct dirent *buf = PC_GET(state, dirent, sizeof(struct dirent));
+
+  if (res > 0) {
+    buf->d_ino = 1;
+    buf->d_off = 0;
+    memcpy(buf->d_name, stat->name, strlen(stat->name) + 1);
+    buf->d_reclen = strlen(buf->d_name);
+    res = sizeof(struct dirent);
+  } else {
+    buf->d_ino = 1;
+    buf->d_off = 0;
+    buf->d_reclen = 0;
+  }
+
+  PC_FREE(state, syscall_addr, @.sizeof(getdents_t));
+}
+
+/*
+ * process information syscalls: - getpid
+ *                               - getuid
+ *                               - getgid
+ *                               - uname
+ *                               - getcwd
+ */
+
+@.func athomux_syscall_getpid() => (int res, int err) {
+
+  @.rawtrace(syscall, " | pid %d: getpid\n", @#.task->pid);
+  res = @#.task->pid;
+}
+
+
+@.func athomux_syscall_getuid() => (int res, int err) {
+
+  @.rawtrace(syscall, " | getuid\n");
+  res = 0;
+}
+
+@.func athomux_syscall_getgid() => (int res, int err) {
+
+  @.rawtrace(syscall, " | getgid\n");
+  res = 0;
+}
+
+
+@.func athomux_syscall_uname(struct utsname *name) => (int res, int err) {
+  
+  res = 0;
+  @.rawtrace(syscall, " | uname\n");
+  sprintf(name->sysname, "Athomux");  // kernel name
+  sprintf(name->nodename, "athomux"); // hostname
+  sprintf(name->release, "0.1");      // kernel release
+  sprintf(name->version, "#1");       // kernel version 
+  sprintf(name->machine, "Linux");    // architecture
+}
+
+@.func athomux_syscall_getcwd(char *buf, int size) => (int res, int err) {
+
+  // see uClibc-athomux for result handling (pointer to 'buf')
+  res = 0;
+  @.rawtrace(syscall, " | pid %d: getcwd\n", @#.task->pid);
+  if (size > strlen(@#.task->cwd)) {
+    res = 1;
+    sprintf(buf, @#.task->cwd);
+  }
+}
+
+@.func athomux_syscall_nanosleep(struct timespec *req, struct timespec *rem) => (int res, int err) {
+  @.rawtrace(syscall, " | pid %d: nanosleep\n", @#.task->pid);
+  res = nanosleep(req, rem);
+  err = 0;
+}
+
+@.func athomux_syscall(unsigned int *cal, unsigned int *arg) => (int res, int err) {
+  int buf_size;
+  void *buf;
+  addr_t addr;
+  res = 0;
+
+  //printf("syscall %d: %s (\n", cal[0], SYSCALL[cal[0]]);
+  //for (index = 0; index < cal[1]; index ++)
+  //printf("%d ", arg[index]);
+  //printf(")\n");
+
+  switch (cal[0]) {
+
+  case __NR_exit: { // 1
+    @.rawtrace(syscall, " | exit pid %d\n", @#.task->pid);
+    athomux_syscall_exit(arg[0]) => (res, err);
+    @#.done = 1;
+    break;
+  }
+  case __NR_fork:  // 2
+    athomux_syscall_fork(arg[0], arg[1], arg[2]) => (res, err);
+    break;
+
+  case __NR_read:  // 3
+    create_buffer(arg[2]) => (buf, addr);
+    athomux_syscall_read(arg[0], addr, arg[2]) => (res, err);
+    send_buffer(addr, arg[2]);
+    break;
+
+  case __NR_write: // 4
+    read_buffer(&buf_size) => (buf, addr);
+    athomux_syscall_write(arg[0], addr, arg[2]) => (res, err);
+    free(buf);
+    break;
+
+  case __NR_open:  // 5
+    read_buffer(&buf_size) => (buf, addr);
+    athomux_syscall_open(addr, arg[1], (mode_t) arg[2]) => (res, err);
+    free(buf);
+    break;
+
+  case __NR_close: // 6
+    athomux_syscall_close(arg[0]) => (res, err);
+    break;
+
+  case __NR_unlink: // 10
+    read_buffer(&buf_size) => (buf, addr);
+    athomux_syscall_unlink(buf) => (res, err);
+    free(buf);
+    break;
+
+  case __NR_execve: { // 11
+    addr_t fileaddr;
+    read_buffer(&buf_size) => (buf, fileaddr);
+    int size, argc, index;
+    read(@#.syscall_pipe, &size, sizeof(int));
+    size = read(@#.syscall_pipe, &argc, size);
+    addr_t *b;
+    addr_t argv;
+    addr_t *a = PC_ALLOC(state, (argc + 1) * sizeof(addr_t)) => (argv);
+    for (index = 0; index < argc; index ++)
+      read_buffer(&size) => (b, a[index]);
+    a[argc] = 0;
+
+    athomux_syscall_execve(fileaddr, argv) => (res, err);
+    free(buf);
+    PC_FREE(state, argv, (argc + 1) * sizeof(addr_t));
+    break;
+  }
+
+  case __NR_time: // 13
+    res = 0;
+    break;
+
+  case __NR_getpid: // 20
+    athomux_syscall_getpid() => (res, err);
+    break;
+
+  case __NR_getuid: // 24
+    athomux_syscall_getuid() => (res, err);
+    break;
+
+  case __NR_access: // 33
+    read_buffer(&buf_size) => (buf, addr);
+    athomux_syscall_access(buf, arg[1]) => (res, err);
+    free(buf);
+    break;
+
+  case __NR_dup: // 41
+    athomux_syscall_dup(arg[0]) => (res, err);
+    break;
+
+  case __NR_pipe: // 42
+    read_buffer(&buf_size) => (buf, addr);
+    athomux_syscall_pipe((int *) buf) => (res, err);
+    send_buffer(addr, 2 * sizeof (int));
+    break;
+
+  case __NR_brk: // 45
+    athomux_syscall_brk(arg[0]) => (res, err);
+    break;
+
+  case __NR_getgid: // 47
+    athomux_syscall_getgid() => (res, err);
+    break;
+
+  case __NR_geteuid: // 49
+    athomux_syscall_getuid() => (res, err);
+    break;
+
+  case __NR_getegid: // 50
+    athomux_syscall_getgid() => (res, err);
+    break;
+
+  case __NR_ioctl: // 54
+    athomux_syscall_ioctl(arg[0], arg[1]) => (res, err);
+    break;
+
+  case __NR_fcntl: // 55
+    athomux_syscall_fcntl(arg[0], arg[1]) => (res, err);
+    break;
+
+  case __NR_dup2: // 63
+    athomux_syscall_dup2(arg[0], arg[1]) => (res, err);
+    break;
+
+  case __NR_stat: { // 106
+    addr_t stataddr;
+    struct stat *stat_buf = PC_ALLOC(state, sizeof(struct stat)) => (stataddr);
+    int size;
+    void *name;
+    read_buffer(&size) => (name, addr);
+    athomux_syscall_stat(addr, stataddr) => (res, err);
+    send_buffer(stataddr, sizeof(struct stat));
+    PC_FREE(state, addr, size);
+    break;
+  }
+
+  case __NR_lstat: { // 107
+    addr_t stataddr;
+    struct stat *stat_buf = PC_ALLOC(state, sizeof(struct stat)) => (stataddr);
+    int size;
+    void *name;
+    read_buffer(&size) => (name, addr);
+    athomux_syscall_stat(addr, stataddr) => (res, err);
+    send_buffer(stataddr, sizeof(struct stat));
+    break;
+  }
+
+  case __NR_wait4: { //114
+    addr_t status;
+    int * stat = PC_ALLOC(state, sizeof(int)) => (status);
+    athomux_syscall_wait4(arg[0], status, arg[2]) => (res, err);
+    PC_FREE(state, status, sizeof(int));
+    break;
+  }
+
+  case __NR_uname: // 122
+    create_buffer(sizeof(struct utsname)) => (buf, addr);
+    athomux_syscall_uname((struct utsname *) buf) => (res, err);
+    send_buffer(addr, sizeof(struct utsname));
+    break;
+
+  case __NR_getdents: // 141
+    create_buffer(arg[2]) => (buf, addr);
+    athomux_syscall_getdents(arg[0], addr, arg[2]) => (res, err);
+    send_buffer(addr, res);
+    break;
+
+  case __NR_nanosleep: { // 162
+
+    int s;
+    void *t1;
+    void *t2;
+    read_buffer(&s) => (t1, addr);
+    read_buffer(&s) => (t2, addr);
+    athomux_syscall_nanosleep((struct timespec *) t1, (struct timespec *) t2) => (res, err);
+
+    free(t1);
+    free(t2);
+
+    break;
+  }
+    /*
+  case __NR_rt_sigaction: // 174
+    @.rawtrace(syscall, " ! pid %d: syscall 174 ('rt_sigaction') not supported\n", @#.task->pid);
+    sleep(1);
+    break;
+    */
+  case __NR_getcwd: // 183
+    create_buffer(arg[1]) => (buf, addr);
+    athomux_syscall_getcwd(buf, arg[1]) => (res, err);
+    send_buffer(addr, arg[1]);
+    break;
+
+  case __NR_vfork:  // 190
+    athomux_syscall_vfork(arg[0], arg[1], arg[2]) => (res, err);
+    break;
+    
+  default:
+    @.rawtrace(syscall, " ! pid %d: syscall %d ('%s') not supported\n", @#.task->pid, cal[0], SYSCALL[cal[0]]);
+    res = 0;
+    break;
+  }
+}
+
+operation $output_init
+{
+  @#.task = PC_GET(state, atoi(@param), sizeof(task_struct));
+
+  @.rawtrace(syscall, "syscall_ulinux pid: %d\n", @#.task->pid);
+  unsigned int cal[2];
+  unsigned int arg[5];
+
+  struct sigaction s;
+  s.sa_handler = (void *) sig_catcher;
+  sigemptyset(&s.sa_mask);
+  s.sa_flags = 0;
+  sigaction(SIGPIPE, &s, 0);
+
+  while (!@#.done) {
+
+    char path[256];		
+    char sys[256];
+    char ret[256];
+    sprintf(path, "%s/%012d", ATHOMUX_ULINUX_SYSCALLS, @#.task->userfs_index);
+    sprintf(sys, "%s/%012d/athomux_syscall", ATHOMUX_ULINUX_SYSCALLS, @#.task->userfs_index);
+    sprintf(ret, "%s/%012d/athomux_return", ATHOMUX_ULINUX_SYSCALLS, @#.task->userfs_index);
+    //@.rawtrace(syscall, "syscall_ulinux syscall: [%s]\n", sys);
+    
+    mkdir(path, 0777);
+    mkfifo(sys, 0644);
+    mkfifo(ret, 0644);
+
+    // synchronize syscall thread with mmu_ulinux thread
+    @=call :<lock(:0:)$unlock [0] (@#.task->lock, 1) => (@success);
+
+    @#.syscall_pipe = open(sys, O_RDONLY);
+    @#.return_pipe = open(ret, O_WRONLY);
+			
+    for (;;) {
+
+      memset(arg, 0, 5 * sizeof(unsigned int));
+      ssize_t size = read(@#.syscall_pipe, &cal, sizeof(int) * 2);
+				
+      if (size <= 0) {
+
+	if (size == 0) {
+	  @.rawtrace(syscall, "  -> process [%d] exit\n", @#.task->pid);
+	} else if (size < 0) {
+	  @.rawtrace(syscall, "  -> error during read\n");
+	  @#.done = 1;
+	  close(@#.syscall_pipe);
+	  close(@#.return_pipe);
+	  remove(sys);
+	  remove(ret);
+	}
+	break;
+      } else {
+	unsigned int result[2];
+	size = read(@#.syscall_pipe, &arg, sizeof(int) * cal[1]);
+	athomux_syscall(cal, arg) => (result[1], result[0]);
+	write(@#.return_pipe, &result[0], sizeof(unsigned int) * 2);
+	@.rawtrace(syscall, " -> returned: %d\n", result[1]);
+      }
+    }
+  }
+
+  @.rawtrace(syscall, "-----------------> done: %d\n", @#.task->pid);
+  @success = TRUE;
+}	

@@ -1,0 +1,57 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #posix_syscalls
+purpose wrapper brick that creates a thread for the syscall mechanism
+desc
+enddesc
+
+static_header {
+#include "types.h"
+}
+
+data {
+    task_struct *task;
+}
+
+instance #syscall_ulinux as sys;
+
+alias ##sys:<lock as :<lock;
+alias ##sys:<fs as :<fs;
+alias ##sys:<process as :<process;
+
+instance #thread_ulinux as thread;
+wire ##sys:>main as ##thread:<exec;
+
+instance #file_syscalls_ulinux as file;
+alias ##file:<fd[] as :<fd[];
+wire ##file:>syscall as ##sys:<fd;
+
+wire ##sys:<state as :>stat;
+wire ##file:<state as :>stat;
+
+input :<state
+
+local output :>stat
+
+operation $op
+{
+  //printf("output :>stat operation %s\n", op_names[@op_code]);
+  @=call :<state(:@sect_code:)$op @args;
+}
+
+output :>dummy
+
+operation $output_init
+{
+  @=call ##file:>dummy$output_init @args : @param;
+  /* the lock is used to synchronize syscall_ulinux with mmu_ulinux.
+   * mmu_ulinux has to wait for the syscall thread to create the
+   * syscall pipes before creating the new athomux user process */
+  @=call :<lock(:0:)$lock [0] ((paddr_t) @param, 1) => (@success);
+  @=call ##thread:>cpu$output_init @args : @param;
+  @success = TRUE;
+}

@@ -12,7 +12,7 @@ desc
 enddesc
 
 static_header {
-#define PERSISTENT
+//#define PERSISTENT
 //#define DIRECT_MEM
 #define UNIFY
 #define MAX_ELEMS (1024*200)

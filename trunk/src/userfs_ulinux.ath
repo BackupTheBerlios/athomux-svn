@@ -1,0 +1,65 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #userfs_ulinux
+purpose Access athomux nests as linux files
+desc
+    Nests that are connected to the image[] inputs are made accessible
+    as files in the linux filesystem by use of the filesystem in
+    userspace kernel module (FUSE).
+    The actual filesystem part is implemented in fuse_ulinux.
+    userfs_mux_ulinux redirects read/write calls to the filesystem
+    to the appropriate image input.
+enddesc
+
+static_header {
+ #include <sys/time.h> 
+ #include <stdlib.h>
+ #include "types.h"
+}
+
+/******************************************************************************
+ *
+ *         +---------------------------------------------------+
+ *    strat| userfs_dir                                        |dummy
+ *    -----|                                                   |-----
+ *    state|                                                   |
+ *    ---------------------------------------+                 |
+ *         |                                 |                 |
+ *         |            +------------+       |state +--------+ |
+ *    image|            | userfs_mux |       +------| fuse   | |
+ *    ------------------|            | mux    image |        | |
+ *    ------------------|            |--------------|        | |
+ *    ------------------|            |              +--------+ |   
+ *         |            +------------+                         |   
+ *         +---------------------------------------------------+
+ *
+ *****************************************************************************/
+
+instance #userfs_mux_ulinux as mux;
+alias ##mux:<image[] as :<image[];
+
+instance #thread_ulinux as thread;
+
+instance #fuse_ulinux as fuse;
+alias ##fuse:<lock as :<lock;
+alias ##fuse:<state as :<state;
+wire ##fuse:>main as ##thread:<exec;
+wire ##mux:>mux as ##fuse:<image;
+
+input :<strat
+
+output :>dummy
+
+operation $output_init
+{
+  @=call ##thread:>cpu$output_init @args : @param;
+  @success = TRUE;
+}
+
+operation $connect
+{
+}

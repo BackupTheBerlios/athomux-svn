@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ -z "$ATHOMUX_ULINUX_BASE" ] 
+then
+    echo "Please set the environment variable ATHOMUX_ULINUX_BASE"
+    echo
+    exit 0
+fi
+
+mkdir -p $ATHOMUX_ULINUX_BASE/log
+mkdir -p $ATHOMUX_ULINUX_BASE/fs
+
+FUSE_LOG=$ATHOMUX_ULINUX_BASE/log/fuse.log
+SYSCALL_LOG=$ATHOMUX_ULINUX_BASE/log/syscall.log
+ATHOMUX_LOG=$ATHOMUX_ULINUX_BASE/log/athomux.log
+
+for file in $FUSE_LOG $SYSCALL_LOG $ATHOMUX_LOG; do
+    touch $file
+done
+
+for pid in `/sbin/pidof athomux_ulinux`; do
+    kill -9 $pid
+done
+
+if grep -q $ATHOMUX_ULINUX_BASE/fs /etc/mtab
+    then fusermount -u $ATHOMUX_ULINUX_BASE/fs
+fi
+
+for file in $FUSE_LOG $SYSCALL_LOG $ATHOMUX_LOG; do
+    if [ -e $file ]
+    then 
+	rm -f $file
+	touch $file
+    fi
+done
+
+xterm -fn fixed -geometry 60x25+0+0 -e "tail -f $FUSE_LOG" &
+xterm -fn fixed -geometry 60x25+400+0 -e "tail -f $SYSCALL_LOG" &
+xterm -fn fixed -geometry 80x25+800+0 -e "tail -f $ATHOMUX_LOG" &
+
+echo "+--------------------------------------------------------------------+"
+echo "| athomux_ulinux starting up...                                      |"
+echo "+--------------------------------------------------------------------+"
+echo 
+
+rm -f ulinux/ulinux/core*
+cd ulinux/ulinux/
+./athomux_ulinux

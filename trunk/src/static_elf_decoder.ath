@@ -1,0 +1,231 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux
+
+brick #static_elf_decoder
+purpose loader for statically linked elf binaries
+desc
+  This brick analyzes an elf-file at its input and provides the various segments inside
+  the file at its output.
+enddesc
+
+static_header {
+#include <errno.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <linux/elf.h>
+#include <sys/mman.h>
+#include <limits.h>
+
+#include "types.h"
+}
+
+data {
+  elf_header header;
+}
+
+instance #device_mem_ulinux as mem;
+wire ##mem:>out as :<mem;
+
+input :<mem
+use PC seg;
+
+input :<file(:2:)
+
+output :>code(:2:)
+
+operation $gettranswait
+{
+  //printf("static_elf_decoder:>code %llx %llx\n", @log_addr, @log_len);
+  @=call :<file(:0:)$gettranswait (@log_addr, @log_len, @forwrite) => (@success, @phys_addr, @phys_len);
+  @.check(!@success, "failed\n");
+}
+
+operation $put
+{
+  @=call :<file$put (@log_addr, @log_len) => (@success);
+  @.check(!@success, "failed\n");
+}
+
+section (:1:)
+
+operation $trans
+{
+  if (@direction == direct_read) {
+    memcpy(MAKE_PTR(@phys_addr), @#.header.code_segment, @#.header.num_code_segments * sizeof(segment));
+    @phys_len = @#.header.num_code_segments * sizeof(segment);
+    @success = TRUE;
+  }
+}
+
+output :>data(:2:)
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+operation $trans
+{
+  //printf("static_elf_decoder:>data $trans(%llx, %llx, %lx)\n", @log_addr, @log_len, @phys_addr);
+  // FIXME (physical address == @log_addr (device_mem_ulinux))
+
+  if (@direction == direct_read) {
+    memcpy(MAKE_PTR(@phys_addr), (void *) (unsigned int) @log_addr, @log_len);
+    @phys_len = @log_len;
+    @success = TRUE;
+  }
+
+  else if (@direction == direct_write) {
+    memcpy((void *) (unsigned int) @log_addr, MAKE_PTR(@phys_addr), @log_len);
+    @phys_len = @log_len;
+    @success = TRUE;
+  }
+}
+
+section (:1:)
+
+operation $trans
+{
+  if (@direction == direct_read) {
+    memcpy(MAKE_PTR(@phys_addr), @#.header.data_segment, @#.header.num_data_segments * sizeof(segment));
+    @phys_len = @#.header.num_data_segments * sizeof(segment);
+    @success = TRUE;
+  }
+}
+
+output :>meta
+
+operation $trans
+{
+  if (@direction == direct_read) {
+    memcpy(MAKE_PTR(@phys_addr), &@#.header, sizeof(elf_header));
+    @phys_len = sizeof(elf_header);
+    @success = TRUE;
+  }
+}
+
+output :>dummy
+
+@.func load_elf_sections(unsigned short psize, unsigned short pnum, int poff) {
+
+  @#.header.num_code_segments = 0;
+  @#.header.num_data_segments = 0;
+
+  unsigned char *buf;
+
+  int offset = 0, num = 0;
+  Elf32_Phdr *phdr = NULL;
+  unsigned pagesize = getpagesize();
+
+  paddr_t phys_addr;
+  plen_t phys_len;
+
+  @=call :<file(:0:)$gettranswait (0, DEFAULT_TRANSFER, FALSE) => (@success, phys_addr, phys_len);  
+  @.check(!@success, "loading elf sections failed\n");
+  buf = MAKE_PTR(phys_addr + 52);
+
+  for (num = 1; num <= pnum; num++) {
+    phdr = (Elf32_Phdr *) (buf + offset);
+    offset += psize;
+		
+    unsigned flags = 0;
+    if (phdr->p_flags & PF_R) flags |= PROT_READ;
+    if (phdr->p_flags & PF_W) flags |= PROT_WRITE;
+    if (phdr->p_flags & PF_X) flags |= PROT_EXEC;
+		
+    if (phdr->p_type == PT_INTERP) { 
+      /* Oops, it turns out to be a dynamically linked program ... */
+      fprintf(stderr, "=== loading failed: dynamically linked ELF binaries not supported\n");
+      return;
+    } else if (phdr->p_type == PT_LOAD) {
+
+      paddr_t addr = phdr->p_vaddr & ~(pagesize - 1);
+      paddr_t size = phdr->p_filesz + (phdr->p_offset & (pagesize - 1));
+      void * phys_addr;
+
+      @#.header.code_segment[@#.header.num_code_segments].start = addr + IMAGE_OFFSET;
+      @#.header.code_segment[@#.header.num_code_segments].length = size;
+      @#.header.code_segment[@#.header.num_code_segments].type = SEG_CODE;
+      @#.header.code_segment[@#.header.num_code_segments].content = (phdr->p_offset & ~(pagesize - 1));
+
+      //printf("code segment: %lx, %lx, filepos %lx\n", addr, size,  phdr->p_offset & ~(pagesize - 1));
+
+      @#.header.num_code_segments++;
+
+      if (phdr->p_filesz != phdr->p_memsz) {
+	/* partially filled .data? */
+	paddr_t addr2 = phdr->p_vaddr + phdr->p_filesz;
+	paddr_t size2 = pagesize - ((phdr->p_vaddr + phdr->p_filesz) & (pagesize - 1));
+	@#.header.data_segment[@#.header.num_data_segments].start = addr2 + IMAGE_OFFSET;
+	@#.header.data_segment[@#.header.num_data_segments].length = size2;
+	@#.header.data_segment[@#.header.num_data_segments].type = SEG_DATA_0;
+	phys_addr = PC_ALLOC(seg, size2) => (@#.header.data_segment[@#.header.num_data_segments].content);
+	//printf("data segment: %lx, %lx\n", addr2, size2);
+	//printf("PC_ALLOC: %llx (%lx) : %p\n", @#.header.data_segment[@#.header.num_data_segments].content, size2, phys_addr);
+	memset(phys_addr, 0, size2);
+	@#.header.num_data_segments++;
+      }
+			
+      if (phdr->p_filesz / pagesize != phdr->p_memsz / pagesize) {
+	/* .data with .bss needing another page? */
+	paddr_t addr2 = ((phdr->p_vaddr + phdr->p_filesz) / pagesize + 1) * pagesize;
+	paddr_t size2 = ((phdr->p_memsz-phdr->p_filesz + pagesize - 1) / pagesize) * pagesize;
+
+	@#.header.data_segment[@#.header.num_data_segments].start = addr2 + IMAGE_OFFSET;
+	@#.header.data_segment[@#.header.num_data_segments].length = size2;
+	@#.header.data_segment[@#.header.num_data_segments].type = SEG_DATA_0;
+	phys_addr = PC_ALLOC(seg, size2) => (@#.header.data_segment[@#.header.num_data_segments].content);
+	//printf("data segment: %lx, %lx\n", addr2, size2);
+	//printf("PC_ALLOC: %llx (%lx) : %p\n", @#.header.data_segment[@#.header.num_data_segments].content, size2, phys_addr);
+	memset(phys_addr, 0, size2);
+
+	@#.header.num_data_segments++;
+      }
+    }
+  }
+  @=call :<file$put (0, DEFAULT_TRANSFER) => (@success);
+  @success = TRUE;
+}
+
+@.func load_elf() {
+
+
+  Elf32_Ehdr *elf;
+  plen_t phys_len;
+  paddr_t phys_addr;
+
+  @=call :<file(:0:)$gettranswait (0, DEFAULT_TRANSFER, FALSE) => (@success, phys_addr, phys_len);
+  @.check(!@success, "=== loading elf failed\n");
+  elf = (Elf32_Ehdr *) MAKE_PTR(phys_addr);
+  
+  /* Is it really an ELF? */
+  if (!((elf->e_ident[EI_MAG0] == ELFMAG0) && 
+	(elf->e_ident[EI_MAG1] == ELFMAG1) && 
+	(elf->e_ident[EI_MAG2] == ELFMAG2) && 
+	(elf->e_ident[EI_MAG3] == ELFMAG3))) {
+    fprintf(stderr, "=== loading failed: no ELF binary\n");
+    return;
+  }
+
+  @=call :<file$put (0, DEFAULT_TRANSFER) => (@success);
+
+  load_elf_sections(elf->e_phentsize, elf->e_phnum, elf->e_phoff);
+  if (!@success)
+    return;
+
+  @#.header.entry = elf->e_entry + IMAGE_OFFSET;
+  //printf("=== ELF entry: %d\n", elf->e_entry);
+  @success = TRUE;
+}
+
+operation $output_init
+{
+  load_elf();
+  @success = TRUE;
+}

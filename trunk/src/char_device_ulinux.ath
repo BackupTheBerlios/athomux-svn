@@ -1,0 +1,62 @@
+  Author: Florian Niebling
+  Copyright: Florian Niebling
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #char_device_ulinux
+purpose dummy character device for posix filedescriptors
+desc
+  Just a wrapper around read/write on posix filedescriptors to be able to do
+    terminal i/o.
+enddesc
+
+static_header { 
+ #include <unistd.h>
+}
+
+data {
+  char buffer[DEFAULT_TRANSFER];
+  bool dowrite;
+  int filedes;
+}
+
+output :>fd
+
+operation $output_init
+{
+  @#.filedes = atoi(@param);
+  @success = TRUE;
+}
+
+operation $get
+{
+  if (@log_len > DEFAULT_TRANSFER)
+    @log_len = DEFAULT_TRANSFER;
+
+  @phys_addr = (paddr_t) @#.buffer;
+  @#.dowrite = @forwrite;
+  
+  if (@forwrite) {
+    @phys_len = @log_len;
+    @success = TRUE;
+  }
+}
+
+operation $gettranswait
+{
+  if (@log_len > DEFAULT_TRANSFER)
+    @log_len = DEFAULT_TRANSFER;
+
+  @phys_addr = (paddr_t) @#.buffer;
+  if (!@forwrite) {
+    @phys_len = read(@#.filedes, @#.buffer, @log_len);
+    @success = TRUE;
+  }
+}
+
+operation $put
+{
+  if (@#.dowrite)
+    write(@#.filedes, @#.buffer, @log_len);
+
+  @success = TRUE;
+}
