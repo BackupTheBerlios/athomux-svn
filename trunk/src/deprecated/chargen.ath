@@ -19,7 +19,7 @@ operation $output_init,$wait
   @success = TRUE;
 }
 
-operation $transfer,$tr
+operation $trans,$transwait
 {
   len_t i;
   switch(@direction) {

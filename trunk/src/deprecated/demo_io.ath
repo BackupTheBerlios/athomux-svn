@@ -22,39 +22,39 @@ local input :<bdev
 
 output :>program
 
-@.func dd_transfer ()
+@.func dd_trans ()
 {
   char buf [MY_TRANSFER];
   plen_t phys_len;
   addr_t position = 0;
 
-  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @=call :<bdev$transwait (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
   @.check(!@success, "read failed");
   printf("DATA: %s\nread 1 ok\n", buf);
 
 #if 1
-  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
+  @=call :<bdev$trans (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
   @.check(!@success, "write failed");
   printf("write 1.5 ok\n");
 
 #if 1
-  @=call :<bdev$transfer (position, 16, (paddr_t)buf, direct_write,prio_urgent) => (@success, phys_len);
+  @=call :<bdev$trans (position, 16, (paddr_t)buf, direct_write,prio_urgent) => (@success, phys_len);
   @.check(!@success, "write2 failed");
   printf("write 2 ok\n");
 #endif
 #if 0
-  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_stop) => (@success);
+  @=call :<bdev$trans (position, sizeof(buf2), (paddr_t)buf2, direct_stop) => (@success);
   @.check(!@success, "stop write failed");
   printf("stop write 1.5 ok\n");
 #endif
 
-  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @=call :<bdev$transwait (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
   @.check(!@success, "read3 failed");
   printf("DATA: %s\nread 3 ok\n", buf);
 
   printf("dump all\n");
   extern void main;
-  @=call :<bdev$transfer (0, 0x40000, (paddr_t)&main & ~(511), direct_write) => (@success, phys_len);
+  @=call :<bdev$trans (0, 0x40000, (paddr_t)&main & ~(511), direct_write) => (@success, phys_len);
   @.check(!@success, "write failed");
   printf("0x%lx bytes written\n", phys_len);
 #endif
@@ -73,7 +73,7 @@ operation $output_init
   if(@constr) {
     if(@success) {
       printf("init ok\n");
-      dd_transfer();
+      dd_trans();
     } else {
       printf("init failed\n");
     }

@@ -12,9 +12,9 @@ desc
 
   Restrictions:
   The current implementation allows only one active
-  transfer request and expects wait to be called afterwards.
+  trans request and expects wait to be called afterwards.
 enddesc
-//attr transfer_size=0
+//attr trans_size=0
 
 static_header {
 #include <linux/bio.h>
@@ -70,13 +70,13 @@ operation $output_init
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
   struct bio *bio;
   @phys_len = 0;
   
   if(IS_ERR(@#.bdev) || (@#.bdev == 0)) {
-    @.err("$transfer called for invalid block device!");
+    @.err("$trans called for invalid block device!");
   }
 
   switch(@direction) {

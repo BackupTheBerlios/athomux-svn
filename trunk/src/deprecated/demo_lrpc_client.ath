@@ -25,31 +25,31 @@ local input :<bdev
 
 output :>program
 
-@.func dd_transfer ()
+@.func dd_trans ()
 {
   char buf [DEFAULT_TRANSFER];
   plen_t phys_len;
   addr_t position = 0;
 
-  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @=call :<bdev$transwait (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
   @.check(!@success, "read failed");
   printf("DATA: %s\n", buf);
 
 #if 1
-  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
+  @=call :<bdev$trans (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
   @.check(!@success, "write failed");
 #if 0
   @=call :<bdev$wait (position, sizeof(buf2)) => (@success);
   @.check(!@success, "wait2 failed");
 #endif
 
-  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @=call :<bdev$transwait (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
   @.check(!@success, "read3 failed");
   printf("DATA: %s\n", buf);
 
   printf("dump all\n");
   extern main;
-  @=call :<bdev$transfer (0, -1, (paddr_t)&main, direct_write) => (@success, phys_len);
+  @=call :<bdev$trans (0, -1, (paddr_t)&main, direct_write) => (@success, phys_len);
   @.check(!@success, "write failed");
   printf("0x%lx bytes written\n", phys_len);
 #endif
@@ -68,7 +68,7 @@ operation $output_init
   if(@constr) {
     if(@success) {
       printf("init ok\n");
-      dd_transfer();
+      dd_trans();
     } else {
       printf("init failed\n");
     }
