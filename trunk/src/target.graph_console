@@ -1,0 +1,5 @@
+#context pconf: ulinux*
+#context cconf: ulinux*
+
+$(pconf)/$(cconf)/graph_console: graph_console.c
+	$(CC) $(LDFLAGS) graph_console.c `pkg-config --cflags gtk+-2.0` `pkg-config --libs gtk+-2.0` -o $@
