@@ -1,0 +1,97 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #adapt_multi
+
+purpose adds multi user capability
+
+desc
+
+          +-------------------------+
+          |                         |
+     in --+--                     --+-- out
+          |                         |
+          |   +-------------+       |  
+          |   | lock_ulinux +--     |  
+          |   +-------------+       |
+          |                         |
+          +-------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #lock_ulinux as l;
+wire ##l:>lock as :<ilock;
+
+
+
+
+local input :<ilock
+
+
+
+
+input :<in
+
+
+
+
+operation $input_init
+{
+  @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  success_t succ;
+
+  // get lock
+  @=call :<ilock$lock [@mandate] (1, 1) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  @=inputcall :>out$op [@mandate] (@args);
+
+  // release lock
+  @=call :<ilock$unlock [@mandate] (1, 1) => (succ);
+  if (succ!=TRUE) @.err("FIXME: switch to error state");
+}
+
+
+
+
+output :>out
+
+
+
+
+operation $output_init
+{
+  @=call ##l:>lock$output_init [@mandate] (@args);
+}
+
+
+
+
+operation $op
+{
+  success_t succ;
+
+  // get lock
+  @=call :<ilock$lock [@mandate] (0, 1) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  @=call :<in$op [@mandate] (@args);
+
+  // release lock
+  @=call :<ilock$unlock [@mandate] (0, 1) => (succ);
+  if (succ!=TRUE) @.err("FIXME: switch to error state");
+}
