@@ -63,8 +63,8 @@ my $commentmatch = qr'(?://[^\n]*\n|/\*(?:[^*]|\*[^/])*\*/)'m;
 my $ws = qr"(?:\s|$commentmatch|^$cppmatch)*"m;
 my $singlestringmatch = qr'(?:\"(?:[^"\\]|\\.)*\"|\'(?:[^"\\]|\\.)\')';
 my $stringmatch = qr"(?:$singlestringmatch(?:$ws$singlestringmatch)*)"m;
-my $simplematch = qr"(?:[^,:;\s()[\]{}\"\'/]|/(?=[^*/])|$commentmatch|$stringmatch)"m;
-my $innermatch = qr'(?:(??{$simplematch})|[,;:\s])*'m;
+my $simplematch = qr"(?:[^,;\s()[\]{}\"\'/]|/(?=[^*/])|$commentmatch|$stringmatch)"m;
+my $innermatch = qr'(?:(??{$simplematch})|[,;\s])*'m;
 my $idmatch = qr'\w+';
 
 # approximate context-free Dyck-style language by a regular one.
@@ -73,9 +73,9 @@ my $idmatch = qr'\w+';
 # using a fixed limit :-(
 # fortunately, (??{ seems to include its argument by reference, otherwise
 # we would get exponential space complexity.
-my $match = qr"(?:$simplematch|[,;:\s]|\((??{$innermatch})\)|\[(??{$innermatch})\]|\{(??{$innermatch})\})*"m;
+my $match = qr"(?:$simplematch|[,;\s]|\((??{$innermatch})\)|\[(??{$innermatch})\]|\{(??{$innermatch})\})*"m;
 for(my $i = 0; $i < 20; $i++) {
-  $match = qr"(?>$simplematch|[,;:\s]|\((??{$match})\)|\[(??{$match})\]|\{(??{$match})\})*"m;
+  $match = qr"(?>$simplematch|[,;\s]|\((??{$match})\)|\[(??{$match})\]|\{(??{$match})\})*"m;
 }
 
 my $parenmatch = qr'\((??{$match})\)'m;
@@ -88,7 +88,7 @@ my $wsargmatch = qr"(?:$simplematch|\s|\($match\)|\[$match\]|\{$match\})*";
 
 # match specifiers
 my $sectmatch = qr"\(:$wsargmatch:\)";
-my $specmatch = qr"(?:(?:(?:\$|:[<>])\w+|\#\w*(?:\.\w+)*|$sectmatch)(?:$brackmatch)?)+";
+my $specmatch = qr"(?:(?:(?:\$|:[<>])\w+|\#\w*(?:[#.]\w+)*|$sectmatch)(?:$brackmatch)?)+";
 my $macrospec = qr"(?:@(?:[.=])?)?\w+(?:\s*\w+)*";
 
 ##########################################################################
@@ -749,13 +749,28 @@ sub eval_macros {
 
 # specifier handling
 
+sub spec_correct { # provisionary, will vanish
+  my $spec = shift;
+  if($spec =~ m/#\w*(?:\.\w+)+/) {
+    my $pre = $PREMATCH;
+    my $middle = $MATCH;
+    my $post = $POSTMATCH;
+    my $newmiddle = $middle;
+    $newmiddle =~ s/\./#/g;
+    $spec = $pre . $newmiddle . $post;
+    warn "please use the new subbrick syntax '$newmiddle' instead of '$middle' -- I try to correct the specifier, but further errors may occur\n";
+  }
+  return $spec;
+}
+
 @::spec_type = ("undef", "brick", "connector", "section", "operation");
 
 sub spec_syntax {
   my ($spec) = @_;
   my $orig = $spec;
   my $bad = 0;
-  if($spec =~ s/#\w*(?:\.\w+)*//) {
+  $spec = spec_correct($spec);
+  if($spec =~ s/#\w*(?:#\w+)*//) {
     $bad++ if $PREMATCH;
   }
   if($spec =~ s/:[<>]\w+//) {
@@ -776,7 +791,8 @@ sub spec_syntax {
 
 sub spec_part {
   my ($spec, $num, $subnum) = @_;
-  $spec =~ s/(\#(\w+|(?=\.))(?:\.(\w+(?:\.\w+)*))?)?//;
+  $spec = spec_correct($spec);
+  $spec =~ s/(#(\w+|(?=#))(?:#(\w+(?:#\w+)*))?)?//;
   if($num == 1) { # brick specifier
     if(defined($subnum)) {
       return $2 if $subnum == 0;
@@ -843,7 +859,7 @@ sub spec_complete {
       $part = spec_part($old, $num) unless $part;
       die "specifier '$spec' / '$old': missing $::spec_type[$num] part" unless defined($part);
       # handle shortform specifier #.sub_isntance
-      $part = "#" . spec_part($old, 1, 0) . $part if $num == 1 and $part =~ s/^\#\./\./;
+      $part = "#" . spec_part($old, 1, 0) . "#$part" if $num == 1 and $part =~ s/^\#\#//;
       $res = $part . $res;
     }
   }
@@ -867,6 +883,9 @@ sub spec_name {
   my $res = "";
   for(my $num = 1; $num <= $maxpart; $num++) {
     my $part = spec_part($spec, $num, 0);
+    if($num == 1) {
+      $part =~ s/\#/\./g;
+    }
     if($num == 3 and $part =~ m/\A(.*)\.\.(.*)\Z/) {
       my $start = $1;
       my $end = $2;
@@ -885,7 +904,8 @@ sub spec_conn_instance {
   my ($spec) = @_;
   my $res = spec_part($spec, 1, 1);
   if(defined $res) {
-    $res =~ s/(^|\.)/$1_sub_/g;
+    $res =~ s/(^|[#.])/$1_sub_/g;
+    $res =~ s/\#/\./g;
     $res .= ".";
   } else {
     $res = "";
@@ -1106,12 +1126,12 @@ sub spec_type_instance {
   my ($name, $spec) = @_;
   my $brick = spec_part($spec, 1, 1);
   if(defined($brick)) {
-    $brick =~ s/\./\._sub_/g;
+    $brick =~ s/[#.]/\._sub_/g;
     $brick = "_sub_${brick}.";
    } else {
      $brick = "";
    }
-  $name = "$brick$name" unless $name =~ s/\./\._sub_/g;
+  $name = "$brick$name" unless $name =~ s/[#.]/\._sub_/g;
   return $name;
 }
 
@@ -1178,7 +1198,7 @@ sub eval_typename_code {
     my ($subst, $type, $offset);
     if(defined($varname)) {
       (my $index, $type) = get_type_index($field, $typetable_max, $type_hash);
-      $offset = "@#${varname}\[$index].gen_offset";
+      $offset = "@#.${varname}\[$index].gen_offset";
     } else {
       ($offset, $type) = get_type_info($field, $type_hash);
     }
@@ -1514,7 +1534,7 @@ sub eval_code {
     spec_syntax($op_spec);
     $optype = "output" unless defined($optype);
     $op_spec =~ s/\$init/\$${optype}_init/ and warn "@=${optype}call to \$init is deprecated, please replace by \$${optype}_init!";
-    $mandate = "@#_mand" unless defined($mandate);
+    $mandate = "@#._mand" unless defined($mandate);
     $param = "_param" unless defined($param);
     $op_spec = spec_complete($op_spec, $caller_spec);
     $pre .= gen_paramcall($op_spec, $optype, $args, $param, $results, $caller_spec, $mandate);
@@ -1559,14 +1579,17 @@ sub eval_code {
   $$code =~ s/@(\w+)/\(_args->$1\)/mg;
   # substitute output vars having a qualifying prefix
   my $brick = spec_part($::current, 1, 0);
-  $$code =~ s/@>(\w+)($brackmatch|)\.(\w+)/\(_brick->_conn_$1$2.$3\)/mg;
+  if($$code =~ m/@[#<>][^.]/m) {
+    die "please update the @#varname syntax to @#.varname, @< to @\:<. and @> to @\:>. (see new syntax in the preprocessor guide)\n";
+  }
+  $$code =~ s/@[:]?>\.?(\w+)($brackmatch|)\.(\w+)/\(_brick->_conn_$1$2.$3\)/mg;
   # substitute normal output vars
   my $out = spec_name($caller_spec, 2);
-  $$code =~ s/@>(\w+)/\(_on->$1\)/mg;
+  $$code =~ s/@[:]?>\.?(\w+)/\(_on->$1\)/mg;
   # substitute generic type accesses
   eval_typename_code($code);
   # substitute brick vars
-  $$code =~ s/@\#(\w+)/\(_brick->$1\)/mg;
+  $$code =~ s/@\#\.?(\w+)/\(_brick->$1\)/mg;
 }
 
 ##########################################################################
@@ -1764,7 +1787,7 @@ sub parse_subinstances {
 	spec_syntax($loc_conn);
 	die "bad specified type '$sub_conn'" unless spec_type($sub_conn) == 2;
 	die "bad specified type '$loc_conn'" unless spec_type($loc_conn) == 2;
-	my $new_spec = spec_part($::current, 1) . ".$name";
+	my $new_spec = spec_part($::current, 1) . "#$name";
 	my $sub_complete = spec_complete($sub_conn, $new_spec);
 	my $loc_complete = spec_complete($loc_conn);
 	my $sub_core = $sub_complete;
@@ -1973,7 +1996,7 @@ sub parse_all {
   spec_syntax($brick);
   die "bad brick type '$brick'" unless spec_type($brick) == 1;
   if($prefix) {
-    $::current = "$prefix\.$suffix";
+    $::current = "$prefix#$suffix";
   } else {
     $::current = $brick;
     add_brick($brick);
@@ -2250,10 +2273,16 @@ sub gen_conn_init {
   my $name = spec_name($spec, 2);
   if($spec =~ m/:</) {
     $res .= "  conn->_input_.ops = ops_$name;\n" unless $exit_mode;
-    $code =~ s/@<(\w+)/\(conn->$1\)/mg;
+    if($code =~ m/@<(\w+)/mg) {
+      warn "please update the @<varname syntax to \@:<.varname (see new syntax in the preprocessor guide)\n";
+    }
+    $code =~ s/@[:]?<\.?(\w+)/\(conn->$1\)/mg;
   } else {
     $res .= "  conn->_output_.ops = ops_$name;\n" unless $exit_mode;
-    $code =~ s/@>(\w+)/\(conn->$1\)/mg;
+    if($code =~ m/@>(\w+)/mg) {
+      warn "please update the @>varname syntax to \@:>.varname (see new syntax in the preprocessor guide)\n";
+    }
+    $code =~ s/@[:]?>\.?(\w+)/\(conn->$1\)/mg;
   }
   $res .= "  conn->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
   $code =~ s/\@param/_param/mg;
@@ -2271,6 +2300,15 @@ sub gen_routine {
   purge(\$code);
   print OUT "#undef OPERATION\n#define OPERATION \"$name\"\n\n";
   print OUT "void ${name}(void)\n$code\n\n";
+}
+
+sub subst_brickvars { # this is provisionary and should vanish
+  my $code = shift;
+  if($code =~ m/@#(\w+)/mg) {
+    warn "please update the @#varname syntax to @#.varname (see new syntax in the preprocessor guide)\n";
+  }
+  $code =~ s/@#\.?(\w+)/\(ini->$1\)/mg;
+  return $code;
 }
 
 sub gen_init {
@@ -2406,7 +2444,7 @@ sub gen_init {
   print OUT "\n// user-defined init part\n";
   my $code = $::init_brick;
   $code = "{\n}" unless defined($code);
-  $code =~ s/@#(\w+)/\(ini->$1\)/mg;
+  $code = subst_brickvars($code);
   $code =~ s/\@param/_param/mg;
   purge(\$code);
   indent(\$code);
@@ -2414,12 +2452,12 @@ sub gen_init {
   # create dynamic exit routine
   $code = $::exit_brick;
   $code = "{\n}" unless defined($code);
-  $code =~ s/@#(\w+)/\(exi->$1\)/mg;
+  $code = subst_brickvars($code);
   $code =~ s/\@param/_param/mg;
   purge(\$code);
   indent(\$code);
   print OUT "#undef OPERATION\n#define OPERATION \"exit_$brick\"\n\n";
-  print OUT "void exit_$brick (void * _exi_, const char * _param)\n{\n  struct brick_$brick * exi = _exi_; (void)exi; int _i_; (void)_i_;\n";
+  print OUT "void exit_$brick (void * _ini_, const char * _param)\n{\n  struct brick_$brick * ini = _ini_; (void)ini; int _i_; (void)_i_;\n";
   while(my ($spec, $tuple) = each %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
     print OUT "  // exit $spec\n";
@@ -2436,7 +2474,7 @@ sub gen_init {
       print OUT "for(_i_ = 0; _i_ < $array; _i_++) {\n";
       $index = "[_i_]";
     }
-    print OUT "  $funcname(&exi->$shortname$index, exi);\n";
+    print OUT "  $funcname(&ini->$shortname$index, ini);\n";
     if($array ne "") {
       print OUT"}\n";
     }

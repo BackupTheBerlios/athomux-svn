@@ -42,8 +42,8 @@ data {
 }
 
 init {
-  if(!@#boot) { // never boot myself twice
-    @#boot = TRUE;
+  if(!@#.boot) { // never boot myself twice
+    @#.boot = TRUE;
     init_static_control_simple();
     ini->_conn_control._input_.connect = root_strategy;
   }

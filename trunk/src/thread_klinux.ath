@@ -58,7 +58,7 @@ operation $op
   struct threadinfo info;
 
   sema_init(&info.mutex, 0);
-  info.on = @#_conn_exec._input_.connect;
+  info.on = @#._conn_exec._input_.connect;
   info.myargs = @args;
   info.myparam = @param;
 

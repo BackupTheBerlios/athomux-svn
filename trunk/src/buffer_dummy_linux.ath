@@ -78,11 +78,11 @@ output :>out
 
 operation $get
 {
-  struct node * node = hash_find(@#table, @log_addr);
+  struct node * node = hash_find(@#.table, @log_addr);
   if(!node) {
     void * buf = malloc(@log_len);
     @.check(!buf, "cannot allocate buffer");
-    node = hash_add(@#table, @log_addr, @log_len, (addr_t)(unsigned long)buf);
+    node = hash_add(@#.table, @log_addr, @log_len, (addr_t)(unsigned long)buf);
   }
   node->refcount++;
   if(@forwrite) {
@@ -96,7 +96,7 @@ operation $get
 
 operation $put
 {
-  struct node * node = hash_find(@#table, @log_addr);
+  struct node * node = hash_find(@#.table, @log_addr);
   @.check(!node, "bad put(), log_addr %llx\n", @log_addr);
   @.check(node->log_len != @log_len, "bad put() len pairing");
   @.check(node->refcount <= 0, "bad put() refcount, log_addr %llx\n", @log_addr);
@@ -112,7 +112,7 @@ operation $put
 operation $transfer
 {
 #ifdef DEBUG
-  struct node * node = hash_find(@#table, @log_addr);
+  struct node * node = hash_find(@#.table, @log_addr);
   @.check(!node, "bad transfer(), log_addr %llx\n", @log_addr);
   @.check(node->phys_addr != @phys_addr, "bad transfer() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);
 #endif
@@ -121,7 +121,7 @@ operation $transfer
 
 operation $wait
 {
-  struct node * node = hash_find(@#table, @log_addr);
+  struct node * node = hash_find(@#.table, @log_addr);
   @.check (!node, "bad wait(), addr %llx\n", @log_addr);
 #ifdef DEBUG
   @.check(node->phys_addr != @phys_addr, "bad wait() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);

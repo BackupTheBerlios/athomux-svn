@@ -20,8 +20,8 @@ output :>out
 operation $get,$put,$transfer,$wait
 {
   addr_t copy_addr = @log_addr;
-  @log_addr -= @#offset;
-  if (@log_addr >= 0 && @log_addr+@log_len <= @#len) {
+  @log_addr -= @#.offset;
+  if (@log_addr >= 0 && @log_addr+@log_len <= @#.len) {
     @=call :<in$op @args;
   }
   @log_addr = copy_addr;

@@ -32,8 +32,8 @@ data {
 }
 
 init {
-  @#unix_file = open(@param, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
-  if(@#unix_file < 0) {
+  @#.unix_file = open(@param, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+  if(@#.unix_file < 0) {
     //@.abort("file '%s' open error: %s\n", @param, strerror(errno));
     exit(-1);
   }
@@ -47,17 +47,17 @@ operation $transfer
 {
   int success;
 
-  success = lseek(@#unix_file, @log_addr, SEEK_SET);
+  success = lseek(@#.unix_file, @log_addr, SEEK_SET);
   @.check(success != @log_addr, "bad lseek()");
   switch(@direction) {
     case direct_read:
-      success = read(@#unix_file, MAKE_PTR(@phys_addr), @log_len);
+      success = read(@#.unix_file, MAKE_PTR(@phys_addr), @log_len);
       @phys_len = (len_t)success;
       //provisionary: this should be checked at wait(), not here!
       @.check(success != @log_len, "bad read()");
       break;
     case direct_write:
-      success = write(@#unix_file, MAKE_PTR(@phys_addr), @log_len);
+      success = write(@#.unix_file, MAKE_PTR(@phys_addr), @log_len);
       @phys_len = (len_t)success;
       @.check(success != @log_len, "bad write()");
       break;

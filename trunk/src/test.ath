@@ -59,14 +59,14 @@ data { // my brick vars
 }
 
 init { // my brick init
-  @#state = 0;
+  @#.state = 0;
 }
 
 instance #test1 as subtest_instance;
 alias :>out1 as :>sub_out;
 alias :<in2 as :<sub_in;
 wire :<loc_in as :>loc_out;
-wire #test:<loc_in as #test.subtest_instance:>loc_out;
+wire #test:<loc_in as #test#subtest_instance:>loc_out;
 
 instance #test1 as subtest2;
 wire :<in1 as :>local_out;
@@ -96,7 +96,7 @@ data { // my input vars
 	int xxx;
 }
 init { // my input init
-	@<xxx = 1;
+	@:<.xxx = 1;
 }
 
 use PC test;
@@ -163,7 +163,7 @@ data { // my output vars
   int outstate;
 }
 init { // my output init
-  @>outstate = 0;
+  @:>.outstate = 0;
 }
 
 define TYPE mytype1 "addr_t a, len_t b:7, .sub1{int x, int y}, .sub2{long z}, paddr_t zzz";
@@ -241,43 +241,43 @@ operation $put
   @=call :<in3[2]$get [1] (0, 0, 0) : "test" => (res1, res2);
   @=call :<in1$put @args;
   @=call $put @args;
-  @=call $put [@#_mand] @args : "test";
+  @=call $put [@#._mand] @args : "test";
   @=call :<sub_in$put @args : "test2";
   @=call :>sub_out$put @args : "test3";
   @=call :<local_in$put @args : "test4";
   @=call :>local_out$put @args : "test5";
   // test array calls
-  @=call #.subtest2:<in_arr1[0]$put @args; 
+  @=call ##subtest2:<in_arr1[0]$put @args; 
   @=call :<arr1[0]$put @args;
-  @=call #.subtest2:<in_arr2[0]$put @args; 
+  @=call ##subtest2:<in_arr2[0]$put @args; 
   @=call :>arr2[0]$put @args;
-  @=call #.subtest2:>o_arr2[0]$put @args;
+  @=call ##subtest2:>o_arr2[0]$put @args;
   @=call :<iarr2[0]$put @args;
   // test calls of array members
   //wire :<in_arr3[1] as :>single_out;
-  @=call #.subtest2:<in_arr3[1]$put @args; // this is not optimized! because instead [1] an expression could be used!
+  @=call ##subtest2:<in_arr3[1]$put @args; // this is not optimized! because instead [1] an expression could be used!
   @=call :>single_out$put @args;
   // wire :>o_arr3[1] as :<single_in;
-  @=call #.subtest2:>o_arr3[res1]$put @args;
+  @=call ##subtest2:>o_arr3[res1]$put @args;
   @=call :<single_in$put @args;
   // test individually connected arrays
   @=call :<iarr3[0]$put @args;
   @=call :<iarr3[1]$put @args;
   // test variable access
   @log_len++;
-  @>outstate++;
-  @#state++;
+  @:>.outstate++;
+  @#.state++;
   @.test(a,b);
   _test(0);
   _test2 (2) => (res2);
   // test nested calls
-  @=call #test.subtest_instance:>out1$output_init (FALSE, FALSE) => (@success);
-  @=call #.subtest_instance:>out1$output_init @args;
-  @=call #.subtest_instance:<in1$output_init @args;
+  @=call #test#subtest_instance:>out1$output_init (FALSE, FALSE) => (@success);
+  @=call ##subtest_instance:>out1$output_init @args;
+  @=call ##subtest_instance:<in1$output_init @args;
   // test _deeply_ nested calls
-  @=call #test.subtest_instance.sub2:>out1$output_init (FALSE, FALSE) => (@success);
-  @=call #.subtest_instance.sub2:>out1$output_init @args;
-  @=call #.subtest_instance.sub2:<in1$output_init @args;
+  @=call #test#subtest_instance#sub2:>out1$output_init (FALSE, FALSE) => (@success);
+  @=call ##subtest_instance#sub2:>out1$output_init @args;
+  @=call ##subtest_instance#sub2:<in1$output_init @args;
   @mandate++;
 }
 
@@ -286,7 +286,7 @@ data {
   int i;
 }
 init {
-  @>i = 0;
+  @:>.i = 0;
 }
 
 @.define @=call myfunc (in1, in2, @!def:xx) => (yy)
@@ -297,8 +297,8 @@ init {
 operation $get
 {
   int a, b, c;
-  @>i++;
-  @>out_arr[2].i++;
+  @:>.i++;
+  @:>.out_arr[2].i++;
   @=call myfunc (a, b, 3) => (c);
 }
 
@@ -306,7 +306,7 @@ section (:1:)
 
 operation $get
 {
-  @>i--;
+  @:>.i--;
 }
 
 @.copy(0){@.cpp{

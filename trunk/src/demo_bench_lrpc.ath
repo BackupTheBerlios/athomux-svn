@@ -51,11 +51,11 @@ instance #lrpc_linux_client as control_klinux;
 
 
 instance #adapt_complete as acomp;
-wire #.acomp:>out as :<bdev;
+wire ##acomp:>out as :<bdev;
 
 
-wire #.control_klinux:>out as :<strat[1];
-wire #.controlpool:>out as :<idpool[1];
+wire ##control_klinux:>out as :<strat[1];
+wire ##controlpool:>out as :<idpool[1];
 
 local input :<strat[2]
 local input :<idpool[2]
@@ -278,54 +278,54 @@ operation $output_init
 
   success_t s;
   if(@constr) {
-    myinstbrick (1, "io_demo_file", @param) => (@#device_ref);
-    @.check(!@#device_ref, "generic_instbrick(1) failed");
+    myinstbrick (1, "io_demo_file", @param) => (@#.device_ref);
+    @.check(!@#.device_ref, "generic_instbrick(1) failed");
 
-    myinstbrick (0, "io_benchmark", @param) => (@#bench_ref);
-    @.checkjump(!@#bench_ref, init1, "generic_instbrick(2) failed");
+    myinstbrick (0, "io_benchmark", @param) => (@#.bench_ref);
+    @.checkjump(!@#.bench_ref, init1, "generic_instbrick(2) failed");
 
-    @#device_out.native.conn_addr = @#device_ref;
-    @#device_out.native.conn_index = 0;
-    strcpy((char *)&@#device_out.native.conn_name, "out");
-    myinstconn (&@#device_out) => (s);
+    @#.device_out.native.conn_addr = @#.device_ref;
+    @#.device_out.native.conn_index = 0;
+    strcpy((char *)&@#.device_out.native.conn_name, "out");
+    myinstconn (&@#.device_out) => (s);
     @.checkjump(!s, init2, "generic_instconn(1) failed");
 
-    @#bench_in.native.conn_addr = @#bench_ref;
-    @#bench_in.native.conn_index = 0;
-    strcpy((char *)&@#bench_in.native.conn_name, "device");
+    @#.bench_in.native.conn_addr = @#.bench_ref;
+    @#.bench_in.native.conn_index = 0;
+    strcpy((char *)&@#.bench_in.native.conn_name, "device");
 #if 0
-    myinstconn (&@#bench_in) => (s);
+    myinstconn (&@#.bench_in) => (s);
     @.checkjump(!s, init3, "generic_instconn(2) failed");
 #endif
 
-    @=call :<strat[0]$connect (&@#bench_in.native, &@#device_out.native) => (s);
+    @=call :<strat[0]$connect (&@#.bench_in.native, &@#.device_out.native) => (s);
     @.checkjump(!s, init4, "connect failed");
 
-    @#bench_out.native.conn_addr = @#bench_ref;
-    @#bench_out.native.conn_index = 0;
-    strcpy((char *)&@#bench_out.native.conn_name, "out");
-    myinstconn (&@#bench_out) => (s);
+    @#.bench_out.native.conn_addr = @#.bench_ref;
+    @#.bench_out.native.conn_index = 0;
+    strcpy((char *)&@#.bench_out.native.conn_name, "out");
+    myinstconn (&@#.bench_out) => (s);
     @.checkjump(!s, init5, "generic_instconn(3) failed");
 
   } else {
-    mydeinstconn (&@#bench_out) => (s);
+    mydeinstconn (&@#.bench_out) => (s);
     @.check(!s, "generic_deinstconn(3) failed");
 init5:
-    @=call :<strat[0]$disconnect (&@#bench_in.native) => (s);
+    @=call :<strat[0]$disconnect (&@#.bench_in.native) => (s);
     @.check(!s, "disconnect failed");
 init4:
 #if 0
-    mydeinstconn (&@#bench_in) => (s);
+    mydeinstconn (&@#.bench_in) => (s);
     @.check(!s, "generic_deinstconn(2) failed");
 init3:
 #endif
-    mydeinstconn (&@#device_out) => (s);
+    mydeinstconn (&@#.device_out) => (s);
     @.check(!s, "generic_deinstconn(1) failed");
 init2:
-    mydeinstbrick (@#bench_ref) => (s);
+    mydeinstbrick (@#.bench_ref) => (s);
     @.check(!s, "generic_deinstbrick(2) failed");
 init1:
-    mydeinstbrick (@#device_ref) => (s);
+    mydeinstbrick (@#.device_ref) => (s);
     @.check(!s, "generic_deinstbrick(1) failed");
     if(@constr) {
       @success = FALSE;

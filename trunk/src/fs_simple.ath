@@ -229,7 +229,7 @@ output :>control
 operation $output_init
 {
   trace("init fs_simple\n");
-  if(@constr && !@#fs_logaddr) {
+  if(@constr && !@#.fs_logaddr) {
     // get root address
     struct conn_info in_info = { .conn_addr = 0, .conn_index = 0, .conn_name = "_root", };
     if(@param[0]) {
@@ -239,14 +239,14 @@ operation $output_init
     @=call :<strat$getconn (&in_info, &out_info, sizeof(out_info)) => (@success);
     @.fatal(!@success, "cannot find root");
     trace("found root '%s'\n", out_info.conn_name);
-    @#root_addr = out_info.conn_addr;
+    @#.root_addr = out_info.conn_addr;
     // reserve space for our virtual brick instance
-    @#fs_len = DEFAULT_TRANSFER * 256;
-    @=call :<strat$getaddr (@#fs_len) => (@success, @#fs_logaddr, @#fs_len);
-    trace("got fs_logaddr %llx\n", @#fs_logaddr);
+    @#.fs_len = DEFAULT_TRANSFER * 256;
+    @=call :<strat$getaddr (@#.fs_len) => (@success, @#.fs_logaddr, @#.fs_len);
+    trace("got fs_logaddr %llx\n", @#.fs_logaddr);
   }
-  if(@destr && @#fs_logaddr) {
-    @=call :<strat$delete (@#fs_logaddr, @#fs_len) => (@success);
+  if(@destr && @#.fs_logaddr) {
+    @=call :<strat$delete (@#.fs_logaddr, @#.fs_len) => (@success);
   }
 }
 
@@ -255,7 +255,7 @@ operation $output_init
  */
 operation $instbrick,$deinstbrick
 {
-  @.check(@log_addr == @#fs_logaddr, "operation not allowed on virtual fs brick");
+  @.check(@log_addr == @#.fs_logaddr, "operation not allowed on virtual fs brick");
   @=call :<strat$op @args;
 }
 
@@ -263,9 +263,9 @@ operation $connect
 {
   struct conn_info * conn1 = @conn1;
   struct conn_info * conn2 = @conn2;
-  if(conn2->conn_addr == @#fs_logaddr) {
+  if(conn2->conn_addr == @#.fs_logaddr) {
     @.check(strcmp(conn2->conn_name,"out"), "bad connector name '%s'", conn2->conn_name);
-    struct path * path = index_find(@#index_hash, conn2->conn_index);
+    struct path * path = index_find(@#.index_hash, conn2->conn_index);
     if(!path) {
       return;
     }
@@ -281,7 +281,7 @@ operation $connect
       vconn->belonging = path;
       vconn->chain_next = path->chain;
       path->chain = vconn;
-      vconn_add(@#vconn_hash, vconn);
+      vconn_add(@#.vconn_hash, vconn);
     }
     return;
   }
@@ -291,7 +291,7 @@ operation $connect
 operation $disconnect
 {
   struct conn_info * conn1 = @conn1;
-  struct vconn * vconn = vconn_find(@#vconn_hash, conn1);
+  struct vconn * vconn = vconn_find(@#.vconn_hash, conn1);
   if(vconn) {
     struct path * path = vconn->belonging;
     struct vconn ** ptr;
@@ -302,7 +302,7 @@ operation $disconnect
 	break;
       }
     }
-    vconn_del(@#vconn_hash, vconn);
+    vconn_del(@#.vconn_hash, vconn);
     free(vconn);
   }
   @=call :<strat$OP_NAME @args;
@@ -365,7 +365,7 @@ operation $disconnect
 operation $instconn
 {
   struct conn_info * conn1 = @conn1;
-  if(conn1->conn_addr != @#fs_logaddr) {
+  if(conn1->conn_addr != @#.fs_logaddr) {
     @=call :<strat$instconn @args;
     return;
   }
@@ -375,7 +375,7 @@ operation $instconn
   int start_pos = 0;
   @.check(@param[start_pos] != '/', "cannot handle relative paths");
   start_pos++;
-  struct conn_info output_info = { .conn_addr = @#root_addr, .conn_index = 0, .conn_name = "out" };
+  struct conn_info output_info = { .conn_addr = @#.root_addr, .conn_index = 0, .conn_name = "out" };
   struct conn_info next_inputinfo = {};
   int pos;
   for(;;) {
@@ -421,11 +421,11 @@ operation $instconn
   struct path * path = MAKE_PTR(phys_addr);
   path->chain = NULL;
   path->len = len;
-  path->index = @#max_index++;
+  path->index = @#.max_index++;
   memcpy(&path->alias, &output_info, sizeof(path->alias));
   strcpy(path->name, @param);
-  path_add(@#path_hash, path);
-  index_add(@#index_hash, path);
+  path_add(@#.path_hash, path);
+  index_add(@#.index_hash, path);
   trace("added %d '%s'\n", path->index, path->name);
   conn1->conn_index = path->index;
   @success = TRUE;
@@ -434,7 +434,7 @@ operation $instconn
 @.func _deinst_path(addr_t addr)
 {
   for(;;) {
-    if(addr == @#root_addr) {
+    if(addr == @#.root_addr) {
       break;
     }
     struct conn_info curr = { .conn_addr = addr, .conn_name = "in", .conn_index = 0 };
@@ -457,11 +457,11 @@ operation $instconn
 operation $deinstconn
 {
   struct conn_info * conn1 = @conn1;
-  if(conn1->conn_addr != @#fs_logaddr) {
+  if(conn1->conn_addr != @#.fs_logaddr) {
     @=call :<strat$deinstconn @args;
     return;
   }
-  struct path * path = index_find(@#index_hash, conn1->conn_index);
+  struct path * path = index_find(@#.index_hash, conn1->conn_index);
   if(!path) {
     return;
   }
@@ -469,8 +469,8 @@ operation $deinstconn
 #if 1
   _deinst_path(path->alias.conn_addr);
 #endif
-  path_del(@#path_hash, path->name, path->len);
-  index_del(@#index_hash, path->index);
+  path_del(@#.path_hash, path->name, path->len);
+  index_del(@#.index_hash, path->index);
   trace("removed '%s'\n", path->name);
   @success = TRUE;
 }
@@ -482,7 +482,7 @@ operation $getconn
   if(!conn1->conn_addr && !strcmp(conn1->conn_name, "_fs")) {
     @.check(@conn_len < sizeof(struct conn_info), "not enough space");
     struct conn_info * res_conn = @res_conn;
-    res_conn->conn_addr = @#fs_logaddr;
+    res_conn->conn_addr = @#.fs_logaddr;
     strcpy(res_conn->conn_name, "hook");
     res_conn->conn_index = 0;
     @conn_len = sizeof(struct conn_info);
@@ -490,8 +490,8 @@ operation $getconn
     return;
   }
 	// virtually create my outputs
-  if(conn1->conn_addr == @#fs_logaddr) {
-    struct path * path = index_find(@#index_hash, conn1->conn_index);
+  if(conn1->conn_addr == @#.fs_logaddr) {
+    struct path * path = index_find(@#.index_hash, conn1->conn_index);
     if(!path) {
       return;
     }
@@ -508,12 +508,12 @@ operation $getconn
 operation $findconn
 {
   struct conn_info * conn1 = @conn1;
-  if(conn1->conn_addr != @#fs_logaddr) {
+  if(conn1->conn_addr != @#.fs_logaddr) {
     @=call :<strat$findconn @args;
     return;
   }
   int len = strlen(@param); 
-  struct path * path = path_find(@#path_hash, @param, len);
+  struct path * path = path_find(@#.path_hash, @param, len);
   if(!path) {
     return;
   }
@@ -525,14 +525,14 @@ operation $findconn
 
 operation $transfer
 {
-  if(@log_addr != @#fs_logaddr) {
+  if(@log_addr != @#.fs_logaddr) {
     @=call :<strat$transfer @args;
 		// virtuall append my infos to the maindir
     if(!@log_addr && @direction == direct_read && @success && @phys_len > 3) {
       @phys_len -= 3;
       char * str = MAKE_PTR(@phys_addr+@phys_len);
       int plus = snprintf(str, (plen_t)@log_len - @phys_len,
-			  "  output _fs = {\n    connect _fs=%llx:hook\n  }\n}\n", @#fs_logaddr);
+			  "  output _fs = {\n    connect _fs=%llx:hook\n  }\n}\n", @#.fs_logaddr);
       @phys_len += plus;
     }
     return;
@@ -545,7 +545,7 @@ operation $transfer
     if(pos >= @log_len) return;
     for(i = 0; i < PATH_HASH_MAX; i++) {
       struct path * tmp;
-      for(tmp = @#index_hash[i]; tmp; tmp = tmp->index_next) {
+      for(tmp = @#.index_hash[i]; tmp; tmp = tmp->index_next) {
 				pos += snprintf(str+pos, @log_len-pos,
 												"  output out[%d]={\n    c_param out[%d]=%s\n",
 												tmp->index, tmp->index, tmp->name);
@@ -570,7 +570,7 @@ operation $transfer
 
 operation $wait
 {
-  if(@log_addr == @#fs_logaddr) {
+  if(@log_addr == @#.fs_logaddr) {
     @success = TRUE;
     return;
   }

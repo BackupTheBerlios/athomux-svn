@@ -29,7 +29,7 @@ data { // my brick vars
 }
 
 init { // my brick init
-  @#state = 0;
+  @#.state = 0;
 }
 
 instance #test2 as sub2;
@@ -42,7 +42,7 @@ data { // my input vars
 	int xxx;
 }
 init { // my input init
-	@<xxx = 1;
+	@:<.xxx = 1;
 }
 
 input :<in2
@@ -91,19 +91,19 @@ data {
   int i;
 }
 init {
-  @>i = 0;
+  @:>.i = 0;
 }
 
 operation $get
 {
-  @>i++;
-  @>out1.outstate++;
-  @>out_arr[2].i++;
+  @:>.i++;
+  @:>.out1.outstate++;
+  @:>.out_arr[2].i++;
 }
 
 section (:1:)
 
 operation $get
 {
-  @>i--;
+  @:>.i--;
 }

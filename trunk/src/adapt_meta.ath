@@ -32,24 +32,24 @@ operation $output_init
 {
   @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
   if(@destr) {
-    if(@#control) {
-      @=call :<in$trput (0, DEFAULT_TRANSFER, @#control) => (@success);
-      @#control = 0;
+    if(@#.control) {
+      @=call :<in$trput (0, DEFAULT_TRANSFER, @#.control) => (@success);
+      @#.control = 0;
     }
   }
   if(@constr) {
-    @=call :<in$gettr (0, DEFAULT_TRANSFER, TRUE) => (@success, @#control);
+    @=call :<in$gettr (0, DEFAULT_TRANSFER, TRUE) => (@success, @#.control);
     if(!@success) {
-      @=call :<in$createget (0, DEFAULT_TRANSFER) => (@success, @#control);
+      @=call :<in$createget (0, DEFAULT_TRANSFER) => (@success, @#.control);
       @.fatal(!@success, "cannot initialize");
-      struct adapt_meta_control * control = MAKE_PTR(@#control);
+      struct adapt_meta_control * control = MAKE_PTR(@#.control);
       control->magic = MAGIC_adapt_meta;
       control->normal_start = GAP;
       control->normal_end = GAP;
       trace("++++++++++++++++++ init adapt_meta +++++++++++++++++++++\n");
-      @=call :<in$transfer (0, DEFAULT_TRANSFER, @#control, direct_write) => (@success);
+      @=call :<in$transfer (0, DEFAULT_TRANSFER, @#.control, direct_write) => (@success);
     }
-    struct adapt_meta_control * control = MAKE_PTR(@#control);
+    struct adapt_meta_control * control = MAKE_PTR(@#.control);
     @.fatal(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   }
 }
@@ -57,7 +57,7 @@ operation $output_init
 operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$create,$delete,$tr,$gettr,$trput,$putwait,$createget,$getaddrcreateget
 {
   @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
-  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  struct adapt_meta_control * control = MAKE_PTR(@#.control);
   @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   addr_t old_addr = @log_addr;
   @log_addr += control->normal_start;
@@ -74,7 +74,7 @@ operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$create,$delete,$tr,$
 operation $move
 {
   @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
-  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  struct adapt_meta_control * control = MAKE_PTR(@#.control);
   @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   addr_t old_addr = @log_addr;
   @log_addr += control->normal_start;
@@ -98,7 +98,7 @@ section (:1:)
 operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$delete,$tr,$gettr,$trput,$putwait,$createget,$getaddrcreateget
 {
   @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
-  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  struct adapt_meta_control * control = MAKE_PTR(@#.control);
   @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   addr_t old_addr = @log_addr;
   @.check(old_addr+@log_len+DEFAULT_TRANSFER > control->normal_start, "bad access outside meta region");
@@ -126,7 +126,7 @@ operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$delete,$tr,$gettr,$t
 operation $create
 {
   @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
-  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  struct adapt_meta_control * control = MAKE_PTR(@#.control);
   @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   addr_t old_addr = @log_addr;
   addr_t border = old_addr+@log_len+DEFAULT_TRANSFER;
@@ -140,7 +140,7 @@ operation $create
 operation $move
 {
   @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
-  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  struct adapt_meta_control * control = MAKE_PTR(@#.control);
   @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
   addr_t old_addr = @log_addr;
   addr_t border = old_addr+@log_len+DEFAULT_TRANSFER;

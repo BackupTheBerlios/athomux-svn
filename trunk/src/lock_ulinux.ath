@@ -190,7 +190,7 @@ operation $lock
   new->type = MAKE_TYPE(@data_lock, @addr_lock);
   struct lock * conflict;
   pthread_mutex_lock(&mutex);
-  while((conflict = lock_add(&@#anchor, new, @action != action_ask))) {
+  while((conflict = lock_add(&@#.anchor, new, @action != action_ask))) {
     if(@action != action_wait) {
       freelock(new);
       break;
@@ -212,7 +212,7 @@ operation $unlock
     .mandate = @mandate,
   };
   pthread_mutex_lock(&mutex);
-  lock_sub(&@#anchor, &del);
+  lock_sub(&@#.anchor, &del);
   pthread_mutex_unlock(&mutex);
   @success = TRUE;
 }

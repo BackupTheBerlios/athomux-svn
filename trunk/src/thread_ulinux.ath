@@ -142,7 +142,7 @@ operation $op
   struct thread_info info = {
     .sync = PTHREAD_COND_INITIALIZER,
     .mutex = PTHREAD_MUTEX_INITIALIZER,
-    .on = @#_conn_exec._input_.connect,
+    .on = @#._conn_exec._input_.connect,
     .myargs = @args,
     .myparam = @param,
   };

@@ -32,7 +32,7 @@ data {
 init {
   #undef OPERATION
   #define OPERATION "instance_init lrpc_linux_client"
-  if(sscanf(@param, "%lu", &@#id) != 1) {
+  if(sscanf(@param, "%lu", &@#.id) != 1) {
     @.rawerr("invalid param '%s' (should be a number)", @param);
   }
 }
@@ -44,11 +44,11 @@ output :>out
 operation $output_init,$transfer,$wait,$tr,$move,$create,$lock,$unlock,$delete,$getaddr,$findconn,$getconn,$connect,$disconnect,$instconn,$deinstconn,$instbrick,$deinstbrick
 {
 #if 1
-  if(lrpc_call(@#id, @args, @param)<0) {
+  if(lrpc_call(@#.id, @args, @param)<0) {
     @success = FALSE;
   }
 #else
-//  lrpc_call(@#id, @args, @param);
-  printf("lrpc(%li, a""rgs, '%s') = %li\n", @#id, @param, lrpc_call(@#id, @args, @param));
+//  lrpc_call(@#.id, @args, @param);
+  printf("lrpc(%li, a""rgs, '%s') = %li\n", @#.id, @param, lrpc_call(@#.id, @args, @param));
 #endif
 }

@@ -13,9 +13,9 @@ static_data {
 instance #lock_ulinux as lock;
 instance #thread_ulinux as thread;
 instance #demo_locking_sub as sub;
-wire #.lock:>lock as #.sub:<lock;
-wire #.sub:>out as #.thread:<exec;
-wire #.thread:>cpu as :<sub;
+wire ##lock:>lock as ##sub:<lock;
+wire ##sub:>out as ##thread:<exec;
+wire ##thread:>cpu as :<sub;
 
 local input :<sub
 
@@ -25,12 +25,12 @@ operation $output_init
 {
   int i;
 
-  @=call #.lock:>lock$output_init @args;
-  @=call #.sub:>out$output_init @args;
+  @=call ##lock:>lock$output_init @args;
+  @=call ##sub:>out$output_init @args;
 
   if(@constr) {
 
-    @=call #.lock:>lock$lock [30] (0, 100) => (@success);
+    @=call ##lock:>lock$lock [30] (0, 100) => (@success);
     @.check(!@success, "initial lock failed");
 
     for(i=0; i<20; i++) {
@@ -41,7 +41,7 @@ operation $output_init
 
     printf("---------------------------\n");
 
-    @=call #.lock:>lock$unlock [30] (0, 100) => (@success);
+    @=call ##lock:>lock$unlock [30] (0, 100) => (@success);
     @.check(!@success, "releasing initial lock failed");
     printf("--sleeping--\n");
     sleep(3);

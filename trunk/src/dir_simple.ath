@@ -176,7 +176,7 @@ section(:0..DATA_SECTIONS-1:)
 operation $output_init
 {
   if(@destr) {
-    @>entry_index = 0;
+    @:>.entry_index = 0;
 #ifdef DEBUG
     struct dir_control_block * control = PC_GET(dirtable, 0, ENTRY_SIZE);
     check_magic(control);
@@ -198,7 +198,7 @@ operation $output_init
       // already exists?
       if(!strcmp(entry->name, @param)) {
 	trace("found existing entry '%s'\n", entry->name);
-	@>entry_index = i;
+	@:>.entry_index = i;
 	@success = TRUE;
 	return;
       }
@@ -220,7 +220,7 @@ operation $output_init
       entry->off[i].off_border = 0;
     }
     strncpy(entry->name, @param, NAME_SIZE-1);
-    @>entry_index = empty;
+    @:>.entry_index = empty;
   }
   @success = TRUE;
 }
@@ -231,7 +231,7 @@ operation $output_init
   struct dir_control_block * control = PC_GET(dirtable, 0, ENTRY_SIZE);
   check_magic(control);
 #endif
-  struct entry * entry = PC_GET(dirtable, @>entry_index * ENTRY_SIZE, ENTRY_SIZE);
+  struct entry * entry = PC_GET(dirtable, @:>.entry_index * ENTRY_SIZE, ENTRY_SIZE);
   @.check(src_addr + src_len > entry->off[@sect_code].off_len, "bad region access: %llx > %llx (border=%llx)", src_addr + src_len, entry->off[@sect_code].off_len, entry->off[@sect_code].off_border);
   entry->off[@sect_code].off_start;
 })
@@ -243,7 +243,7 @@ operation $op
   if(++xxx % 64 == 0) PC_FLUSH(dirtable);
 #endif
 #ifdef DEBUG
-  @.check(!@>entry_index, "trying to operate on an uninitialized output");
+  @.check(!@:>.entry_index, "trying to operate on an uninitialized output");
 #endif
   addr_t offset = get_offset(@log_addr, @log_len);
   trace("log_addr=%llx, adding offset=%lld, new log_addr=%llx\n", @log_addr, offset, @log_addr+offset);
@@ -261,7 +261,7 @@ operation $op
   entry->off[@sect_code].off_border += delta;
   index_t i;
   for(i = 1; i < control->entry_count; i++) {
-    if(i == @>entry_index) {
+    if(i == @:>.entry_index) {
       continue;
     }
     struct entry * entry = PC_GET_DIRTY(dirtable, i * ENTRY_SIZE, ENTRY_SIZE);
@@ -274,7 +274,7 @@ operation $op
 @.func change_size(len_t new_len, len_t new_border, len_t postgap)
 {
   @.check(new_len > new_border, "internal inconsistency");
-  struct entry * entry = PC_GET_DIRTY(dirtable, @>entry_index * ENTRY_SIZE, ENTRY_SIZE);
+  struct entry * entry = PC_GET_DIRTY(dirtable, @:>.entry_index * ENTRY_SIZE, ENTRY_SIZE);
   /* Currently the postgap is only enlarged, never shrunk.
    * TODO: implement shrinking, but beware of cyclic pingpong effects!
    * Only shrink if some threshold is exceeded or if the new length is 0.
@@ -310,7 +310,7 @@ operation $op
 operation $create,$createget
 {
   trace("address=%lld len=%llx\n", @log_addr, @log_len);
-  struct entry * entry = PC_GET(dirtable, @>entry_index * ENTRY_SIZE, ENTRY_SIZE);
+  struct entry * entry = PC_GET(dirtable, @:>.entry_index * ENTRY_SIZE, ENTRY_SIZE);
   len_t border = @log_addr + @log_len;
   if(border > entry->off[@sect_code].off_len) {
     change_size(border, border, POSTGAP(@sect_code));
@@ -331,7 +331,7 @@ operation $move
   trace("address=%lld len=%llx offset=%llx offset_max=%llx\n", @log_addr, @log_len, @offset, @offset_max);
   @.check(@offset_max < @offset, "bad offset_max parameter %llx < %llx", @offset_max, @offset);
   @.check(-@offset > (offs_t)@log_addr, "trying to move to negative addresses,  %llx > %llx", -@offset, @log_addr);
-  struct entry * entry = PC_GET(dirtable, @>entry_index * ENTRY_SIZE, ENTRY_SIZE);
+  struct entry * entry = PC_GET(dirtable, @:>.entry_index * ENTRY_SIZE, ENTRY_SIZE);
   len_t end = @log_addr + @log_len;
   len_t border = end;
   if(@offset_max > 0) {
@@ -344,7 +344,7 @@ operation $move
     @=call :<in$move @args;
     len_t new_len = end + @offset;
     if(@success && new_len > entry->off[@sect_code].off_len) {
-      PC_DIRTY(dirtable, @>entry_index * ENTRY_SIZE);
+      PC_DIRTY(dirtable, @:>.entry_index * ENTRY_SIZE);
       entry->off[@sect_code].off_len = new_len;
     }
   } else {
@@ -358,7 +358,7 @@ operation $move
     @=call :<in$move @args;
     @log_len = old_len;
     if(@success) {
-      PC_DIRTY(dirtable, @>entry_index * ENTRY_SIZE);
+      PC_DIRTY(dirtable, @:>.entry_index * ENTRY_SIZE);
       correct_infos(control, entry, base_addr, @offset);
     }
   }
@@ -368,7 +368,7 @@ section (:STAT_SECTION:)
 
 operation $transfer
 {
-  transfer_statinfo(@>entry_index);
+  transfer_statinfo(@:>.entry_index);
 }
 
 

@@ -8,7 +8,7 @@
 // not in static_init or the like!
 
 @.define @.msg (kind, text...)
-{ printf(kind "OP "OPERATION" file "BASEFILE" line %d op(%s) sect(%d) mand(%d): "text"\n", __LINE__, op_names[@op_code], @sect_code, @#_mand ...);
+{ printf(kind "OP "OPERATION" file "BASEFILE" line %d op(%s) sect(%d) mand(%d): "text"\n", __LINE__, op_names[@op_code], @sect_code, @#._mand ...);
 }
 
 @.macro @.errmsg (text...)
@@ -123,14 +123,14 @@
 @.macro __PC_GET(name, _addr, _len, dirty)
 {
   index_t index = _PC_HASH(name, _addr);
-  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  struct pc_elem * elem = &@#._pc_@@name.pc_elem[index];
   addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
   plen_t base_offset = PC__BASE_OFFSET(_addr, PC_@@name@@_WHOLE);
   if((elem->pc_addr & ~(addr_t)PC__DIRTY) != base_addr) {
     plen_t base_len = PC__BASE_LEN(base_offset, _len, PC_@@name@@_WHOLE);
-    _PC_GET(&@#_pc_@@name, elem, base_addr, base_len);
+    _PC_GET(&@#._pc_@@name, elem, base_addr, base_len);
   }
-  @#_pc_@@name.pc_write |= (dirty & PC__DIRTY);
+  @#._pc_@@name.pc_write |= (dirty & PC__DIRTY);
   elem->pc_addr |= (dirty & PC__DIRTY);
 }
 
@@ -149,9 +149,9 @@
 @.define PC_SET(name, addr_t _addr, plen_t _len, void * _ptr, bool dirty)
 {
   index_t index = _PC_HASH(name, _addr);
-  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  struct pc_elem * elem = &@#._pc_@@name.pc_elem[index];
   if(elem->pc_addr & PC__PRESENT) {
-    _PC_PUT(&@#_pc_@@name, elem);
+    _PC_PUT(&@#._pc_@@name, elem);
   }
   addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
   plen_t base_offset = PC__BASE_OFFSET(_addr, PC_@@name@@_WHOLE);
@@ -159,41 +159,41 @@
   elem->pc_addr = base_addr | (dirty & PC__DIRTY);
   elem->pc_len = base_len;
   elem->pc_ptr = MAKE_PTR(MAKE_PADDR(_ptr) & ~(PC_@@name@@_WHOLE-1));
-  @#_pc_@@name.pc_write |= dirty;
+  @#._pc_@@name.pc_write |= dirty;
 }
 
 @.define PC_UNSET(name, addr_t _addr)
 {
   index_t index = _PC_HASH(name, _addr);
-  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  struct pc_elem * elem = &@#._pc_@@name.pc_elem[index];
   if(elem->pc_addr & PC__PRESENT) {
-    _PC_PUT(&@#_pc_@@name, elem);
+    _PC_PUT(&@#._pc_@@name, elem);
   }
 }
 
 @.define PC_DIRTY(name, addr_t _addr)
 {
   index_t index = _PC_HASH(name, _addr);
-  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  struct pc_elem * elem = &@#._pc_@@name.pc_elem[index];
   addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
   if((elem->pc_addr & ~(addr_t)PC__DIRTY) == base_addr) {
     elem->pc_addr |= PC__DIRTY;
-    @#_pc_@@name.pc_write = TRUE;
+    @#._pc_@@name.pc_write = TRUE;
   }
 }
 
 @.define PC_FLUSH(name)
 {
-  if(@#_pc_@@name.pc_version) {
-    _PC_ALL_PUT(&@#_pc_@@name, PC_@@name@@_MAX);
-    @#_pc_@@name.pc_version++;
-    @#_pc_@@name.pc_write = FALSE;
+  if(@#._pc_@@name.pc_version) {
+    _PC_ALL_PUT(&@#._pc_@@name, PC_@@name@@_MAX);
+    @#._pc_@@name.pc_version++;
+    @#._pc_@@name.pc_write = FALSE;
   }
 }
 
 @.define PC_ALLOC(name, len_t _len) => (log_addr)
 ({
-  struct pc_elem * elem = _PC_ALLOC(&@#_pc_@@name, _len, PC_@@name@@_ALIGN, PC_@@name@@_WHOLE, PC_@@name@@_MAX);
+  struct pc_elem * elem = _PC_ALLOC(&@#._pc_@@name, _len, PC_@@name@@_ALIGN, PC_@@name@@_WHOLE, PC_@@name@@_MAX);
   log_addr = elem->pc_addr & ~(addr_t)(PC__DIRTY | PC__PRESENT);
   elem->pc_ptr;
 })
@@ -201,8 +201,8 @@
 @.define PC_FREE(name, addr_t _addr, len_t _len)
 {
   index_t index = _PC_HASH(name, _addr);
-  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
-  _PC_FREE(&@#_pc_@@name, elem, _addr, _len);
+  struct pc_elem * elem = &@#._pc_@@name.pc_elem[index];
+  _PC_FREE(&@#._pc_@@name, elem, _addr, _len);
 }
 
 @.define PC_BASEADDR(name, _addr)

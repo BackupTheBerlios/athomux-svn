@@ -3001,7 +3001,7 @@ $brick_init
  Before calling any operation, at least the inputs must have been connected.
 \layout Standard
 
-Special case: if there are no inputs at all, the created phasee is equivalent
+Special case: if there are no inputs at all, the created phase is equivalent
  to the connected phase; this may be the case for some device drivers.
 \layout Standard
 
@@ -3097,7 +3097,7 @@ $output_init
 operating
 \emph default 
 .
- In general, it is an error to call any operation on an non-operating output;
+ In general, it is an error to call any operation on a non-operating output;
  however it is possible to implement outputs in such a way that non-operating
  mode can be tolerated.
 \layout Standard

@@ -11,18 +11,18 @@ enddesc
 
 instance #io_demo_file as device;
 instance #io_benchmark as bench;
-wire #.device:>out as #.bench:<device;
+wire ##device:>out as ##bench:<device;
 
 output :>program
 
 operation $output_init
 {
   if(@destr) {
-    @=call #.bench:>out$output_init @args;
-    @=call #.device:>out$output_init @args;
+    @=call ##bench:>out$output_init @args;
+    @=call ##device:>out$output_init @args;
   }
   if(@constr) {
-    @=call #.device:>out$output_init @args;
-    @=call #.bench:>out$output_init @args;
+    @=call ##device:>out$output_init @args;
+    @=call ##bench:>out$output_init @args;
   }
 }

@@ -28,7 +28,7 @@ data {
 
 instance #lock_ulinux as lock;
 instance #thread_ulinux as thread;
-wire #.thread:<exec as :>dummy;
+wire ##thread:<exec as :>dummy;
 
 local output :>dummy
 data {
@@ -39,23 +39,23 @@ operation $output_init
 {
   @success = TRUE;
   if(@destr) {
-    @>is_running = FALSE;
-    @=call #.lock:>lock$lock [1] (-1, 1) => (); // wait on thread
+    @:>.is_running = FALSE;
+    @=call ##lock:>lock$lock [1] (-1, 1) => (); // wait on thread
   }
   if(@constr) {
-    @>is_running = TRUE;
-    sscanf(@param, "%Lu", &@#transfers_per_second);
-    @.fatal(!@#transfers_per_second, "please specify the number of transfers per second in the p""aram");
+    @:>.is_running = TRUE;
+    sscanf(@param, "%Lu", &@#.transfers_per_second);
+    @.fatal(!@#.transfers_per_second, "please specify the number of transfers per second in the p""aram");
     sleep(1);
-    while(@>is_running) {
-      @=call #.lock:>lock$unlock [0] (@#next_unlock, @#transfers_per_second) => ();
+    while(@:>.is_running) {
+      @=call ##lock:>lock$unlock [0] (@#.next_unlock, @#.transfers_per_second) => ();
       sleep(1);
-      addr_t bytes_done   = @#bytes_done;
-      @#bytes_done        = 0;
-      @#total_bytes_done += bytes_done;
+      addr_t bytes_done   = @#.bytes_done;
+      @#.bytes_done        = 0;
+      @#.total_bytes_done += bytes_done;
       printf("%llu KB/s\n", bytes_done >> 10); // div by 1024
     }
-    @=call #.lock:>lock$unlock [0] (0, -1) => ();
+    @=call ##lock:>lock$unlock [0] (0, -1) => ();
   }
 }
 
@@ -74,13 +74,13 @@ output :>out
 
   for(i=0; i<TRANSFERS; i++) {
     if(randomorder) {
-      position = ((position + randomdata[@#randompos++]) % RANDOM_RANGE) & ~MY_TRANSFER_MASK;
+      position = ((position + randomdata[@#.randompos++]) % RANDOM_RANGE) & ~MY_TRANSFER_MASK;
     }
-    @=call #.lock:>lock$lock [1] (@#next_unlock, 1) => (mysuccess);
-    @#next_unlock++;
+    @=call ##lock:>lock$lock [1] (@#.next_unlock, 1) => (mysuccess);
+    @#.next_unlock++;
     @.check(!mysuccess, "obtaining lock failed");
     position     += MY_TRANSFER;
-    @#bytes_done += MY_TRANSFER;
+    @#.bytes_done += MY_TRANSFER;
     @=call :<device$transfer (position, sizeof(buf), (paddr_t)buf, direct_write) => (mysuccess);
     @.check(!mysuccess, "write failed");
   }
@@ -101,10 +101,10 @@ operation $output_init
   if(@constr) {
     if(@success) {
       printf("init ok\n");
-      @=call #.lock:>lock$lock [0] (0, -1) => (@success);
+      @=call ##lock:>lock$lock [0] (0, -1) => (@success);
       @.check(!@success, "locking lock failed");
 
-      @=call #.thread:>cpu$output_init (FALSE, TRUE) => (@success);
+      @=call ##thread:>cpu$output_init (FALSE, TRUE) => (@success);
       @.check(!@success, "initializing thread failed");
 
       do_benchmark(TRUE);

@@ -60,24 +60,24 @@ operation $output_init
   mand_t   mandate = 0;
   struct ioqueue_request *req;
 
-  @>is_running = !@destr;
+  @:>.is_running = !@destr;
 
   if(@constr) {
     // this hack avoids problems with identical mandates
     mandate = -(base_mand++);
   }
   // main loop
-  while(@>is_running) {
+  while(@:>.is_running) {
     // wait for next request
     trace("io_arbiter: waiting for next request\n");
     @=call :<queue$getaddr [mandate] (IOQUEUE_REQUEST_SIZE, TRUE) => (mysuccess, req_laddr);
-    if(!@>is_running) goto shutdown;
+    if(!@:>.is_running) goto shutdown;
     @.checkjump(!mysuccess, fail, "getaddr failed");
 
     // fetch it
     trace("io_arbiter: processing request %llx\n", req_laddr);
     @=call :<queue$gettr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
-    if(!@>is_running) goto shutdown;
+    if(!@:>.is_running) goto shutdown;
     @.checkjump(!mysuccess, fail, "gettr failed");
 
     req = MAKE_PTR(req_paddr);
@@ -88,7 +88,7 @@ operation $output_init
       // send it to the driver
       trace("io_arbiter: calling transfer (laddr:%llx,llen:%llx,paddr=%p,prio=%i)\n", req->log_addr, req->log_len, MAKE_PTR(req->phys_addr), req->prio);
       @=call :<driver$transfer [mandate] (req->log_addr, req->log_len, req->phys_addr, req->direction, req->prio) => (mysuccess, phys_len);
-      if(!@>is_running) goto shutdown;
+      if(!@:>.is_running) goto shutdown;
       @.checkjump(!mysuccess, fail, "transfer failed");
       @.checkjump(req->log_len != phys_len, fail, "transfer could only process %lu of %llu bytes", phys_len, req->log_len);
     }

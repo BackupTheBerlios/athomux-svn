@@ -24,8 +24,8 @@ data {
 }
 
 init {
-  @#pos = 0;
-  memset(&@#pool, 0, sizeof(@#pool));
+  @#.pos = 0;
+  memset(&@#.pool, 0, sizeof(@#.pool));
 }
 
 
@@ -34,14 +34,14 @@ output :>out
 
 operation $getaddr
 {
-  unsigned int id = @#pos;
+  unsigned int id = @#.pos;
 
-  while(id_is_used(@#pool[id])) {
+  while(id_is_used(@#.pool[id])) {
     if (++id >= HELPER_IDPOOL_MAXID) id = 0;
-    if (id == @#pos) return;
+    if (id == @#.pos) return;
   }
   
-  @#pool[id] = 1;
+  @#.pool[id] = 1;
   @log_addr  = id;
   @log_len   = 1;
   @success   = TRUE;
@@ -49,6 +49,6 @@ operation $getaddr
 
 operation $delete
 {
-  @#pool[@log_addr] = 0;
+  @#.pool[@log_addr] = 0;
   @success = TRUE;
 }

@@ -630,7 +630,7 @@ data {
 }
 
 init {
-  @#mand = 10;
+  @#.mand = 10;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -645,22 +645,22 @@ output :>control
 operation $instbrick
 {
   @.check(!@log_addr, "trying to instantiate at address 0 (reserved for MAINDIR)");
-  struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, @log_addr);
   @.check(brick, "trying to create '%s' on an existing '%s' instance (%llx)", @name, brick->loader->name, @log_addr);
-  brick = new_brick(@name, @param, &@#mand);
+  brick = new_brick(@name, @param, &@#.mand);
   @.check(!brick, "brick '%s' creation failed", @name);
   trace("created %s %llx -> %p\n", @name, @log_addr, brick);
   brick->addr = @log_addr;
-  insert_brick_hash(@#brick_hash, brick);
+  insert_brick_hash(@#.brick_hash, brick);
   @success = TRUE;
 }
 
 operation $deinstbrick
 {
   @.check(!@log_addr, "trying to deinstantiate at address 0 (reserved for MAINDIR)");
-  struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, @log_addr);
   @.check(!brick, "brick %llx does not exist", @log_addr);
-  @success = delete_brick(@#brick_hash, brick, @param);
+  @success = delete_brick(@#.brick_hash, brick, @param);
   @.check(!@success, "deinst %llx failed\n", @log_addr);
 }
 
@@ -677,7 +677,7 @@ operation $instconn
     return;
   }
   // normal bricks
-  brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   trace("inst_conn %llx -> %p\n", conn1->conn_addr, brick);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   index_t conn_ix = find_load_conn(brick, conn1->conn_name);
@@ -759,7 +759,7 @@ operation $deinstconn
     return;
   }
   struct connector_header * conn;
-  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
   @.check(!conn, "non-existing input/output name '%s'", conn1->conn_name);
@@ -790,7 +790,7 @@ operation $connect
   struct connector_header * conn;
   struct brick_header * other_brick;
   struct connector_header * other_conn;
-  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
   @.check(!conn, "non-existing input '%s'", conn1->conn_name);
@@ -806,7 +806,7 @@ operation $connect
     @success = TRUE;
     return;
   }
-  other_brick = find_brick_hash(@#brick_hash, conn2->conn_addr);
+  other_brick = find_brick_hash(@#.brick_hash, conn2->conn_addr);
   @.check(!other_brick, "other brick %llx does not exist", conn2->conn_addr);
   other_conn = find_conn(other_brick, conn2->conn_name, conn2->conn_index);
   @.check(!other_conn, "output name '%s' index %d in brick %llx does not exist", conn2->conn_name, conn2->conn_index, conn2->conn_addr);
@@ -824,7 +824,7 @@ operation $disconnect
 {
   struct conn_info * conn1 = @conn1;
   struct connector_header * conn;
-  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
   @.check(!conn, "non-existing input name '%s'", conn1->conn_name);
@@ -866,7 +866,7 @@ operation $getconn
     }
     return;
   }
-  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
   if(conn) {
@@ -879,7 +879,7 @@ operation $findconn
 {
   struct conn_info * conn1 = @conn1;
   struct connector_header * conn;
-  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  struct brick_header * brick = find_brick_hash(@#.brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_param(brick, @param, 1);
   if(conn) {
@@ -898,7 +898,7 @@ operation $transfer
     if(!@log_addr) {
       @phys_len = main_dir_info(MAKE_PTR(@phys_addr), @log_len);
     } else {
-      struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+      struct brick_header * brick = find_brick_hash(@#.brick_hash, @log_addr);
       @.check(!brick, "brick address %llx does not exist", @log_addr);
       @phys_len = gen_info(brick, MAKE_PTR(@phys_addr), @log_len);
     }
@@ -908,7 +908,7 @@ operation $transfer
   } else if(@direction == direct_write) {
     trace("interpreting '%s'\n", (char*)MAKE_PTR(@phys_addr));
 #if 1
-    @=call #.adapt:>control$transfer @args;
+    @=call ##adapt:>control$transfer @args;
 #else
     // this should disappear!
     char * buf = MAKE_PTR(@phys_addr);
@@ -999,7 +999,7 @@ operation $getaddr
   if(!@log_len) {
     @log_len = REPRES_MAX;
   }
-  @log_addr = @#last_addr;
-  @#last_addr += @log_len;
+  @log_addr = @#.last_addr;
+  @#.last_addr += @log_len;
   @success = TRUE;
 }

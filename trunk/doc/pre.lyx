@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.28, 24 Nov 2004
+Version 0.29, 1 Dec 2004
 \layout Standard
 
 
@@ -881,7 +881,7 @@ must
 @#
 \family default 
 \emph on 
-variable_name
+.variable_name
 \emph default 
 , since you will not have an ordinary C pointer for accessing the instance
  variables in conventional sense.
@@ -1021,7 +1021,7 @@ input_var_exitcode
 \emph default 
  parts are similar to brick instance variables, but accessed via 
 \family typewriter 
-@<
+@:<.
 \family default 
 \emph on 
 var_name
@@ -1136,7 +1136,7 @@ max_sections
  is optional as above.
  Output vars are acessed by the special notation 
 \family typewriter 
-@>
+@:>.
 \family default 
 \emph on 
 var_name
@@ -1169,7 +1169,7 @@ dir_simple.ath
 
 You may access the fields of other array members via the syntax 
 \family typewriter 
-@>output_arrayname[
+@:>output_arrayname[
 \family default 
 \emph on 
 index
@@ -1180,7 +1180,7 @@ index
 \family default 
  or 
 \family typewriter 
-@<input_name[
+@:<input_name[
 \family default 
 \emph on 
 index
@@ -1226,7 +1226,7 @@ $instconn
 
 NOTICE: addressing of array members via the syntax 
 \family typewriter 
-@>arrayname[
+@:>arrayname[
 \family default 
 \emph on 
 index
@@ -1483,27 +1483,28 @@ code
 @#
 \family default 
 \emph on 
-brick_var
+.brick_var
 \emph default 
  and to output vars 
 \family typewriter 
-@>
-\family default 
+@:>
 \emph on 
+.
+\family default 
 output_var
 \emph default 
- of the last 
+ of the current 
 \family typewriter 
 output
 \family default 
- statement (TODO: input vars 
+ (if the operation belongs to an output) or an input variable 
 \family typewriter 
-@<
+@:<.
 \family default 
 \emph on 
 input_var
 \emph default 
- should also work, but have not been tested).
+ (if your operation belongs to an input).
 \layout Standard
 
 Calls to elementary operations of inputs or other outputs may also be performed,
@@ -1695,6 +1696,103 @@ $get(:1:)
 #test_brick:>out(:1:)$get
 \family default 
 .
+\layout Subsection
+
+Proposed New General Specifiers
+\layout Standard
+
+The following general specifier syntax is not yet fully implemented.
+ Dashed lines denote currently non-implemented extensions.
+ Dotted lines denoted a proposed new syntax which is different from prior
+ versions, but already parsed syntactically correct at least in some cases:
+\layout Standard
+\noindent 
+
+\begin_inset Graphics
+	filename specs.fig
+	width 100col%
+
+\end_inset 
+
+
+\layout Standard
+
+The following special cases will be treated uniformly:
+\layout Itemize
+
+An empty 
+\family typewriter 
+#brick
+\family default 
+ part (denoted simply 
+\family typewriter 
+#
+\family default 
+ without a brick name) means the current brick name.
+\layout Itemize
+
+An empty 
+\family typewriter 
+:<input
+\family default 
+ part (denoted simply 
+\family typewriter 
+:<
+\family default 
+) means the current input name where the specifier occurs (current scope)
+\layout Itemize
+
+Dito for empty 
+\family typewriter 
+:>output
+\family default 
+.
+\layout Standard
+
+In future, abbreviated specifiers not starting with 
+\family typewriter 
+#
+\family default 
+ will be interpreted in the following way: first, the specifier of the current
+ context scope is prepended.
+ If that does not yield a valid specifier syntax, the last part of the current
+ context specifier is stripped, and the test is recursively tried again
+ with a shorter scope specifier until either a possible completion with
+ a shorter scope specifier is found, or until no possible completion has
+ been found at all.
+ This is similar in style to shadowing of identifiers in scoped programming
+ languages: always take the outmost possible definition of an identifier.
+\layout Standard
+
+IMPORTANT: the new specifier syntax requires changes to the old 
+\family typewriter 
+@#brickvar
+\family default 
+, 
+\family typewriter 
+@<inputvar
+\family default 
+ and 
+\family typewriter 
+@>outputvar
+\family default 
+ syntax.
+ It is now denoted 
+\family typewriter 
+@#.brickvar
+\family default 
+, 
+\family typewriter 
+@:<.inputvar
+\family default 
+ and 
+\family typewriter 
+@:>.outputvar
+\family default 
+, respectively.
+ Currently it works only for abbreviated brick, input and output parts,
+ but full variable path specifiers (even for accessing variables of nested
+ brick instances) will be introduced soon (hopefully).
 \layout Section
 
 Call Syntax
@@ -1969,7 +2067,7 @@ mandate
  It tells the callee under which mandate the operation should be executed.
  When omitted at the long call syntax, the default mandate 
 \family typewriter 
-@#_mand
+@#._mand
 \family default 
  of the caller instance is automatically used by default.
  However, when omitted at the short call syntax, the 
@@ -4275,48 +4373,6 @@ Advice: try to avoid these predefined low-level substitutions by using
 $op
 \family default 
  instead (which avoids code bloat).
-\layout Subsection
-
-Qualified instance variables
-\layout Standard
-
-DISCUSS: this is inconsistent with the specifier notation! Better notation
- required!
-\layout Standard
-
-Foreign input and output variables may be accessed with the notation 
-\family typewriter 
-@<
-\family default 
-\emph on 
-input_name
-\family typewriter 
-\emph default 
-.
-\family default 
-\emph on 
-var_name 
-\emph default 
-or 
-\family typewriter 
-@>
-\family default 
-\emph on 
-output_name
-\family typewriter 
-\emph default 
-[
-\family default 
-\emph on 
-index
-\family typewriter 
-\emph default 
-].
-\family default 
-\emph on 
-var_name
-\emph default 
-.
 \layout Section
 
 Not yet implemented
@@ -4847,7 +4903,7 @@ member
 
 
 \family typewriter 
-@#_mand
+@#._mand
 \family default 
  The default mandate number of the current brick instance.
  Default numbers are automatically generated at brick instantiation time.
