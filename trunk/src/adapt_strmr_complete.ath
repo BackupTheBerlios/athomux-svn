@@ -1,0 +1,41 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strmr_complete
+
+purpose makes reader's granularity independent of writer's granularity 
+
+desc
+
+           +----------------------------------------+
+           |                                        |
+           |  +--------------+                      |
+           |  |              |     +-------------+  |
+  istrmr --+--+ adapt_pstrmr +-----+             |  |
+           |  |              |     | adapt_strmr +--+-- ostrmr
+           |  +--------------+  +--+             |  |
+           |                    |  +-------------+  |
+     tmp --+--------------------+                   |
+           |                                        |
+           +----------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #adapt_pstrmr as pr;
+alias :<strmr as :<istrmr;
+
+instance #adapt_strmr as sr;
+alias :<tmp as :<tmp;
+alias :>strmr as :>ostrmr;
+
+wire #adapt_strmr_complete#sr:<pstrmr as #adapt_strmr_complete#pr:>pstrmr;

@@ -1,0 +1,197 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #remote_server
+
+purpose marshalling/demarshalling operation calls and sending/receiving them over a stream
+
+desc
+
+          +---------------------------------------------------+
+          |                                                   |
+     in --+--                        +---------------+        |
+          |                        --+ thread_ulinux +--      |
+    mem --+--                        +---------------+        |
+          |                                                   |
+          |  +-----------------+     +----------------+       |
+          |  |                 |     |                +--     |
+  strmr --+--+ adapt_complete2 +-----+ strm_multiplex |       |
+          |  |                 |     |                +--     |
+          |  +-----------------+     +----------------+       |
+          |                                                   |
+          |  +-----------------+     +----------------+       |
+          |  |                 |     |                +--     |
+  strmw --+--+ adapt_complete2 +-----+ strm_multiplex |       |
+          |  |                 |     |                +--     |
+          |  +-----------------+     +----------------+       |
+          |                                                   |
+          +---------------------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "strm_types.h"
+
+  #define RPC_VERSION (1)
+
+  #define RPC_REQ      1
+  #define RPC_RSP      2
+
+  struct rpc_header_t {
+    uns4 identification;
+    uns1 version;
+    uns1 type;
+    plen_t param_len;
+    plen_t data_len;
+  };
+
+  struct rpc_args_t {
+    struct args plain_args;
+    bool conn1_valid;
+    bool conn2_valid;
+    bool res_conn_valid;
+    struct conn_info conn1;
+    struct conn_info conn2;
+    struct conn_info res_conn;
+  };
+
+  struct packet_t {
+    addr_t start;
+    len_t len;
+    paddr_t paddr;
+  };
+}
+
+
+
+
+instance #adapt_complete2 as complr;
+alias :<in as :<strmr;
+
+instance #adapt_complete2 as complw;
+alias :<in as :<strmw;
+
+instance #strm_multiplex as mplexr;
+wire :<istrm as #remote_server#complr:>out;
+wire :>ostrm1 as :<cpr;
+wire :>ostrm2 as :<icpr;
+
+instance #strm_multiplex as mplexw;
+wire :<istrm as #remote_server#complw:>out;
+wire :>ostrm1 as :<cpw;
+wire :>ostrm2 as :<icpw;
+
+instance #thread_ulinux as th;
+wire :<exec as :>loop;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>loop$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // start thread
+  @=call #remote_server#th:>cpu$wait [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "thread failed");
+}
+
+
+
+
+input :<mem
+
+
+
+
+// for output calls
+local input :<cpr
+local input :<cpw
+
+// for input calls
+local input :<icpr
+local input :<icpw
+
+
+
+
+@.include "remote_common.inc"
+@.include "remote_decode.inc"
+
+
+
+
+input :<in
+
+
+
+
+operation $retract
+{
+  success_t succ;
+
+  encode_rev(@args, @param) => (succ);
+  @.check(succ!=TRUE, "cannot encode");
+
+  @success = TRUE;
+}
+
+
+
+
+local output :>loop
+
+
+
+
+@.func decode_loop()
+{
+  success_t _decodeloopprefix_succ;
+  struct packet_t _decodeloopprefix_packet;
+
+  while (1) {
+    get_packet(cpr) => (_decodeloopprefix_succ, _decodeloopprefix_packet);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot get packet - FIXME: switch to error state");
+
+    decode(&_decodeloopprefix_packet) => (_decodeloopprefix_succ);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot decode packet - FIXME: switch to error state");
+
+    delete_packetr(cpr, &_decodeloopprefix_packet) => (_decodeloopprefix_succ);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot delete packet - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $wait
+{
+  decode_loop();
+
+  @success = TRUE;
+}

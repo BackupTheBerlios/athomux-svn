@@ -1,0 +1,155 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #device_tcp_client_ulinux
+
+purpose client for tcp connections
+
+desc
+  - only synchronous IO so far
+  - $brick_init expects host and port number in @param ("host=<host> port=<port>")
+  - implements multiuser capabilities
+
+         +--------------------------------+
+         |                                |
+  hook --+--                              |
+         |                                |
+         |  +----------------------+      |
+         |  | device_socket_ulinux +------+-- pstrm
+         |  +----------------------+      |
+         |                                |
+         +--------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+
+static_data {
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <netdb.h>
+  #include <string.h>
+  #include <unistd.h>
+  #include <errno.h>
+  #include "param_scanner.h"
+}
+
+
+
+
+instance #device_socket_ulinux as sl;
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    // FIXME: init brick
+    @=call #device_tcp_client_ulinux#sl:>init$output_init [@mandate] (@args);
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // FIXME: init brick
+    @=call #device_tcp_client_ulinux#sl:>init$output_init [@mandate] (@args);
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+  else if (@constr) {
+    // instantiate brick
+    int retval;
+    uint16_t port;
+
+    #define STRBUFLEN 256
+    char host_str[STRBUFLEN];
+    char port_str[STRBUFLEN];
+
+    getoptval(@param, "host", host_str, STRBUFLEN);
+    getoptval(@param, "port", port_str, STRBUFLEN);
+
+    unsigned long int convresult = strtoul(port_str, NULL, 0);
+    @.check(convresult==ULONG_MAX, "invalid port as parameter: %s", strerror(errno));
+    port = convresult;
+
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+    @.check(s==-1, "cannot create socket: %s", strerror(errno));
+    
+    struct hostent *he;
+    he=gethostbyname(host_str);
+    if (he==NULL){
+      retval = close(s);
+      @.check(retval==-1, "cannot close socket: %s - FIXME: switch to error state", strerror(errno));
+      @.err("cannot get host address");
+    }
+    
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(remote_addr));
+    remote_addr.sin_family = AF_INET;
+    remote_addr.sin_port = htons(port);
+    remote_addr.sin_addr = *((struct in_addr *)he->h_addr);
+
+    retval = connect(s, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+    if (retval==-1) {
+      retval = close(s);
+      @.check(retval==-1, "cannot close socket: %s - FIXME: switch to error state", strerror(errno));
+      @.err("cannot connect: %s", strerror(errno));
+    }
+
+    char buf[STRBUFLEN];
+    snprintf(buf, STRBUFLEN, "socket=%d", s);
+    buf[STRBUFLEN-1]=0;
+    // FIXME: init brick
+    @=call #device_tcp_client_ulinux#sl:>init$output_init [@mandate] (@args) : buf;
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+output :>pstrm
+
+
+
+
+operation $op
+{
+  @=call #device_tcp_client_ulinux#sl:>pstrm$op [@mandate] (@args);
+}
+
+
+
+
+input :<hook

@@ -1,0 +1,339 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #strm_multiplex
+
+purpose multiplexes two streams
+
+desc
+  - implements single user capabilities on ostrm1 and ostrm2
+  - requires multi user capabilities on istrm
+
+          +-------------------------+
+          |                         |
+  istrm --+--                     --+-- ostrm1
+          |                         |
+          | +-------------+       --+-- ostrm2
+          | | lock_ulinux +--       |  
+          | +-------------+         |
+          |                         |  
+          +-------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "strm_types.h"
+
+  #define LOCK_ADDR_MOD    0
+  #define LOCK_ADDR_WAIT1  1
+  #define LOCK_ADDR_WAIT2  2
+
+  #define LOCK_MAND1       1
+  #define LOCK_MAND2       2
+  #define LOCK_MAND_WAIT1  1
+  #define LOCK_MAND_WAIT2  2
+
+  struct strm_mplex_header_t {
+    uns4 identification;
+    uns1 channel;
+  };
+}
+
+
+
+
+data {
+  addr_t packet_start;
+  len_t packet_len;
+  bool packet_avail;
+  mand_t packet_mand;
+}
+
+
+
+
+init {
+  @#.packet_avail = FALSE;
+}
+
+
+
+
+instance #lock_ulinux as l;
+wire :>lock as :<ilock;
+
+
+
+
+input :<istrm
+local input :<ilock
+
+
+
+
+output :>ostrm1
+
+
+
+
+operation $gadr
+{
+  success_t succ;
+  struct strm_mplex_header_t header;
+  plen_t plen;
+
+  addr_t request_len = @log_len + sizeof(struct strm_mplex_header_t);
+
+  // get modify lock
+  @=call :<ilock$lock [LOCK_MAND1] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  if (@reader==TRUE) {
+    do {
+      @log_len = request_len;
+      if (@#.packet_avail) {
+        @.check(((@#.packet_avail>=request_len) && (@#.packet_avail<=@try_len)) || ((@#.packet_avail>=request_len) && (@try_len==0)), "cannot satisfy request");
+        @log_addr = @#.packet_start;
+        @log_len = @#.packet_len;
+      }
+      else {
+        @=call :<istrm$gadr [@mandate] (@args);
+        @.check(@success!=TRUE, "gadr on istrm failed1");
+        @success=FALSE;
+        @#.packet_start = @log_addr;
+        @#.packet_len = @log_len;
+        @#.packet_mand = @mandate;
+        @#.packet_avail = TRUE;
+      }
+
+      @=call :<istrm$transwait [@mandate] (@log_addr, sizeof(struct strm_mplex_header_t), MAKE_PADDR(&header), direct_read) => (succ, plen);
+      @.check(succ!=TRUE, "cannot read header - FIXME: switch to error state");
+      @.check(plen!=sizeof(struct strm_mplex_header_t), "cannot read header - FIXME: switch to error state");
+      @.check(header.identification!=SMPLEX_IDENTIFICATION, "invalid header - FIXME: switch to error state");
+      @.check((header.channel!=1) && (header.channel!=2), "invalid packet channel - FIXME: switch to error state");
+
+      if (header.channel!=1) {
+        if (@action!=action_wait) {
+          @=call :<ilock$unlock [LOCK_MAND1] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+          @.check(succ!=TRUE, "cannot release lock");
+          return;
+        }
+
+        // wait for next packet
+        @=call :<ilock$lock [LOCK_MAND_WAIT1] (LOCK_ADDR_WAIT1, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock");
+
+        // releasing modify lock
+        @=call :<ilock$unlock [LOCK_MAND1] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock");
+
+        // blocks here
+        @=call :<ilock$lock [LOCK_MAND_WAIT2] (LOCK_ADDR_WAIT1, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock - FIXME: switch to error state");
+
+        // clean up
+        @=call :<ilock$unlock [LOCK_MAND_WAIT2] (LOCK_ADDR_WAIT1, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+        // get modify lock
+        @=call :<ilock$lock [LOCK_MAND1] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock");
+      }
+    } while (header.channel!=1);
+  }
+  else {
+    @log_len = request_len;
+    @=call :<istrm$gadr [@mandate] (@args);
+    @.check(@success!=TRUE, "gadr on istrm failed2");
+    @success=FALSE;
+
+    header.identification = SMPLEX_IDENTIFICATION;
+    header.channel = 1;
+    @=call :<istrm$transwait [@mandate] (@log_addr, sizeof(struct strm_mplex_header_t), MAKE_PADDR(&header), direct_write) => (succ, plen);
+    @.check(succ!=TRUE, "cannot write header - FIXME: switch to error state");
+    @.check(plen!=sizeof(struct strm_mplex_header_t), "cannot write header - FIXME: switch to error state");
+  }
+
+  @log_len -= sizeof(struct strm_mplex_header_t);
+  @log_addr += sizeof(struct strm_mplex_header_t);
+
+  @success = TRUE;
+}
+
+
+
+
+operation $create,$delete,$padr
+{
+  success_t succ;
+
+  @log_addr -= sizeof(struct strm_mplex_header_t);
+  @log_len += sizeof(struct strm_mplex_header_t);
+  
+  if (@#.packet_avail) @=call :<istrm$OP_NAME [@#.packet_mand] (@args);
+  else @=call :<istrm$OP_NAME [@mandate] (@args);
+
+  @log_addr += sizeof(struct strm_mplex_header_t);
+  @log_len -= sizeof(struct strm_mplex_header_t);
+
+  if ((@success==TRUE) && (@op_code==opcode_padr)) {
+    // packet was consumed
+    @#.packet_avail = FALSE;
+
+    // releasing modify lock
+    @=call :<ilock$unlock [LOCK_MAND1] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+    @.check(succ!=TRUE, "cannot release lock");
+
+    // wakeup other thread
+    @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_WAIT2, 1, lock_write) => (succ);
+    @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $op
+{
+  @=call :<istrm$op [@mandate] (@args);
+}
+
+
+
+
+output :>ostrm2
+
+
+
+
+operation $gadr
+{
+  success_t succ;
+  struct strm_mplex_header_t header;
+  plen_t plen;
+
+  addr_t request_len = @log_len + sizeof(struct strm_mplex_header_t);
+
+  // get modify lock
+  @=call :<ilock$lock [LOCK_MAND2] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  if (@reader==TRUE) {
+    do {
+      @log_len = request_len;
+      if (@#.packet_avail) {
+        @.check(((@#.packet_avail>=request_len) && (@#.packet_avail<=@try_len)) || ((@#.packet_avail>=request_len) && (@try_len==0)), "cannot satisfy request");
+        @log_addr = @#.packet_start;
+        @log_len = @#.packet_len;
+      }
+      else {
+        @=call :<istrm$gadr [@mandate] (@args);
+        @.check(@success!=TRUE, "gadr on istrm failed3");
+        @success=FALSE;
+        @#.packet_start = @log_addr;
+        @#.packet_len = @log_len;
+        @#.packet_mand = @mandate;
+        @#.packet_avail = TRUE;
+      }
+
+      @=call :<istrm$transwait [@mandate] (@log_addr, sizeof(struct strm_mplex_header_t), MAKE_PADDR(&header), direct_read) => (succ, plen);
+      @.check(succ!=TRUE, "cannot read header - FIXME: switch to error state");
+      @.check(plen!=sizeof(struct strm_mplex_header_t), "cannot read header - FIXME: switch to error state");
+      @.check(header.identification!=SMPLEX_IDENTIFICATION, "invalid header - FIXME: switch to error state");
+      @.check((header.channel!=1) && (header.channel!=2), "invalid packet channel - FIXME: switch to error state");
+
+      if (header.channel!=2) {
+        if (@action!=action_wait) {
+          @=call :<ilock$unlock [LOCK_MAND2] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+          @.check(succ!=TRUE, "cannot release lock");
+          return;
+        }
+
+        // wait for next packet
+        @=call :<ilock$lock [LOCK_MAND_WAIT1] (LOCK_ADDR_WAIT2, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock");
+
+        // releasing modify lock
+        @=call :<ilock$unlock [LOCK_MAND2] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock");
+
+        // blocks here
+        @=call :<ilock$lock [LOCK_MAND_WAIT2] (LOCK_ADDR_WAIT2, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock - FIXME: switch to error state");
+
+        // clean up
+        @=call :<ilock$unlock [LOCK_MAND_WAIT2] (LOCK_ADDR_WAIT2, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+        // get modify lock
+        @=call :<ilock$lock [LOCK_MAND2] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot get lock");
+      }
+    } while (header.channel!=2);
+  }
+  else {
+    @log_len = request_len;
+    @=call :<istrm$gadr [@mandate] (@args);
+    @.check(@success!=TRUE, "gadr on istrm failed4");
+    @success=FALSE;
+
+    header.identification = SMPLEX_IDENTIFICATION;
+    header.channel = 2;
+    @=call :<istrm$transwait [@mandate] (@log_addr, sizeof(struct strm_mplex_header_t), MAKE_PADDR(&header), direct_write) => (succ, plen);
+    @.check(succ!=TRUE, "cannot write header - FIXME: switch to error state");
+    @.check(plen!=sizeof(struct strm_mplex_header_t), "cannot write header - FIXME: switch to error state");
+  }
+
+  @log_len -= sizeof(struct strm_mplex_header_t);
+  @log_addr += sizeof(struct strm_mplex_header_t);
+
+  @success = TRUE;
+}
+
+
+
+
+operation $create,$delete,$padr
+{
+  success_t succ;
+
+  @log_addr -= sizeof(struct strm_mplex_header_t);
+  @log_len += sizeof(struct strm_mplex_header_t);
+  
+  if (@#.packet_avail) @=call :<istrm$OP_NAME [@#.packet_mand] (@args);
+  else @=call :<istrm$OP_NAME [@mandate] (@args);
+
+  @log_addr += sizeof(struct strm_mplex_header_t);
+  @log_len -= sizeof(struct strm_mplex_header_t);
+
+  if ((@success==TRUE) && (@op_code==opcode_padr)) {
+    // packet was consumed
+    @#.packet_avail = FALSE;
+
+    // releasing modify lock
+    @=call :<ilock$unlock [LOCK_MAND2] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+    @.check(succ!=TRUE, "cannot release lock");
+
+    // wakeup other thread
+    @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_WAIT1, 1, lock_write) => (succ);
+    @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $op
+{
+  @=call :<istrm$op [@mandate] (@args);
+}

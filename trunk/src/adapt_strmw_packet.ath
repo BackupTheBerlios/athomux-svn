@@ -1,0 +1,138 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strmw_packet
+
+purpose adds logical IO (writer) for physical stream
+
+desc
+  - encodes the packet borders into the stream
+  - borders can be restored using adapt_strmr_packet
+
+           +-----------------------------+
+           |                             |
+     mem --+--                           |
+           |                             |
+           |  +-----------------+        |
+           |  |                 |      --+-- strmw
+  pstrmw --+--+ adapt_complete2 +--      |
+           |  |                 |        |
+           |  +-----------------+        |
+           |                             |
+           +-----------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "strm_types.h"
+
+  struct strm_packet_header_t {
+    uns4 identification;
+    len_t length;
+  };
+}
+
+
+
+
+instance #adapt_complete2 as pcompl;
+alias :<in as :<pstrmw;
+wire :>out as :<pw;
+
+
+
+
+local input :<pw
+
+input :<mem
+
+
+
+
+output :>strmw
+
+
+
+
+operation $gadr
+{
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  // get address region in :<mem
+  @=call :<mem$gadr [@mandate] (@args);
+  @.check(@success!=TRUE, "gadr failed");
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+
+  // send packet border information
+  struct strm_packet_header_t header;
+  header.identification=PSTRMP_IDENTIFICATION;
+  header.length = @log_len;
+  @=call :<pw$transwait [@mandate] (0, sizeof(struct strm_packet_header_t), MAKE_PADDR(&header), direct_write) => (succ);
+  if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+  // send data
+  len_t sum_packet_len = 0;
+  while (sum_packet_len<@log_len) {
+    paddr_t buf_start;
+    plen_t buf_len;
+    @=call :<mem$gettranswait [@mandate] (@log_addr + sum_packet_len, @log_len - sum_packet_len) => (succ, buf_start, buf_len);
+
+    // transfer buffer contents to phys stream
+    @=call :<pw$transwait [@mandate] (0, buf_len, buf_start, direct_write) => (succ);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+    @=call :<mem$put [@mandate] (@log_addr + sum_packet_len, buf_len, prio_none) => (succ);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+    sum_packet_len += buf_len;
+  }
+
+  // delete region in :<mem
+  @=call :<mem$deletepadr [@mandate] (@log_addr, @log_len) => (succ);
+  if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $create
+{
+  @=call :<mem$create [@mandate] (@args);
+}
+
+
+
+
+operation $delete
+{
+  @.err("cannot delete in unidirectional writeable stream");
+}
+
+
+
+
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}

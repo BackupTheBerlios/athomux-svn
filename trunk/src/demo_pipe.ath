@@ -1,0 +1,119 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_pipe
+
+purpose validation for pipe brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_mem_ulinux as mem;
+instance #lock_ulinux as l;
+
+instance #adapt_tmp as at;
+wire :<mem as #demo_pipe#mem:>out;
+
+instance #pipe as p;
+wire :<ilock as #demo_pipe#l:>lock;
+wire :<mem as #demo_pipe#mem:>out;
+wire :<stat as #demo_pipe#at:>tmp;
+wire :>strmr as #demo_pipe#pr:<in;
+wire :>strmw as #demo_pipe#pw:<in;
+
+instance #adapt_complete2 as pr;
+wire :>out as :<reader;
+
+instance #adapt_complete2 as pw;
+wire :>out as :<writer;
+
+
+
+
+@.func run()
+{
+  success_t _runprefix_succ;
+  paddr_t _runprefix_paddr;
+  plen_t _runprefix_plen;
+  plen_t _runprefix_tlen;
+  addr_t _runprefix_addr;
+  len_t _runprefix_len;
+  int _runprefix_i;
+  int _runprefix_n=4;
+
+  char *_runprefix_s="This is a test!\n";
+
+  for (_runprefix_i=0; _runprefix_i<_runprefix_n; _runprefix_i++) {
+    @=call :<writer$gadrcreate [@mandate] (strlen(_runprefix_s+_runprefix_i)+1) => (_runprefix_succ, _runprefix_addr, _runprefix_len);
+    printf("writer: (%lld,%lld)\n", _runprefix_addr, _runprefix_len);
+    @.check(_runprefix_succ!=TRUE, "writer:gadr ERROR");
+
+    @=call :<writer$transwait [@mandate] (_runprefix_addr, strlen(_runprefix_s+_runprefix_i)+1, MAKE_PADDR(_runprefix_s+_runprefix_i), direct_write) => (_runprefix_succ, _runprefix_tlen);
+    @.check(_runprefix_succ!=TRUE, "writer:transwait ERROR");
+    @.check(_runprefix_tlen!=_runprefix_len, "writer:transwait tlen!=len");
+
+    @=call :<writer$padr [@mandate] (_runprefix_addr, _runprefix_len, FALSE) => (_runprefix_succ);
+    @.check(_runprefix_succ!=TRUE, "writer:create ERROR");
+  }
+
+  do {
+    //@=call :<reader$gadr [@mandate] (0, TRUE, TRUE, action_wait, 0) => (_runprefix_succ, _runprefix_addr, _runprefix_len);
+    @=call :<reader$gadr [@mandate] (0, TRUE, TRUE, action_try, 1) => (_runprefix_succ, _runprefix_addr, _runprefix_len);
+    //printf("reader: (%lld,%lld)\n", _runprefix_addr, _runprefix_len);
+    if (_runprefix_succ!=TRUE) break;
+
+    @=call :<reader$gettranswait [@mandate] (_runprefix_addr, _runprefix_len) => (_runprefix_succ, _runprefix_paddr, _runprefix_plen);
+    @.check(_runprefix_succ!=TRUE, "reader:gettranswait ERROR");
+    @.check(_runprefix_len!=_runprefix_plen, "reader:gettranswait len!=plen");
+
+    char _runprefix_c = *((char *)MAKE_PTR(_runprefix_paddr));
+    printf("%c", _runprefix_c);
+    //printf("received: '%s'\n", (char *)MAKE_PTR(_runprefix_paddr));
+
+    @=call :<reader$putdeletepadr [@mandate] (_runprefix_addr, _runprefix_len, TRUE) => (_runprefix_succ);
+    @.check(_runprefix_succ!=TRUE, "reader:putdelete ERROR");
+  } while (_runprefix_succ == TRUE);
+}
+
+
+
+
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init bricks
+  @=call #demo_pipe#at:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #demo_pipe#p:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if(!@destr) {
+    run();
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<reader
+local input :<writer
+
+input :<strat

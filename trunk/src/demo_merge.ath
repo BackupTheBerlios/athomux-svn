@@ -1,0 +1,449 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_merge
+
+purpose merging part of network transparency demonstration
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+  #include <limits.h>
+  #include <errno.h>
+}
+
+
+
+
+data {
+  addr_t rc1addr;
+  addr_t rc2addr;
+  addr_t rc3addr;
+  addr_t memaddr;
+  addr_t merge1addr;
+  addr_t merge2addr;
+  addr_t merge3addr;
+  addr_t gd1addr;
+  addr_t gd2addr;
+  addr_t gd3addr;
+  addr_t gd4addr;
+  addr_t asncaddr;
+  addr_t asntaddr;
+  addr_t am1addr;
+  addr_t am2addr;
+}
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+@.func sh_loop()
+{
+  success_t succ;
+  plen_t plen;
+  char buf[DEFAULT_TRANSFER];
+  memset(buf, 0, DEFAULT_TRANSFER);
+
+  printf("-> ");
+  while (fgets(buf, DEFAULT_TRANSFER-1, stdin)!=NULL) {
+    unsigned long int convresult = strtoul(buf, NULL, 0);
+    if (convresult!=ULONG_MAX) {
+      int i=convresult;
+
+      memset(buf, 0, DEFAULT_TRANSFER);
+      @=call :<mstrat$transwait [@mandate] (DEFAULT_TRANSFER*i,DEFAULT_TRANSFER,MAKE_PADDR(buf),direct_read) => (succ, plen);
+      if (succ==TRUE) {
+        if (fwrite(buf, plen, 1, stdout) != 1) printf("write error\n");
+      }
+      else printf("cannot read\n");
+    }
+    else printf("invalid address multiplikator: %s\n", strerror(errno));
+
+    printf("-> ");
+    memset(buf, 0, DEFAULT_TRANSFER);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  if (@constr && !@destr) {
+    // instantiate brick
+    success_t succ;
+
+    char *par1 = "host=localhost port=10001 rid=1";
+    char *par2 = "host=localhost port=40001 rid=4";
+    char *par3 = "host=localhost port=30001 rid=3";
+
+    addr_t this = 2*DEFAULT_TRANSFER;  // FIXME: hardcoded address
+    addr_t controladdr = DEFAULT_TRANSFER;  // FIXME: hardcoded address of control brick
+    struct conn_info control_control = { .conn_addr = controladdr, .conn_index = 0, .conn_name = "control" };
+    struct conn_info dm_mstrat = { .conn_addr = this, .conn_index = 0, .conn_name = "mstrat" };
+    struct conn_info amd_hook = { .conn_addr = 0, .conn_index = 0, .conn_name = "hook" };
+    @=call :<strat$instconn [@mandate] (&amd_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+
+    // -----------------------------------------
+    // instantiate bricks and inputs and outputs
+    // -----------------------------------------
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.gd1addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info gd1_strat = { .conn_addr = @#.gd1addr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.gd1addr, "strategy_display", FALSE, FALSE) : "fname=graph_merge_local" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&gd1_strat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.gd2addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info gd2_strat = { .conn_addr = @#.gd2addr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.gd2addr, "strategy_display", FALSE, FALSE) : "fname=graph_merge" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&gd2_strat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.gd3addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info gd3_strat = { .conn_addr = @#.gd3addr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.gd3addr, "strategy_display", FALSE, FALSE) : "fname=graph_merge_nc" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&gd3_strat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.gd4addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info gd4_strat = { .conn_addr = @#.gd4addr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.gd4addr, "strategy_display", FALSE, FALSE) : "fname=graph_merge_nt" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&gd4_strat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.memaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info mem_out = { .conn_addr = @#.memaddr, .conn_index = 0, .conn_name = "out" };
+    struct conn_info mem_hook = { .conn_addr = @#.memaddr, .conn_index = 0, .conn_name = "hook" };
+    @=call :<strat$instbrick [@mandate] (@#.memaddr, "device_mem_ulinux", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&mem_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&mem_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.merge1addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info merge1_ostrat = { .conn_addr = @#.merge1addr, .conn_index = 0, .conn_name = "ostrat" };
+    struct conn_info merge1_mem = { .conn_addr = @#.merge1addr, .conn_index = 0, .conn_name = "mem" };
+    struct conn_info merge1_istrat1 = { .conn_addr = @#.merge1addr, .conn_index = 0, .conn_name = "istrat1" };
+    struct conn_info merge1_istrat2 = { .conn_addr = @#.merge1addr, .conn_index = 0, .conn_name = "istrat2" };
+    @=call :<strat$instbrick [@mandate] (@#.merge1addr, "strategy_merge", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&merge1_mem) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge1_istrat1) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge1_istrat2) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge1_ostrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.merge2addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info merge2_ostrat = { .conn_addr = @#.merge2addr, .conn_index = 0, .conn_name = "ostrat" };
+    struct conn_info merge2_mem = { .conn_addr = @#.merge2addr, .conn_index = 0, .conn_name = "mem" };
+    struct conn_info merge2_istrat1 = { .conn_addr = @#.merge2addr, .conn_index = 0, .conn_name = "istrat1" };
+    struct conn_info merge2_istrat2 = { .conn_addr = @#.merge2addr, .conn_index = 0, .conn_name = "istrat2" };
+    @=call :<strat$instbrick [@mandate] (@#.merge2addr, "strategy_merge", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&merge2_mem) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge2_istrat1) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge2_istrat2) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge2_ostrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.merge3addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info merge3_ostrat = { .conn_addr = @#.merge3addr, .conn_index = 0, .conn_name = "ostrat" };
+    struct conn_info merge3_mem = { .conn_addr = @#.merge3addr, .conn_index = 0, .conn_name = "mem" };
+    struct conn_info merge3_istrat1 = { .conn_addr = @#.merge3addr, .conn_index = 0, .conn_name = "istrat1" };
+    struct conn_info merge3_istrat2 = { .conn_addr = @#.merge3addr, .conn_index = 0, .conn_name = "istrat2" };
+    @=call :<strat$instbrick [@mandate] (@#.merge3addr, "strategy_merge", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&merge3_mem) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge3_istrat1) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge3_istrat2) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&merge3_ostrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.asncaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info asnc_mem = { .conn_addr = @#.asncaddr, .conn_index = 0, .conn_name = "mem" };
+    struct conn_info asnc_istrat = { .conn_addr = @#.asncaddr, .conn_index = 0, .conn_name = "istrat" };
+    struct conn_info asnc_ostrat = { .conn_addr = @#.asncaddr, .conn_index = 0, .conn_name = "ostrat" };
+    @=call :<strat$instbrick [@mandate] (@#.asncaddr, "strategy_netconnect", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&asnc_mem) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&asnc_istrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&asnc_ostrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.asntaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info asnt_mem = { .conn_addr = @#.asntaddr, .conn_index = 0, .conn_name = "mem" };
+    struct conn_info asnt_istrat = { .conn_addr = @#.asntaddr, .conn_index = 0, .conn_name = "istrat" };
+    struct conn_info asnt_ostrat = { .conn_addr = @#.asntaddr, .conn_index = 0, .conn_name = "ostrat" };
+    @=call :<strat$instbrick [@mandate] (@#.asntaddr, "strategy_nettransparent", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&asnt_mem) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&asnt_istrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&asnt_ostrat) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.rc1addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rc1_hook = { .conn_addr = @#.rc1addr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info rc1_out = { .conn_addr = @#.rc1addr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.rc1addr, "remote_client_tcp", FALSE, FALSE) : par1 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&rc1_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&rc1_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.rc2addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rc2_hook = { .conn_addr = @#.rc2addr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info rc2_out = { .conn_addr = @#.rc2addr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.rc2addr, "remote_client_tcp", FALSE, FALSE) : par2 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&rc2_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&rc2_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.rc3addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rc3_hook = { .conn_addr = @#.rc3addr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info rc3_out = { .conn_addr = @#.rc3addr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.rc3addr, "remote_client_tcp", FALSE, FALSE) : par3 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&rc3_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&rc3_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.am1addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info am1_in = { .conn_addr = @#.am1addr, .conn_index = 0, .conn_name = "in" };
+    struct conn_info am1_out = { .conn_addr = @#.am1addr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.am1addr, "adapt_multi", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&am1_in) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&am1_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.am2addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info am2_in = { .conn_addr = @#.am2addr, .conn_index = 0, .conn_name = "in" };
+    struct conn_info am2_out = { .conn_addr = @#.am2addr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.am2addr, "adapt_multi", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&am2_in) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&am2_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+
+    // --------------
+    // connect bricks
+    // --------------
+
+    @=call :<strat$connect [@mandate] (&mem_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&rc1_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&rc2_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&rc3_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&merge1_mem, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&merge2_mem, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&merge3_mem, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&asnc_mem, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&asnt_mem, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&merge1_istrat1, &rc1_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&merge1_istrat2, &rc2_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&merge2_istrat1, &rc3_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&merge2_istrat2, &control_control) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&merge3_istrat1, &merge1_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&merge3_istrat2, &merge2_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&am1_in, &merge3_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&asnc_istrat, &am1_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&am2_in, &asnc_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&asnt_istrat, &am2_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&gd4_strat, &asnt_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&gd1_strat, &control_control) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&gd2_strat, &am1_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&gd3_strat, &am2_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+    @=call :<strat$connect [@mandate] (&dm_mstrat, &merge3_ostrat) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    //@=call :<strat$connect [@mandate] (&dm_mstrat, &asnt_ostrat) => (succ);
+    //@.check(succ!=TRUE, "connect failed");
+
+
+    // ------------
+    // start bricks
+    // ------------
+
+    @=call :<strat$instbrick [@mandate] (@#.memaddr, "device_mem_ulinux", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.am1addr, "adapt_multi", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.am2addr, "adapt_multi", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.merge1addr, "strategy_merge", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.merge2addr, "strategy_merge", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.merge3addr, "strategy_merge", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.rc1addr, "remote_client_tcp", TRUE, FALSE) : par1 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.rc2addr, "remote_client_tcp", TRUE, FALSE) : par2 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.rc3addr, "remote_client_tcp", TRUE, FALSE) : par3 => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.asncaddr, "strategy_netconnect", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.asntaddr, "strategy_nettransparent", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.gd1addr, "strategy_display", TRUE, FALSE) : "fname=graph_merge_local" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.gd2addr, "strategy_display", TRUE, FALSE) : "fname=graph_merge" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.gd3addr, "strategy_display", TRUE, FALSE) : "fname=graph_merge_nc" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.gd4addr, "strategy_display", TRUE, FALSE) : "fname=graph_merge_nt" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+
+    // FIXME: init brick
+    struct conn_info merge1_init = { .conn_addr = @#.merge1addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&merge1_init) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info merge2_init = { .conn_addr = @#.merge2addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&merge2_init) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info merge3_init = { .conn_addr = @#.merge3addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&merge3_init) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    struct conn_info rc1_init = { .conn_addr = @#.rc1addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&rc1_init) : par1 => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info rc2_init = { .conn_addr = @#.rc2addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&rc2_init) : par2 => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info rc3_init = { .conn_addr = @#.rc3addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&rc3_init) : par3 => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    struct conn_info asnc_init = { .conn_addr = @#.asncaddr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&asnc_init) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info asnt_init = { .conn_addr = @#.asntaddr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&asnt_init) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    struct conn_info gd1_init = { .conn_addr = @#.gd1addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&gd1_init) : "fname=graph_merge_local" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info gd2_init = { .conn_addr = @#.gd2addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&gd2_init) : "fname=graph_merge" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info gd3_init = { .conn_addr = @#.gd3addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&gd3_init) : "fname=graph_merge_nc" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info gd4_init = { .conn_addr = @#.gd4addr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&gd4_init) : "fname=graph_merge_nt" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    sh_loop();
+  }
+  else {
+    // deinstantiate bricks
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<strat
+input :<mstrat

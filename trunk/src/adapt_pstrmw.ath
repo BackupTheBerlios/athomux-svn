@@ -1,0 +1,92 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_pstrmw
+
+purpose removes logical IO layer from stream (only writer)
+
+desc
+  - implements single user capabilities.
+
+          +---------+
+          |         |
+  strmw --+--     --+-- pstrmw
+          |         |
+          +---------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+}
+
+
+
+
+input :<strmw
+
+
+
+
+operation $input_init
+{
+  @success = TRUE;
+}
+
+
+
+
+output :>pstrmw
+
+
+
+
+operation $trans,$transwait
+{
+  @.check(@direction!=direct_write, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+  addr_t start;
+  len_t len;
+
+  // reserve new packet
+  @=call :<strmw$gadrcreate [@mandate] (@log_len, FALSE) => (succ, start, len);
+  if (succ!=TRUE) return;
+
+  // transfer as much data as possible
+  @=call :<strmw$transwait [@mandate] (start, MIN(@log_len, len), @phys_addr, direct_write) => (succ, @phys_len);
+  if (succ!=TRUE) @phys_len = 0;
+
+  // create packet with transferred data
+  @=call :<strmw$padr [@mandate] (start, @phys_len, FALSE) => (succ);
+  @.check (succ!=TRUE, "FIXME: switch to error state");
+
+  len_t rest = len-@phys_len;
+  if (rest>0) {
+    // delete the rest
+    @=call :<strmw$delete [@mandate] (start+@phys_len, rest) => (succ);
+    @.check (succ!=TRUE, "FIXME: switch to error state");
+  }
+    
+  @success = TRUE;
+}
+
+
+
+
+operation $wait
+{
+  // so far only synchronous IO
+  @success = TRUE;
+}

@@ -1,0 +1,205 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_stratc_init
+
+purpose server initialization part of network transparency demonstration
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+  #include <limits.h>
+  #include <errno.h>
+}
+
+
+
+
+data {
+  addr_t mscaddr;
+  addr_t rcaddr;
+  addr_t smaddr;
+  addr_t gdaddr;
+}
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+@.func remote_init(char *param_buf)
+{
+  success_t succ;
+
+  addr_t controladdr = DEFAULT_TRANSFER;  // FIXME: hardcoded address of control brick
+  struct conn_info control_control = { .conn_addr = controladdr, .conn_index = 0, .conn_name = "control" };
+
+  @=call :<rstrat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.mscaddr);
+  @.check(succ!=TRUE, "gadr failed");
+  struct conn_info msc_strat = { .conn_addr = @#.mscaddr, .conn_index = 0, .conn_name = "strat" };
+  @=call :<rstrat$instbrick [@mandate] (@#.mscaddr, "strategy_msconnect", FALSE, FALSE) : param_buf => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+  @=call :<rstrat$connect [@mandate] (&msc_strat, &control_control) => (succ);
+  @.check(succ!=TRUE, "connect failed");
+  @=call :<rstrat$instbrick [@mandate] (@#.mscaddr, "strategy_msconnect", TRUE, FALSE) : param_buf => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+
+  // FIXME: init brick
+  struct conn_info msc_init = { .conn_addr = @#.mscaddr, .conn_index = 0, .conn_name = "init" };
+  @=call :<rstrat$instconn [@mandate] (&msc_init) : param_buf => (succ);
+  @.check(succ!=TRUE, "instconn failed");
+}
+
+
+
+
+@.func sh_loop()
+{
+  success_t succ;
+  plen_t plen;
+  char buf[DEFAULT_TRANSFER] = "";
+
+  printf("-> ");
+  while (fgets(buf, DEFAULT_TRANSFER-1, stdin)!=NULL) {
+    unsigned long int convresult = strtoul(buf, NULL, 0);
+    if (convresult!=ULONG_MAX) {
+      int i=convresult;
+
+      @=call :<strat$transwait [@mandate] (DEFAULT_TRANSFER*i,DEFAULT_TRANSFER,MAKE_PADDR(buf),direct_read) => (succ, plen);
+      if (succ==TRUE) {
+        if (fwrite(buf, plen, 1, stdout) != 1) printf("write error\n");
+      }
+      else printf("cannot read\n");
+    }
+    else printf("invalid address multiplikator: %s\n", strerror(errno));
+
+    printf("-> ");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  if (@constr && !@destr) {
+    // instantiate brick
+    success_t succ;
+
+    char *rpar = "host=localhost port=10001 rid=1";
+    char *spar = "port=30001 rid=3";
+    char *rspar = "port=20001 rid=2";
+  
+    addr_t this = 2*DEFAULT_TRANSFER;  // FIXME: hardcoded address
+    addr_t controladdr = DEFAULT_TRANSFER;  // FIXME: hardcoded address of control brick
+    struct conn_info control_control = { .conn_addr = controladdr, .conn_index = 0, .conn_name = "control" };
+    struct conn_info amd_hook = { .conn_addr = 0, .conn_index = 0, .conn_name = "hook" };
+    @=call :<strat$instconn [@mandate] (&amd_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+
+    // -----------------------------------------
+    // instantiate bricks and inputs and outputs
+    // -----------------------------------------
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.rcaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rc_hook = { .conn_addr = @#.rcaddr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info rc_out = { .conn_addr = @#.rcaddr, .conn_index = 0, .conn_name = "out" };
+    struct conn_info dsci_rmem = { .conn_addr = this, .conn_index = 0, .conn_name = "rstrat" };
+    @=call :<strat$instbrick [@mandate] (@#.rcaddr, "remote_client_tcp", FALSE, FALSE) : rpar => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&rc_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.smaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info sm_strat = { .conn_addr = @#.smaddr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.smaddr, "strategy_stratconnect", FALSE, FALSE) : spar => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.gdaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info gd_strat = { .conn_addr = @#.gdaddr, .conn_index = 0, .conn_name = "strat" };
+    @=call :<strat$instbrick [@mandate] (@#.gdaddr, "strategy_display", FALSE, FALSE) : "fname=graph_stratc_init" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+
+
+    // --------------
+    // connect bricks
+    // --------------
+
+    @=call :<strat$connect [@mandate] (&rc_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&dsci_rmem, &rc_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&sm_strat, &control_control) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&gd_strat, &control_control) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+
+    // ------------
+    // start bricks
+    // ------------
+
+    @=call :<strat$instbrick [@mandate] (@#.rcaddr, "remote_client_tcp", TRUE, FALSE) : rpar => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.smaddr, "strategy_stratconnect", TRUE, FALSE) : spar => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.gdaddr, "strategy_display", TRUE, FALSE) : "fname=graph_stratc_init" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+
+
+    // FIXME: init brick
+    struct conn_info rc_init = { .conn_addr = @#.rcaddr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&rc_init) : rpar => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info sm_init = { .conn_addr = @#.smaddr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&sm_init) : spar => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    struct conn_info gd_init = { .conn_addr = @#.gdaddr, .conn_index = 0, .conn_name = "init" };
+    @=call :<strat$instconn [@mandate] (&gd_init) : "fname=graph_stratc_init" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    // instantiate bricks on remote
+    remote_init(rspar);
+
+    sh_loop();
+  }
+  else {
+    // deinstantiate bricks
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<rstrat
+input :<strat

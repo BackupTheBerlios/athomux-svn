@@ -1,0 +1,72 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_ppc
+
+purpose validation for device_tcp_client_ulinux brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_tcp_client_ulinux as tcpc;
+wire :>pstrm as :<src;
+
+
+
+
+@.func ping_pong()
+{
+  char _pinpongprefix_buf[1];
+  plen_t _pinpongprefix_phys_len;
+  success_t _pinpongprefix_succ;
+
+  while (fread(_pinpongprefix_buf, 1, 1, stdin)==1) {
+    @=call :<src$transwait [@mandate] (0, sizeof(_pinpongprefix_buf), (paddr_t)_pinpongprefix_buf, direct_write) => (_pinpongprefix_succ, _pinpongprefix_phys_len);
+    @.check(!_pinpongprefix_succ, "write failed");
+    @=call :<src$transwait [@mandate] (0, _pinpongprefix_phys_len, (paddr_t)_pinpongprefix_buf, direct_read) => (_pinpongprefix_succ, _pinpongprefix_phys_len);
+    @.check(!_pinpongprefix_succ, "read failed");
+    fwrite(_pinpongprefix_buf, 1, 1, stdout);
+  }
+}
+
+
+
+
+operation $brick_init
+{
+  printf("usage: ./abl demo_ppc \"host=<host> port=<port>\"\n");
+
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init bricks
+  @=call #demo_ppc#tcpc:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if(@constr && !@destr) {
+    ping_pong();
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<src
+
+input :<strat

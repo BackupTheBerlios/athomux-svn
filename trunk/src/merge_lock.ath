@@ -1,0 +1,72 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #merge_lock
+
+purpose redirects lock calls to other input
+
+desc
+
+          +----------+
+          |          |
+     in --+--        |
+          |        --+-- out
+  ilock --+--        |
+          |          |
+          +----------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+input :<in
+
+
+
+
+operation $retract
+{
+  @=inputcall :>out$retract [@mandate] (@args);
+}
+
+
+
+
+input :<ilock
+
+
+
+
+operation $retract
+{
+  @=inputcall :>out$retract [@mandate] (@args);
+}
+
+
+
+
+output :>out
+
+
+
+
+operation $lock,$unlock
+{
+  @=call :<ilock$OP_NAME [@mandate] (@args);
+}
+
+
+
+
+operation $op
+{
+  @=call :<in$OP_NAME [@mandate] (@args);
+}

@@ -1,0 +1,127 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #device_tcp_server_ulinux
+
+purpose server for tcp connections
+
+desc
+  - only synchronous IO so far
+  - $brick_init expects port number in @param ("port=<port>")
+  - implements multiuser capabilities
+
+         +------------------------------------+
+         |                                    |
+  hook --+--                                  |
+         |                                    |
+         |  +----------------------+          |
+         |  | device_socket_ulinux +----------+-- pstrm
+         |  +----------------------+          |
+         |                                    |
+         |  +--------------------------+      |
+         |  | device_tcp_listen_ulinux +--    |
+         |  +--------------------------+      |
+         |                                    |
+         +------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+
+static_data {
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <string.h>
+  #include <unistd.h>
+  #include <errno.h>
+}
+
+
+
+
+instance #device_socket_ulinux as sl;
+instance #device_tcp_listen_ulinux as tl;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init brick
+  @=call #device_tcp_server_ulinux#tl:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if (@destr && @constr) {
+    // flush state
+    // FIXME: init brick
+    @=call #device_tcp_server_ulinux#sl:>init$output_init [@mandate] (@args) : "";
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // FIXME: init brick
+    @=call #device_tcp_server_ulinux#sl:>init$output_init [@mandate] (@args) : "";
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+  else if (@constr) {
+    // instantiate brick
+    int s;
+    success_t succ;
+
+    @=call #device_tcp_server_ulinux#tl:>out$trans [@mandate] (0, sizeof(s), MAKE_PADDR(&s), direct_read) => (succ);
+    @.check(succ!=TRUE, "did not get new socket");
+
+    #define STRBUF 256
+    char buf[STRBUF];
+    snprintf(buf, STRBUF, "socket=%d", s);
+    buf[STRBUF-1]=0;
+
+    // FIXME: init brick
+    @=call #device_tcp_server_ulinux#sl:>init$output_init [@mandate] (@args) : buf;
+    @.check(@success!=TRUE, "init failed on local instance");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+output :>pstrm
+
+
+
+
+operation $op
+{
+  @=call #device_tcp_server_ulinux#sl:>pstrm$op [@mandate] (@args);
+}
+
+
+
+
+input :<hook

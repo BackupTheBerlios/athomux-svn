@@ -1,0 +1,131 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strmw
+
+purpose adds logical IO (writer) for physical stream
+
+desc
+  - packet borders will get lost.
+    use adapt_strmw_packet if you want to keep packet borders
+
+           +-----------------------------+
+           |                             |
+           |  +-----------------+        |
+           |  |                 |        |
+  pstrmw --+--+ adapt_complete2 +--      |
+           |  |                 |      --+-- strmw
+           |  +-----------------+        |
+           |                             |
+     mem --+--                           |
+           |                             |
+           +-----------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #adapt_complete2 as pcompl;
+alias :<in as :<pstrmw;
+wire :>out as :<pw;
+
+
+
+
+local input :<pw
+
+input :<mem
+
+
+
+
+output :>strmw
+
+
+
+
+operation $gadr
+{
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+
+  // get address region in :<mem
+  @=call :<mem$gadr [@mandate] (@args);
+  if (@success!=TRUE) return;
+
+  // ...and create it
+  @=call :<mem$create [@mandate] (@log_addr, @log_len) => (succ);
+  if (succ!=TRUE) {
+    @=call :<mem$delete [@mandate] (@log_addr, @log_len) => (succ);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+    return;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+
+  // send data
+  len_t sum_packet_len = 0;
+  while (sum_packet_len<@log_len) {
+    paddr_t buf_start;
+    plen_t buf_len;
+    @=call :<mem$gettranswait [@mandate] (@log_addr + sum_packet_len, @log_len - sum_packet_len) => (succ, buf_start, buf_len);
+
+    // transfer buffer contents to phys stream
+    @=call :<pw$transwait [@mandate] (0, buf_len, buf_start, direct_write) => (succ);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+    @=call :<mem$put [@mandate] (@log_addr + sum_packet_len, buf_len, prio_none) => (succ);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+    sum_packet_len += buf_len;
+  }
+
+  // delete region in :<mem
+  @=call :<mem$deletepadr [@mandate] (@log_addr, @log_len) => (succ);
+  if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $delete
+{
+  @.err("cannot delete in unidirectional writeable stream");
+}
+
+
+
+
+operation $create
+{
+  @=call :<mem$create [@mandate] (@args);
+}
+
+
+
+
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}

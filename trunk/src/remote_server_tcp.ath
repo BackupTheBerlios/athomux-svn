@@ -1,0 +1,88 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #remote_server_tcp
+
+purpose using a tcp connection for transportation of marshalled operation calls
+
+desc
+  - $brick_init expects port number in @param ("port=<port>")
+
+       +---------------------------------------------------------------------------------------+
+       |                                                                                       |
+       |                                +--------------------------------+  +---------------+  |
+       |                                |                                |  |               |  |
+       |  +-------------------+         |     +--------------------+     +--+               |  |
+       |  | device_mem_ulinux +---------+-----+                    |        |               |  |
+       |  +-------------------+         |     | adapt_strmr_packet +--------+               |  |
+       |                                |  +--+                    |        |               |  |
+       |  +--------------------------+  |  |  +--------------------+  +-----+ remote_server |  |
+       |  | device_tcp_server_ulinux +-----+                          |     |               |  |
+       |  +--------------------------+  |  |  +--------------------+  |  +--+               |  |
+       |                                |  +--+                    |  |  |  |               |  |
+       |                                |     | adapt_strmw_packet +--+  |  +---------------+  |
+       |                                +-----+                    |     |                     |
+       |                                      +--------------------+     |                     |
+       |                                                                 |                     |
+  in --+-----------------------------------------------------------------+                     |
+       |                                                                                       |
+       +---------------------------------------------------------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_mem_ulinux as mem;
+instance #device_tcp_server_ulinux as tcps;
+
+instance #adapt_strmr_packet as ar;
+wire :<mem as #remote_server_tcp#mem:>out;
+wire :<pstrmr as #remote_server_tcp#tcps:>pstrm;
+
+instance #adapt_strmw_packet as aw;
+wire :<mem as #remote_server_tcp#mem:>out;
+wire :<pstrmw as #remote_server_tcp#tcps:>pstrm;
+
+instance #remote_server as rpcs;
+alias :<in as :<in;
+wire :<mem as #remote_server_tcp#mem:>out;
+wire :<strmr as #remote_server_tcp#ar:>strmr;
+wire :<strmw as #remote_server_tcp#aw:>strmw;
+
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init brick
+  @=call #remote_server_tcp#tcps:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #remote_server_tcp#ar:>init$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #remote_server_tcp#rpcs:>init$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  @success = TRUE;
+}

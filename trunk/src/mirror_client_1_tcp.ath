@@ -1,0 +1,74 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #mirror_client_1_tcp
+
+purpose client side of simple mirror brick for two server and two clients
+
+desc
+  - $brick_init expects host name and port number in @param ("host=<host> host=<host>")
+
+       +-------------------------+
+       |                         |
+       |  +-------------------+  |
+       |  | remote_client_tcp +--+-- out
+       |  +-------------------+  |
+       |                         |
+       +-------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+}
+
+
+
+
+instance #remote_client_tcp as rc;
+alias :>out as :>out;
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init brick
+  @=call #mirror_client_1_tcp#rc:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  @success = TRUE;
+}
+
+
+
+
+input :<hook

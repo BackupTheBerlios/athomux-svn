@@ -1,0 +1,260 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #strategy_msconnect
+
+purpose strategy for mirror demonstration
+
+desc
+  - $brick_init expects port number in @param.
+  - listens on given port and dynamically instantiates
+    bricks as shown in example.
+
+          +------------------------------------+
+          |                                    |
+          |  +--------------------------+      |
+          |  | device_tcp_listen_ulinux +--    |
+          |  +--------------------------+      |
+          |                                    |
+          |    +---------------+               |
+          |  --+ thread_ulinux +--             |
+          |    +---------------+               |
+          |                                    |
+  strat --+--                                  |
+          |                                    |
+          +------------------------------------+
+
+enddesc
+
+example
+
+  +-------------------+     +-------------+     +----------------------+
+  | device_mem_ulinux +-----+ adapt_multi +--+--+ remote_server_socket +--
+  +-------------------+     +-------------+  |  +----------------------+
+                                             |
+                                             |  +----------------------+
+                                             +--+ remote_server_socket +--
+                                             .  +----------------------+
+                                             .              .
+                                             .              .
+
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+}
+
+
+
+
+data {
+  addr_t memaddr;
+  addr_t amaddr;
+}
+
+
+
+
+instance #device_tcp_listen_ulinux as tl;
+
+instance #thread_ulinux as th;
+wire :<exec as :>listen;
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  success_t succ;
+
+  // FIXME: init on local output
+  @=call :>listen$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // FIXME: init brick
+  @=call #strategy_msconnect#tl:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // nothing to do...
+  }
+  else if (@constr) {
+    // instantiate brick
+
+    // start thread
+    @=call #strategy_msconnect#th:>cpu$wait [@mandate] (@args) : @param;
+    @.check(@success!=TRUE, "thread failed");
+
+    struct conn_info amd_hook = { .conn_addr = 0, .conn_index = 0, .conn_name = "hook" };
+    @=call :<strat$instconn [@mandate] (&amd_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+
+    // -----------------------------------------
+    // instantiate bricks and inputs and outputs
+    // -----------------------------------------
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.memaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info mem_hook = { .conn_addr = @#.memaddr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info mem_out = { .conn_addr = @#.memaddr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.memaddr, "device_mem_ulinux", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&mem_hook) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&mem_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+    @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, @#.amaddr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info am_in = { .conn_addr = @#.amaddr, .conn_index = 0, .conn_name = "in" };
+    struct conn_info am_out = { .conn_addr = @#.amaddr, .conn_index = 0, .conn_name = "out" };
+    @=call :<strat$instbrick [@mandate] (@#.amaddr, "adapt_multi", FALSE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instconn [@mandate] (&am_in) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    @=call :<strat$instconn [@mandate] (&am_out) : "" => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+
+
+    // --------------
+    // connect bricks
+    // --------------
+
+    @=call :<strat$connect [@mandate] (&mem_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    @=call :<strat$connect [@mandate] (&am_in, &mem_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+
+
+    // ------------
+    // start bricks
+    // ------------
+
+    @=call :<strat$instbrick [@mandate] (@#.memaddr, "device_mem_ulinux", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    @=call :<strat$instbrick [@mandate] (@#.amaddr, "adapt_multi", TRUE, FALSE) : "" => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<strat
+
+
+
+
+local output :>listen
+
+
+
+
+@.func new_remote(int _newremoteprefix_socket)
+{
+  success_t succ;
+  addr_t brickaddr;
+
+  #define STRBUFLEN 256
+  char rid_str[STRBUFLEN];
+  
+  getoptval(@param, "rid", rid_str, STRBUFLEN);
+
+  char buf[STRBUFLEN];
+  snprintf(buf, STRBUFLEN, "socket=%d rid=%s", _newremoteprefix_socket, rid_str);
+  buf[STRBUFLEN-1]=0;
+
+  struct conn_info am_out = { .conn_addr = @#.amaddr, .conn_name = "out" };
+
+
+  // -----------------------------------------
+  // instantiate bricks and inputs and outputs
+  // -----------------------------------------
+
+  @=call :<strat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, brickaddr);
+  @.check(succ!=TRUE, "gadr failed");
+  struct conn_info rss_in = { .conn_addr = brickaddr, .conn_name = "in" };
+  @=call :<strat$instbrick [@mandate] (brickaddr, "remote_server_socket", FALSE, FALSE) : buf => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+  @=call :<strat$instconn [@mandate] (&rss_in) : "" => (succ);
+  @.check(succ!=TRUE, "instconn failed");
+
+
+  // --------------
+  // connect bricks
+  // --------------
+
+  @=call :<strat$connect [@mandate] (&rss_in, &am_out) : "" => (succ);
+  @.check(succ!=TRUE, "connect failed");
+
+
+  // ------------
+  // start bricks
+  // ------------
+
+  @=call :<strat$instbrick [@mandate] (brickaddr, "remote_server_socket", TRUE, FALSE) : buf => (succ);
+  @.check(succ!=TRUE, "instbrick failed");
+
+  // FIXME: init brick
+  struct conn_info rss_init = { .conn_addr = brickaddr, .conn_index = 0, .conn_name = "init" };
+  @=call :<strat$instconn [@mandate] (&rss_init) : buf => (succ);
+  @.check(succ!=TRUE, "instconn failed");
+}
+
+
+
+
+@.func listen_loop()
+{
+  success_t _listenloopprefix_succ;
+  int _listenloopprefix_s;
+
+  while (1) {
+    @=call #strategy_msconnect#tl:>out$trans [@mandate] (0, sizeof(_listenloopprefix_s), MAKE_PADDR(&_listenloopprefix_s), direct_read) => (_listenloopprefix_succ);
+    @.check(_listenloopprefix_succ!=TRUE, "listen failed");
+    new_remote(_listenloopprefix_s);
+  }
+}
+
+
+
+
+operation $wait
+{
+  listen_loop();
+
+  @success = TRUE;
+}

@@ -1,0 +1,142 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #device_socket_ulinux
+
+purpose mapping of $trans to Linux socket functions
+
+desc
+  - only synchronous IO so far
+  - $brick_init expects socket number in @param ("socket=<sockno>")
+  - implements multiuser capabilities
+
+         +-------+
+         |       |
+  hook --+--   --+-- pstrm
+         |       |
+         +-------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+
+static_data {
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <errno.h>
+  #include <unistd.h>
+  #include "param_scanner.h"
+}
+
+
+
+
+data {
+  int socket;
+}
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    int retval = close(@#.socket);
+    @.check(retval==-1, "cannot close socket: %s", strerror(errno));
+  }
+  else if (@constr) {
+    // instantiate brick
+    #define STRBUFLEN 256
+    char sock_str[STRBUFLEN];
+
+    getoptval(@param, "socket", sock_str, STRBUFLEN);
+
+    unsigned long int convresult = strtoul(sock_str, NULL, 0);
+    @.check(convresult==ULONG_MAX, "invalid socket number as parameter: %s", strerror(errno));
+    @#.socket = convresult;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+output :>pstrm
+
+
+
+
+operation $trans
+{
+  // just ignore log_addr
+
+  ssize_t alen;
+
+  switch(@direction) {
+    case direct_read:
+      alen = recv(@#.socket, MAKE_PTR(@phys_addr), @log_len, MSG_NOSIGNAL);
+      @.check(alen == 0, "tcp connection was closed - FIXME: switch to error state?");
+      @.check(alen == -1, "%s", strerror(errno));
+      @phys_len = alen;
+      break;
+    case direct_write:
+      alen = send(@#.socket, MAKE_PTR(@phys_addr), @log_len, MSG_NOSIGNAL);
+      if (alen == -1) {
+        if (errno==EPIPE) @.err("tcp connection was closed - FIXME: switch to error state?");
+        else @.err("%s", strerror(errno));
+      }
+      @phys_len = alen;
+      break;
+    default:
+      @.err("unknown direction");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $wait
+{
+  // so far only synchronous io
+  @success = TRUE;
+}
+
+
+
+
+input :<hook

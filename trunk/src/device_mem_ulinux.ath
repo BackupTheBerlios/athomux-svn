@@ -28,6 +28,7 @@ operation $gadr,$gadrcreate
 
 operation $createget,$get,$gettranswait
 {
+  if (@log_addr==0) return;
   @phys_addr = @log_addr;
   @phys_len = @log_len;
   @version = vers_newest;

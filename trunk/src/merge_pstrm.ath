@@ -1,0 +1,69 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #merge_pstrm
+
+purpose merges two unidirectional streams into one bidirectional stream
+
+desc
+  - implements multi user capabilities.
+
+           +-------+
+           |       |
+  pstrmr --+--   --+-- pstrm
+           |       |
+  pstrmw --+--     |
+           |       |
+           +-------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+input :<pstrmr
+input :<pstrmw
+
+
+
+
+output :>pstrm
+
+
+
+
+operation $trans,$transwait
+{
+  switch (@direction) {
+  case direct_read:
+    @=call :<pstrmr$OP_NAME [@mandate] (@args);
+    break;
+  case direct_write:
+    @=call :<pstrmw$OP_NAME [@mandate] (@args);
+    break;
+  case direct_stop:
+    @=call :<pstrmr$OP_NAME [@mandate] (@args);
+    if (@success!=TRUE) return;
+    @=call :<pstrmw$OP_NAME [@mandate] (@args);
+    break;
+  default:
+    @.err("unknown direction");
+  }
+}
+
+
+
+
+operation $wait
+{
+  @=call :<pstrmr$wait [@mandate] (@args);
+  if (@success!=TRUE) return;
+  @=call :<pstrmw$wait [@mandate] (@args);
+}

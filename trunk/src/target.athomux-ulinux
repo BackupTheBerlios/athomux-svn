@@ -1,11 +1,13 @@
 #context pconf: !.*, ulinux
-#context "test ! -f /usr/local/lib/libfuse.a && echo 'cannot build userspace fs: /usr/local/lib/libfuse.a does not exist'" target: !athomux-ulinux
+#context "test ! -f /usr/local/lib/libfuse.a && test ! -f /usr/lib/libfuse.a && echo 'cannot build userspace fs: /usr/local/lib/libfuse.a does not exist'" target: !athomux-ulinux
 
 include target-include.ulinux
 
+LIB_FUSE = `if ( test -f /usr/local/lib/libfuse.a ); then echo /usr/local/lib/libfuse.a; else echo /usr/lib/libfuse.a; fi`
+
 GCC_LIB = `gcc -print-libgcc-file-name`
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o /usr/local/lib/libfuse.a
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o $(pconf)/$(cconf)/param_scanner.o $(LIB_FUSE)
 
 $(pconf)/$(cconf)/athomux-ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) $(pconf)/$(cconf)/loader_exec $(pconf)/$(cconf)/loader_fork
 	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<

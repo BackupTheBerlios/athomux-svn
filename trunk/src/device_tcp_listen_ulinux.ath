@@ -1,0 +1,158 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #device_tcp_listen_ulinux
+
+purpose listen on given port for connections
+
+desc
+  - $brick_init expects port number in @param ("port=<port>")
+  - new socket number can be read with $trans
+
+         +---------+
+         |         |
+  hook --+--     --+-- out
+         |         |
+         +---------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+
+static_data {
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <string.h>
+  #include <unistd.h>
+  #include <string.h>
+  #include <errno.h>
+  #include "param_scanner.h"
+}
+
+
+
+
+data {
+  int lsocket;
+}
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  int retval;
+
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    retval = close(@#.lsocket);
+    @.check(retval==-1, "cannot close socket: %s - FIXME: switch to error state", strerror(errno));
+  }
+  else if (@constr) {
+    // instantiate brick
+    uint16_t port;
+    
+    #define STRBUFLEN 256
+    char port_str[STRBUFLEN];
+
+    getoptval(@param, "port", port_str, STRBUFLEN);
+
+    unsigned long int convresult = strtoul(port_str, NULL, 0);
+    @.check(convresult==ULONG_MAX, "invalid port as parameter: %s", strerror(errno));
+    port = convresult;
+
+    @#.lsocket = socket(AF_INET, SOCK_STREAM, 0);
+    @.check(@#.lsocket==-1, "cannot create socket: %s", strerror(errno));
+    
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    
+    retval = bind(@#.lsocket, (struct sockaddr *)&addr, sizeof(struct sockaddr));
+    if (retval==-1) {
+      retval = close(@#.lsocket);
+      @.check(retval==-1, "cannot close socket: %s - FIXME: switch to error state", strerror(errno));
+      @.err("cannot bind socket: %s", strerror(errno));
+    }
+
+    retval = listen(@#.lsocket, 1);
+    @.check(retval==-1, "cannot listen: %s", strerror(errno));
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+output :>out
+
+
+
+
+operation $trans,$transwait
+{
+  int s;
+
+  @.check(@direction!=direct_read, "can only read");
+  @.check(@log_len<sizeof(s), "buffer too small");
+
+  struct sockaddr_in their_addr;
+  int sin_size = sizeof(struct sockaddr_in);
+  
+  s = accept(@#.lsocket, (struct sockaddr *)&their_addr, &sin_size);
+  @.check(s==-1, "cannot accept connection: %s", strerror(errno));
+
+  memcpy(MAKE_PTR(@phys_addr), &s, sizeof(s));
+  @phys_len = sizeof(s);
+
+  @success = TRUE;
+}
+
+
+
+
+operation $wait
+{
+  @success = TRUE;
+}
+
+
+
+
+input :<hook

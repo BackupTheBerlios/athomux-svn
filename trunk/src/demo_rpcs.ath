@@ -1,0 +1,54 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_rpcs
+
+purpose validation for remote_server brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_mem_ulinux as mem;
+
+instance #remote_server_tcp as rs;
+wire :<in as #demo_rpcs#mem:>out;
+
+
+
+
+operation $brick_init
+{
+  printf("usage: ./abl demo_rpcs port=<port>\n");
+
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init brick
+  @=call #demo_rpcs#rs:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if (@constr && !@destr) {
+    while (1) ;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<strat

@@ -1,0 +1,719 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #strategy_netconnect
+
+purpose merges server and lient parts to a virtual brick
+
+desc
+  - FIXME: so far only traversing forward. All Bricks with no inputs must hook with ATHOMUX_MAINDIR!!!
+  - implements single user capabilities.
+
+           +------------------------+
+           |                        |
+  istrat --+--     +-------------+  |
+           |     --+ adapt_strat +--+-- ostrat
+     mem --+--     +-------------+  |
+           |                        |
+           +------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+
+  // FIXME: maximum length of param string
+  #define PARAMSIZE 256
+
+  typedef char param_t[PARAMSIZE];
+
+  struct g_brick_t {
+    struct link link;
+    addr_t  addr;
+    name_t  name;
+    param_t bparam;
+  };
+
+  struct g_conn_t {
+    struct link link;
+    param_t cparam;
+    sname_t src_name;
+    addr_t  src_addr;
+    sname_t dst_name;
+    addr_t  dst_addr;
+  };
+}
+
+
+
+
+data {
+  addr_t lb_hook;
+  addr_t lc_hook;
+}
+
+
+
+
+instance #adapt_strat as astrat;
+alias :>control as :>ostrat;
+wire :<strat as :>lostrat;
+
+
+
+
+@.include "param_scanner.inc"
+@.include "li.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>lostrat$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
+  if (@destr && @constr) {
+    // flush state
+    PC_FLUSH(ASNC_PC);
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    PC_FLUSH(ASNC_PC);
+    PC_FREE(ASNC_PC, @#.lb_hook, sizeof(struct g_brick_t));
+    PC_FREE(ASNC_PC, @#.lc_hook, sizeof(struct g_conn_t));
+  }
+  else if (@constr) {
+    // instantiate brick
+    PC_ALLOC(ASNC_PC, sizeof(struct g_brick_t)) => (@#.lb_hook);
+    LI_INIT(ASNC_PC, @#.lb_hook);
+
+    PC_ALLOC(ASNC_PC, sizeof(struct g_conn_t)) => (@#.lc_hook);
+    LI_INIT(ASNC_PC, @#.lc_hook);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<istrat
+input :<mem
+use PC ASNC_PC [1024];
+
+
+
+
+local output :>lostrat
+
+
+
+
+@.func clear_bc()
+{
+  struct g_brick_t *_clearbcprefix_b;
+  struct g_conn_t *_clearbcprefix_c;
+  addr_t _clearbcprefix_elem_ptr;
+
+  LI_NEXT(ASNC_PC, @#.lb_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.lb_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
+    _clearbcprefix_b = LI_GET(ASNC_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(ASNC_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(ASNC_PC, _clearbcprefix_elem_ptr, sizeof(struct g_brick_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+
+  LI_NEXT(ASNC_PC, @#.lc_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.lc_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
+    _clearbcprefix_c = LI_GET(ASNC_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(ASNC_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(ASNC_PC, _clearbcprefix_elem_ptr, sizeof(struct g_conn_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func find_brick(const addr_t _findbrickprefix_addr) => (success_t _findbrickprefix_success, addr_t _findbrickprefix_ptr)
+{
+  _findbrickprefix_success = FALSE;
+
+  struct g_brick_t *_findbrickprefix_b;
+  addr_t _findbrickprefix_elem_ptr;
+
+  LI_NEXT(ASNC_PC, @#.lb_hook) => (_findbrickprefix_elem_ptr);
+  while (_findbrickprefix_elem_ptr != @#.lb_hook) {
+    addr_t _findbrickprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _findbrickprefix_elem_ptr) => (_findbrickprefix_next_ptr);
+    _findbrickprefix_b = LI_GET(ASNC_PC, _findbrickprefix_elem_ptr, FALSE);
+
+    if (_findbrickprefix_b->addr == _findbrickprefix_addr) {
+      _findbrickprefix_success = TRUE;
+      _findbrickprefix_ptr = _findbrickprefix_elem_ptr;
+      return;
+    }
+
+    _findbrickprefix_elem_ptr = _findbrickprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func insert_brick(const struct g_brick_t * const _insertbrickprefix_b)
+{
+  struct g_brick_t *_insertbrickprefix_buf;
+  addr_t _insertbrickprefix_elem_ptr;
+
+  _insertbrickprefix_buf = PC_ALLOC(ASNC_PC, sizeof(struct g_brick_t)) => (_insertbrickprefix_elem_ptr);
+  memcpy(_insertbrickprefix_buf, _insertbrickprefix_b, sizeof(struct g_brick_t));
+  LI_PREPEND(ASNC_PC, @#.lb_hook, _insertbrickprefix_elem_ptr);
+}
+
+
+
+
+@.func insert_conn(const struct g_conn_t * const _insertconnprefix_c)
+{
+  struct g_conn_t *_insertconnprefix_buf;
+  addr_t _insertconnprefix_elem_ptr;
+
+  _insertconnprefix_buf = PC_ALLOC(ASNC_PC, sizeof(struct g_conn_t)) => (_insertconnprefix_elem_ptr);
+  memcpy(_insertconnprefix_buf, _insertconnprefix_c, sizeof(struct g_conn_t));
+  LI_PREPEND(ASNC_PC, @#.lc_hook, _insertconnprefix_elem_ptr);
+}
+
+
+
+
+// get info about brick at given address
+@.func binfo(addr_t _binfoprefix_addr) => (success_t _binfoprefix_success)
+{
+  _binfoprefix_success = FALSE;
+
+  success_t _binfoprefix_succ;
+  plen_t _binfoprefix_plen;
+  char _binfoprefix_buf[DEFAULT_TRANSFER];
+
+  @=call :<istrat$transwait [@mandate] (_binfoprefix_addr, DEFAULT_TRANSFER, MAKE_PADDR(_binfoprefix_buf), direct_read) => (_binfoprefix_succ, _binfoprefix_plen);
+  @.check(_binfoprefix_succ!=TRUE, "trans failed");
+  _binfoprefix_buf[MIN(_binfoprefix_plen, DEFAULT_TRANSFER)-1]=0;
+
+  struct g_brick_t _binfoprefix_b;
+  struct g_conn_t _binfoprefix_c;
+
+  char *_binfoprefix_curpos = _binfoprefix_buf;
+  char *_binfoprefix_endpos;
+  char *_binfoprefix_tmppos;
+  int _binfoprefix_slen;
+
+  // ---------------------
+  // get brick information
+  // ---------------------
+
+  _binfoprefix_b.addr = _binfoprefix_addr;
+  _binfoprefix_c.src_addr = _binfoprefix_b.addr;
+
+  _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "brick=");
+  if (_binfoprefix_tmppos!=NULL) {
+    _binfoprefix_curpos = _binfoprefix_tmppos+6;
+    _binfoprefix_endpos = strstr(_binfoprefix_curpos, " {");
+    @.check(_binfoprefix_endpos==NULL, "cannot find end of brick name");
+    _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(name_t)-1);
+    strncpy(_binfoprefix_b.name, _binfoprefix_curpos, _binfoprefix_slen);
+    _binfoprefix_b.name[_binfoprefix_slen] = 0;
+    _binfoprefix_curpos = _binfoprefix_endpos+2;
+  }
+  else _binfoprefix_b.name[0] = 0;
+
+  _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "b_param ");
+  if (_binfoprefix_tmppos!=NULL) {
+    _binfoprefix_curpos = _binfoprefix_tmppos;
+    _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+    @.check(_binfoprefix_tmppos==NULL, "cannot find start of b_param");
+    _binfoprefix_curpos = _binfoprefix_tmppos+1;
+    _binfoprefix_endpos = strstr(_binfoprefix_curpos, "\n");
+    @.check(_binfoprefix_endpos==NULL, "cannot find end of b_param");
+    _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(param_t)-1);
+    strncpy(_binfoprefix_b.bparam, _binfoprefix_curpos, _binfoprefix_slen);
+    _binfoprefix_b.bparam[_binfoprefix_slen] = 0;
+    _binfoprefix_curpos = _binfoprefix_endpos+1;
+  }
+  else _binfoprefix_b.bparam[0] = 0;
+
+  addr_t _binfoprefix_tmphook;
+  find_brick(_binfoprefix_addr) => (_binfoprefix_succ, _binfoprefix_tmphook);
+  if ((_binfoprefix_succ!=TRUE) || (_binfoprefix_addr==0)) {
+    if (_binfoprefix_succ!=TRUE) insert_brick(&_binfoprefix_b);
+
+    // --------------------------
+    // get connection information
+    // --------------------------
+
+    while (1) {
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "output=");
+      if (_binfoprefix_tmppos!=NULL) {
+        _binfoprefix_curpos = _binfoprefix_tmppos+7;
+        _binfoprefix_endpos = strstr(_binfoprefix_curpos, " {");
+        @.check(_binfoprefix_endpos==NULL, "cannot find end of output name");
+        _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(sname_t)-1);
+        strncpy(_binfoprefix_c.src_name, _binfoprefix_curpos, _binfoprefix_slen);
+        _binfoprefix_c.src_name[_binfoprefix_slen] = 0;
+        _binfoprefix_curpos = _binfoprefix_endpos+2;
+      }
+      else break; // no more connections
+      
+      char *_binfoprefix_cendpos = strstr(_binfoprefix_curpos, "}");
+      @.check(_binfoprefix_cendpos==NULL, "cannot find end of output structure");
+      
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "c_param ");
+      if ((_binfoprefix_tmppos!=NULL) && (_binfoprefix_tmppos<_binfoprefix_cendpos)) {
+        _binfoprefix_curpos = _binfoprefix_tmppos;
+        _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+        @.check(_binfoprefix_tmppos==NULL, "cannot find start of c_param");
+        _binfoprefix_curpos = _binfoprefix_tmppos+1;
+        _binfoprefix_endpos = strstr(_binfoprefix_curpos, "\n");
+        @.check(_binfoprefix_endpos==NULL, "cannot find end of c_param");
+        _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(param_t)-1);
+        strncpy(_binfoprefix_c.cparam, _binfoprefix_curpos, _binfoprefix_slen);
+        _binfoprefix_c.cparam[_binfoprefix_slen] = 0;
+        _binfoprefix_curpos = _binfoprefix_endpos+1;
+      }
+      else _binfoprefix_c.cparam[0] = 0;
+      
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "connect ");
+      if ((_binfoprefix_tmppos!=NULL) && (_binfoprefix_tmppos<_binfoprefix_cendpos)) {
+        _binfoprefix_curpos = _binfoprefix_tmppos;
+        _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+        @.check((_binfoprefix_tmppos==NULL) || (_binfoprefix_tmppos>=_binfoprefix_cendpos), "cannot find start of connect");
+        _binfoprefix_curpos = _binfoprefix_tmppos+1;
+
+        char *_binfoprefix_endposn = strstr(_binfoprefix_curpos, "\n");
+        @.check((_binfoprefix_endposn==NULL) || (_binfoprefix_endposn>=_binfoprefix_cendpos), "cannot find end of line");
+
+        char *_binfoprefix_endposi = strstr(_binfoprefix_curpos, ",");
+        if ((_binfoprefix_endposi==NULL) || (_binfoprefix_endposi>_binfoprefix_cendpos)) _binfoprefix_endposi=_binfoprefix_endposn;
+ 
+        while (_binfoprefix_curpos<_binfoprefix_endposn) {
+          _binfoprefix_endpos = strstr(_binfoprefix_curpos, ":");
+          @.check((_binfoprefix_endpos==NULL) || (_binfoprefix_tmppos>=_binfoprefix_endposi), "cannot find end of address");
+        
+          int _binfoprefix_nlen = _binfoprefix_endpos-_binfoprefix_curpos;
+          @.check(_binfoprefix_nlen>=20, "address string too long");
+          char _binfoprefix_nbuf[20];
+          strncpy(_binfoprefix_nbuf, _binfoprefix_curpos, _binfoprefix_nlen);
+          _binfoprefix_nbuf[_binfoprefix_nlen] = 0;
+          int _binfoprefix_ret = sscanf(_binfoprefix_nbuf, "%llx", &_binfoprefix_c.dst_addr);
+          @.check(_binfoprefix_ret!=1, "sscanf failed");
+          _binfoprefix_curpos = _binfoprefix_endpos+1;
+
+          _binfoprefix_slen = MIN(_binfoprefix_endposi-_binfoprefix_curpos, sizeof(sname_t)-1);
+          strncpy(_binfoprefix_c.dst_name, _binfoprefix_curpos, _binfoprefix_slen);
+          _binfoprefix_c.dst_name[_binfoprefix_slen] = 0;
+          _binfoprefix_curpos = _binfoprefix_endposi+1;
+        
+          binfo(_binfoprefix_c.dst_addr) => (_binfoprefix_succ);
+          @.check(_binfoprefix_succ!=TRUE, "binfo failed");
+          insert_conn(&_binfoprefix_c);
+
+          _binfoprefix_endposi = strstr(_binfoprefix_curpos, ",");
+          if ((_binfoprefix_endposi==NULL) || (_binfoprefix_endposi>_binfoprefix_cendpos)) _binfoprefix_endposi=_binfoprefix_endposn;
+        }
+      }
+      
+      _binfoprefix_curpos = _binfoprefix_cendpos;
+    }
+  }
+
+  _binfoprefix_success = TRUE;
+}
+
+
+
+
+@.func build_graph() => (success_t _buildgraphprefix_success)
+{
+  _buildgraphprefix_success = FALSE;
+  // FIXME: use operation calls instead of string parsing when new operations are available
+  success_t _buildgraphprefix_succ;
+
+  clear_bc();
+  binfo(0) => (_buildgraphprefix_succ);
+  @.check(_buildgraphprefix_succ!=TRUE, "binfo failed");
+
+  _buildgraphprefix_success = TRUE;
+}
+
+
+
+
+@.func remove_hook(addr_t _removehookprefix_baddr)
+{
+  addr_t _removehookprefix_elem_ptr;
+  LI_NEXT(ASNC_PC, @#.lc_hook) => (_removehookprefix_elem_ptr);
+  while (_removehookprefix_elem_ptr != @#.lc_hook) {
+    addr_t _removehookprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _removehookprefix_elem_ptr) => (_removehookprefix_next_ptr);
+    struct g_conn_t *_removehookprefix_c = LI_GET(ASNC_PC, _removehookprefix_elem_ptr, FALSE);
+
+    if ((_removehookprefix_c->src_addr == 0) && (_removehookprefix_c->dst_addr == _removehookprefix_baddr)) {
+      LI_REMOVE(ASNC_PC, _removehookprefix_elem_ptr);
+      PC_FREE(ASNC_PC, _removehookprefix_elem_ptr, sizeof(struct g_conn_t));
+    }
+
+    _removehookprefix_elem_ptr = _removehookprefix_next_ptr;
+  }
+}
+
+
+
+
+// removes double wires
+@.func remove_dw(const struct g_conn_t * const _removedwprefix_refc)
+{
+  bool _removedwprefix_found = FALSE;
+  addr_t _removedwprefix_elem_ptr;
+
+  LI_NEXT(ASNC_PC, @#.lc_hook) => (_removedwprefix_elem_ptr);
+  while (_removedwprefix_elem_ptr != @#.lc_hook) {
+    addr_t _removedwprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _removedwprefix_elem_ptr) => (_removedwprefix_next_ptr);
+    struct g_conn_t *_removedwprefix_c = LI_GET(ASNC_PC, _removedwprefix_elem_ptr, FALSE);
+
+    if ((_removedwprefix_c->src_addr == _removedwprefix_refc->src_addr) && (_removedwprefix_c->dst_addr == _removedwprefix_refc->dst_addr) && (strcmp(_removedwprefix_c->src_name, _removedwprefix_refc->src_name) == 0) && (strcmp(_removedwprefix_c->dst_name, _removedwprefix_refc->dst_name) == 0)) {
+      // found a match
+      if (_removedwprefix_found != TRUE) {
+        // first match -> keep it
+        _removedwprefix_found = TRUE;
+      }
+      else {
+        // remove duplicates
+        LI_REMOVE(ASNC_PC, _removedwprefix_elem_ptr);
+        PC_FREE(ASNC_PC, _removedwprefix_elem_ptr, sizeof(struct g_conn_t));
+      }
+    }
+
+    _removedwprefix_elem_ptr = _removedwprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func rewire_nc(addr_t _rewirencprefix_baddr, addr_t _rewirencprefix_raddr)
+{
+  addr_t _rewirencprefix_elem_ptr;
+  LI_NEXT(ASNC_PC, @#.lc_hook) => (_rewirencprefix_elem_ptr);
+  while (_rewirencprefix_elem_ptr != @#.lc_hook) {
+    addr_t _rewirencprefix_next_ptr;
+    LI_NEXT(ASNC_PC, _rewirencprefix_elem_ptr) => (_rewirencprefix_next_ptr);
+    struct g_conn_t *_rewirencprefix_c = LI_GET(ASNC_PC, _rewirencprefix_elem_ptr, FALSE);
+
+    if ((_rewirencprefix_c->src_addr == 0) && (_rewirencprefix_c->dst_addr == _rewirencprefix_baddr)) {
+      LI_REMOVE(ASNC_PC, _rewirencprefix_elem_ptr);
+      PC_FREE(ASNC_PC, _rewirencprefix_elem_ptr, sizeof(struct g_conn_t));
+    }
+    else {
+      if (_rewirencprefix_c->src_addr == _rewirencprefix_baddr) {
+        _rewirencprefix_c = LI_GET(ASNC_PC, _rewirencprefix_elem_ptr, TRUE);
+        _rewirencprefix_c->src_addr = _rewirencprefix_raddr;
+      }
+      if (_rewirencprefix_c->dst_addr == _rewirencprefix_baddr) {
+        _rewirencprefix_c = LI_GET(ASNC_PC, _rewirencprefix_elem_ptr, TRUE);
+        _rewirencprefix_c->dst_addr = _rewirencprefix_raddr;
+      }
+      struct g_conn_t _rewirencprefix_tc;
+      memcpy(&_rewirencprefix_tc, _rewirencprefix_c, sizeof(struct g_conn_t));
+      remove_dw(&_rewirencprefix_tc);
+    }
+
+    _rewirencprefix_elem_ptr = _rewirencprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func merge_nc_r() => (success_t _mergencprefix_success)
+{
+  _mergencprefix_success = FALSE;
+
+  struct g_brick_t *_mergencprefix_b;
+  addr_t _mergencprefix_elem_ptr;
+  char *_mergencprefix_r_str = "remote_";
+  #define STRBUFLEN 256
+  char _mergencprefix_rid_str[STRBUFLEN];
+  char _mergencprefix_crid_str[STRBUFLEN];
+  int _mergencprefix_ret;
+  addr_t _mergencprefix_raddr = 0;
+  bool _mergencprefix_found;
+
+  do {
+    _mergencprefix_found = FALSE;
+    LI_NEXT(ASNC_PC, @#.lb_hook) => (_mergencprefix_elem_ptr);
+    while (_mergencprefix_elem_ptr != @#.lb_hook) {
+      addr_t _mergencprefix_next_ptr;
+      LI_NEXT(ASNC_PC, _mergencprefix_elem_ptr) => (_mergencprefix_next_ptr);
+      _mergencprefix_b = LI_GET(ASNC_PC, _mergencprefix_elem_ptr, FALSE);
+      
+      if (strncmp(_mergencprefix_b->name, _mergencprefix_r_str, strlen(_mergencprefix_r_str)) == 0) {
+        // is remote_server or remote_client
+        if (_mergencprefix_found!=TRUE) {
+          // make remote brick
+          _mergencprefix_b = LI_GET(ASNC_PC, _mergencprefix_elem_ptr, TRUE);
+
+          _mergencprefix_found = TRUE;
+          _mergencprefix_raddr = _mergencprefix_b->addr;
+          getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_rid_str, STRBUFLEN);
+          
+          strncpy(_mergencprefix_b->name, "remote", STRBUFLEN);
+          _mergencprefix_b->name[STRBUFLEN-1] = 0;
+          
+          _mergencprefix_ret = snprintf(_mergencprefix_b->bparam, PARAMSIZE, "rid=%s", _mergencprefix_rid_str);
+          @.check(_mergencprefix_ret<0, "snprintf failed");
+          @.check(_mergencprefix_ret>=PARAMSIZE, "buffer too small");
+          _mergencprefix_b->bparam[PARAMSIZE-1] = 0;
+
+          // hook is not necessary any more
+          remove_hook(_mergencprefix_b->addr);
+        }
+        else {
+          // check if current rid matches the rid of first remote brick
+          getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_crid_str, STRBUFLEN);
+          if (strcmp(_mergencprefix_crid_str, _mergencprefix_rid_str) == 0) {
+            rewire_nc(_mergencprefix_b->addr, _mergencprefix_raddr);
+            LI_REMOVE(ASNC_PC, _mergencprefix_elem_ptr);
+            PC_FREE(ASNC_PC, _mergencprefix_elem_ptr, sizeof(struct g_brick_t));
+          }
+        }
+      }
+      
+      _mergencprefix_elem_ptr = _mergencprefix_next_ptr;
+    }
+  } while (_mergencprefix_found==TRUE);
+
+  _mergencprefix_success = TRUE;
+}
+
+
+
+
+@.func merge_nc_m() => (success_t _mergencprefix_success)
+{
+  _mergencprefix_success = FALSE;
+
+  struct g_brick_t *_mergencprefix_b;
+  addr_t _mergencprefix_elem_ptr;
+  char *_mergencprefix_r_str = "mirror_";
+  #define STRBUFLEN 256
+  char _mergencprefix_rid_str[STRBUFLEN];
+  char _mergencprefix_crid_str[STRBUFLEN];
+  int _mergencprefix_ret;
+  addr_t _mergencprefix_raddr = 0;
+  bool _mergencprefix_found;
+
+  do {
+    _mergencprefix_found = FALSE;
+    LI_NEXT(ASNC_PC, @#.lb_hook) => (_mergencprefix_elem_ptr);
+    while (_mergencprefix_elem_ptr != @#.lb_hook) {
+      addr_t _mergencprefix_next_ptr;
+      LI_NEXT(ASNC_PC, _mergencprefix_elem_ptr) => (_mergencprefix_next_ptr);
+      _mergencprefix_b = LI_GET(ASNC_PC, _mergencprefix_elem_ptr, FALSE);
+      
+      if (strncmp(_mergencprefix_b->name, _mergencprefix_r_str, strlen(_mergencprefix_r_str)) == 0) {
+        // is mirror_server or mirror_client
+        if (_mergencprefix_found!=TRUE) {
+          // make mirror brick
+          _mergencprefix_b = LI_GET(ASNC_PC, _mergencprefix_elem_ptr, TRUE);
+
+          _mergencprefix_found = TRUE;
+          _mergencprefix_raddr = _mergencprefix_b->addr;
+          getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_rid_str, STRBUFLEN);
+          
+          strncpy(_mergencprefix_b->name, "mirror", STRBUFLEN);
+          _mergencprefix_b->name[STRBUFLEN-1] = 0;
+          
+          _mergencprefix_ret = snprintf(_mergencprefix_b->bparam, PARAMSIZE, "rid=%s", _mergencprefix_rid_str);
+          @.check(_mergencprefix_ret<0, "snprintf failed");
+          @.check(_mergencprefix_ret>=PARAMSIZE, "buffer too small");
+          _mergencprefix_b->bparam[PARAMSIZE-1] = 0;
+
+          // hook is not necessary any more
+          remove_hook(_mergencprefix_b->addr);
+        }
+        else {
+          // check if current rid matches the rid of first mirror brick
+          getoptval(_mergencprefix_b->bparam, "rid", _mergencprefix_crid_str, STRBUFLEN);
+          if (strcmp(_mergencprefix_crid_str, _mergencprefix_rid_str) == 0) {
+            rewire_nc(_mergencprefix_b->addr, _mergencprefix_raddr);
+            LI_REMOVE(ASNC_PC, _mergencprefix_elem_ptr);
+            PC_FREE(ASNC_PC, _mergencprefix_elem_ptr, sizeof(struct g_brick_t));
+          }
+        }
+      }
+      
+      _mergencprefix_elem_ptr = _mergencprefix_next_ptr;
+    }
+  } while (_mergencprefix_found==TRUE);
+
+  _mergencprefix_success = TRUE;
+}
+
+
+
+
+operation $trans,$transwait
+{
+  @.check(@direction!=direct_read, "this view is read only");
+
+  success_t succ;
+  addr_t elem_ptr;
+  plen_t remain = @log_len;
+  char *buf = MAKE_PTR(@phys_addr);
+  int ret;
+
+
+  if (@log_addr == 0) {
+    build_graph() => (succ);
+    @.check(succ!=TRUE, "build_graph failed");
+    merge_nc_r() => (succ);
+    @.check(succ!=TRUE, "merge_nc_r failed");
+    merge_nc_m() => (succ);
+    @.check(succ!=TRUE, "merge_nc_m failed");
+  }
+
+  find_brick(@log_addr) => (succ, elem_ptr);
+  @.check(succ!=TRUE, "invalid address");
+
+  struct g_brick_t *b = LI_GET(ASNC_PC, elem_ptr, FALSE);
+
+  ret = snprintf(buf, remain, "brick=%s {\n", b->name);
+  @.check(ret<0, "snprintf failed");
+  @.check(ret>=remain, "buffer too small");
+  remain-=ret;
+  buf+=ret;
+
+  if (b->bparam[0]!=0) {
+    ret = snprintf(buf, remain, "  b_param %s=%s\n", b->name, b->bparam);
+    @.check(ret<0, "snprintf failed");
+    @.check(ret>=remain, "buffer too small");
+    remain-=ret;
+    buf+=ret;
+  }
+
+  // print connections
+  LI_NEXT(ASNC_PC, @#.lc_hook) => (elem_ptr);
+  while (elem_ptr != @#.lc_hook) {
+    addr_t next_ptr;
+    LI_NEXT(ASNC_PC, elem_ptr) => (next_ptr);
+    struct g_conn_t *c = LI_GET(ASNC_PC, elem_ptr, FALSE);
+
+    if (c->src_addr == b->addr) {
+      ret = snprintf(buf, remain, "  output=%s {\n", c->src_name);
+      @.check(ret<0, "snprintf failed");
+      @.check(ret>=remain, "buffer too small");
+      remain-=ret;
+      buf+=ret;
+
+      if (c->cparam[0]!=0) {
+        ret = snprintf(buf, remain, "    c_param %s=%s\n", c->src_name, c->cparam);
+        @.check(ret<0, "snprintf failed");
+        @.check(ret>=remain, "buffer too small");
+        remain-=ret;
+        buf+=ret;
+      }
+
+      ret = snprintf(buf, remain, "    connect %s=%llx:%s\n", c->src_name, c->dst_addr, c->dst_name);
+      @.check(ret<0, "snprintf failed");
+      @.check(ret>=remain, "buffer too small");
+      remain-=ret;
+      buf+=ret;
+
+      ret = snprintf(buf, remain, "  }\n");
+      @.check(ret<0, "snprintf failed");
+      @.check(ret>=remain, "buffer too small");
+      remain-=ret;
+      buf+=ret;
+    }
+
+    elem_ptr = next_ptr;
+  }
+
+  ret = snprintf(buf, remain, "}\n");
+  @.check(ret<0, "snprintf failed");
+  @.check(ret>=remain, "buffer too small");
+  remain-=ret;
+  buf+=ret;
+
+  buf[0] = 0;
+  remain--;
+  buf++;
+
+  @phys_len = @log_len-remain;
+
+  @success = TRUE;
+}
+
+
+
+
+operation $wait
+{
+  @success = TRUE;
+}
+
+
+
+
+operation $deinstbrick
+{
+  @.errmsg("FIXME: deinstbrick not yet implemented correctly!\n");
+  // If the brick is a virtual remote or mirror brick:
+  //   -> deinstantiate all corresponding server and client parts in input nest.
+
+  @=call :<istrat$op [@mandate] (@args);
+}
+
+
+
+
+operation $instbrick,$get,$put,$create,$delete,$instconn,$deinstconn,$connect,$disconnect,$getconn,$findconn
+{
+  @=call :<istrat$OP_NAME [@mandate] (@args);
+}

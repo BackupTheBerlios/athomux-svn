@@ -1,0 +1,110 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #merge_strm
+
+purpose merges two unidirectional streams into one bidirectional stream
+
+desc
+  - implements multi user capabilities.
+
+          +-----------------------------+
+          |                             |
+  strmr --+--     +------------------+  |                           |
+          |     --+ adapt_strm_multi +--+-- strm
+  strmw --+--     +------------------+  |
+          |                             |
+          +-----------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  enum mode_t {
+    MODE_UNDEF,
+    MODE_READER,
+    MODE_WRITER
+  };
+}
+
+
+
+
+data {
+  mode_t mode;
+}
+
+
+
+
+init {
+  @#.mode = MODE_UNDEF;
+}
+
+
+
+
+instance #adapt_strm_multi as asm;
+alias :>ostrm as :>strm;
+wire :<istrm as :>lstrm;
+
+
+
+
+input :<strmr
+input :<strmw
+
+
+
+
+local output :>lstrm
+
+
+
+
+operation $gadr
+{
+  if (@reader) {
+    @#.mode = MODE_READER;
+    @=call :<strmr$gadr [@mandate] (@args);
+  }
+  else {
+    @#.mode = MODE_WRITER;
+    @=call :<strmw$gadr [@mandate] (@args);
+  }
+}
+
+
+
+
+operation $padr
+{
+  if (@#.mode==MODE_READER) {
+    @.check(@reader!=TRUE, "invalid mode");
+    @=call :<strmr$padr [@mandate] (@args);
+  }
+  else if (@#.mode==MODE_WRITER) {
+    @.check(@reader!=FALSE, "invalid mode");
+    @=call :<strmw$padr [@mandate] (@args);
+  }
+  else @.err("undefined mode");
+}
+
+
+
+
+operation $op
+{
+  if (@#.mode==MODE_READER) @=call :<strmr$op [@mandate] (@args);
+  else if (@#.mode==MODE_WRITER) @=call :<strmw$op [@mandate] (@args);
+  else @.err("undefined mode");
+}

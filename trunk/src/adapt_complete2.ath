@@ -1,0 +1,72 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_complete2
+
+purpose completes shorter requests
+
+desc
+
+       +--------+
+       |        |
+  in --+--    --+-- out
+       |        |
+       +--------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+input :<in
+
+
+
+
+operation $op
+{
+  @=inputcall :>out$op [@mandate] (@args);
+}
+
+
+
+
+output :>out
+
+
+
+
+operation $trans,$transwait
+{
+  struct args targs;
+  plen_t sum = 0;
+  memcpy(&targs, @args, sizeof(struct args));
+
+  while (sum<@log_len) {
+    @=call :<in$OP_NAME [@mandate] (&targs);
+    if (targs.success!=TRUE) break;
+    sum+=targs.phys_len;
+    targs.log_addr+=targs.phys_len;
+    targs.phys_addr+=targs.phys_len;
+    targs.log_len-=targs.phys_len;
+  }
+
+  @phys_len = sum;
+
+  if (sum==@log_len) @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  @=call :<in$op [@mandate] @args;
+}

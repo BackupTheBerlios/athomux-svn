@@ -1,0 +1,119 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #mirror_server_1_tcp
+
+purpose server side of simple mirror brick for one or two server and two clients
+
+desc
+  - $brick_init expects port numbers in @param ("port1=<port> port2=<port>")
+
+        +----------------------------+
+        |                            |
+        |     +-------------------+  |
+        |  +--+ remote_server_tcp |  |
+        |  |  +-------------------+  |
+   in --+--+                         |
+        |  |  +-------------------+  |
+        |  +--+ remote_server_tcp |  |
+        |     +-------------------+  |
+        |                            |
+        +----------------------------+
+
+enddesc
+
+example
+  - In the case of one server you can connect using simple remote_client bricks.
+  - In the case of two server you have to use mirror_client_simple_tcp on the client sides.
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+}
+
+
+
+
+instance #remote_server_tcp as rs1;
+wire :<in as :>lin1;
+
+instance #remote_server_tcp as rs2;
+wire :<in as :>lin2;
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>lin1$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+  @=call :>lin2$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
+  #define STRBUFLEN 256
+  char port1_str[STRBUFLEN];
+  char port2_str[STRBUFLEN];
+  char buf1[STRBUFLEN];
+  char buf2[STRBUFLEN];
+
+  getoptval(@param, "port1", port1_str, STRBUFLEN);
+  getoptval(@param, "port2", port2_str, STRBUFLEN);
+
+  snprintf(buf1, STRBUFLEN, "port=%s", port1_str);
+  snprintf(buf2, STRBUFLEN, "port=%s", port2_str);
+
+  // FIXME: init brick
+  @=call #mirror_server_1_tcp#rs1:>init$output_init [@mandate] (@args) : buf1;
+  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #mirror_server_1_tcp#rs2:>init$output_init [@mandate] (@args) : buf2;
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  @success = TRUE;
+}
+
+
+
+
+// cannot alias on same input!
+input :<in
+operation $op
+{
+  @=inputcall :>lin1$op [@mandate] (@args);
+  if (@success!=TRUE) @=inputcall :>lin2$op [@mandate] (@args);
+}
+local output :>lin1
+operation $op
+{
+  @=call :<in$op [@mandate] (@args);
+}
+local output :>lin2
+operation $op
+{
+  @=call :<in$op [@mandate] (@args);
+}

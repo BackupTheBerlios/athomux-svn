@@ -1,0 +1,443 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #map_delta
+
+purpose adds move functionality
+
+desc
+  - Addresses returned by $gadr may conflict with other regions
+    due to $move operations. The caller is responsible for calling
+    $move in order to map the address range returned by $gadr
+    into a valid region.
+
+  - Acts like map_simple_delta, but keeps a minimum of state
+    information. blocks are merged if possible and blocks are
+    deleted when offset becomes zero.
+
+         +--------+
+         |        |
+    in --+--      |
+         |      --+-- out
+   mem --+--      |
+         |        |
+         +--------+
+
+  FIXME: more efficient data structure like b*-trees!
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  struct block_t {
+    struct link link;
+    addr_t start;
+    len_t len;
+    offs_t offset;
+  };
+}
+
+
+
+
+data {
+  addr_t ld_hook;
+}
+
+
+
+
+@.include "isect.inc"
+@.include "li.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    PC_FLUSH(MD_PC);
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    PC_FLUSH(MD_PC);
+    PC_FREE(MD_PC, @#.ld_hook, sizeof(struct block_t));
+  }
+  else if (@constr) {
+    // instantiate output
+    PC_ALLOC(MD_PC, sizeof(struct block_t)) => (@#.ld_hook);
+    LI_INIT(MD_PC, @#.ld_hook);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<in
+
+input :<mem
+use PC MD_PC [1024];
+
+
+
+
+output :>out
+
+
+
+
+operation $move
+{
+  if (@offset == 0) {
+    // undo all moves in this region
+    LI_REMOVE_ISECT(MD_PC, @#.ld_hook, @log_addr, @log_len) => (@success);
+    return;
+  }
+
+  success_t succ;
+  addr_t elem_ptr = 0;
+  struct block_t *block;
+
+  addr_t src_start = @log_addr;
+  addr_t dst_start = @log_addr + @offset;
+  len_t len = @log_len;
+
+  addr_t dstart;
+  len_t dlen;
+
+  substract(dst_start, src_start, len) => (dstart, dlen);
+  LI_REMOVE_ISECT(MD_PC, @#.ld_hook, dstart, dlen) => (succ);
+  @.check(succ!=TRUE, "cannot remove intersection");
+
+  addr_t lt_hook;
+  PC_ALLOC(MD_PC, sizeof(struct block_t)) => (lt_hook);
+  LI_INIT(MD_PC, lt_hook);
+
+  // move existing blocks in src to dst
+  LI_FIND_ISECT(MD_PC, @#.ld_hook, src_start, len) => (succ, elem_ptr);
+  if (succ==TRUE) {
+    addr_t remain_start = src_start;
+    len_t remain_len = len;
+
+    while (elem_ptr != @#.ld_hook) {
+      addr_t next_ptr;
+      LI_NEXT(MD_PC, elem_ptr) => (next_ptr);
+      block = LI_GET(MD_PC, elem_ptr, FALSE);
+
+      addr_t istart;
+      addr_t ilen;
+      
+      intersect(src_start, len, block->start, block->len) => (istart, ilen);
+
+      if (ilen>0) {
+        if (remain_start < istart) {
+          // insert new block in lt
+          addr_t ptr;
+          struct block_t *b;
+          b = PC_ALLOC(MD_PC, sizeof(struct block_t)) => (ptr);
+          b->start = remain_start+@offset;
+          b->len = istart - remain_start;
+          b->offset = -@offset;
+          LI_PREPEND(MD_PC, lt_hook, ptr);
+          
+          remain_start = istart+ilen;
+          remain_len = src_start+len-remain_start;
+        }
+
+        addr_t lstart;
+        len_t llen;
+        addr_t rstart;
+        len_t rlen;
+      
+        splitleft(block->start, block->len, istart) => (lstart, llen);
+        splitright(block->start, block->len, istart+ilen) => (rstart, rlen);
+
+        if (llen>0) {
+          addr_t ptr;
+          struct block_t *b;
+          b = PC_ALLOC(MD_PC, sizeof(struct block_t)) => (ptr);
+          b->start = lstart;
+          b->len = llen;
+          b->offset = block->offset;
+          LI_PREPEND(MD_PC, elem_ptr, ptr);
+        }
+        if (rlen>0) {
+          addr_t ptr;
+          struct block_t *b;
+          b = PC_ALLOC(MD_PC, sizeof(struct block_t)) => (ptr);
+          b->start = rstart;
+          b->len = rlen;
+          b->offset = block->offset;
+          LI_PREPEND(MD_PC, elem_ptr, ptr);
+        }
+      
+        if (block->offset - @offset == 0) {
+          LI_REMOVE(MD_PC, elem_ptr);
+          PC_FREE(MD_PC, elem_ptr, sizeof(struct block_t));
+        }
+        else {
+          // we will modify the buffer
+          LI_GET(MD_PC, elem_ptr, TRUE);
+
+          LI_REMOVE(MD_PC, elem_ptr);
+
+          block->start = istart + @offset;
+          block->len = ilen;
+          block->offset -= @offset;
+
+          LI_PREPEND(MD_PC, lt_hook, elem_ptr);
+
+          remain_start = istart+ilen;
+          remain_len -= ilen;
+        }
+      }
+      else break; // no more intersections
+    
+      elem_ptr = next_ptr;
+    }
+
+    if (remain_len>0) {
+      addr_t ptr;
+      struct block_t *b;
+      b = PC_ALLOC(MD_PC, sizeof(struct block_t)) => (ptr);
+      b->start = remain_start+@offset;
+      b->len = remain_len;
+      b->offset = -@offset;
+      LI_PREPEND(MD_PC, lt_hook, ptr);
+    }
+
+    addr_t left_ptr = 0;
+    addr_t right_ptr = 0;
+    LI_FIND_GE(MD_PC, @#.ld_hook, dst_start) => (succ, right_ptr);
+    if (succ!=TRUE) right_ptr=@#.ld_hook;
+    LI_PREV(MD_PC, right_ptr) => (left_ptr);
+
+    // try to merge left
+    if (left_ptr!=@#.ld_hook) {
+      struct block_t *b_left;
+      b_left = LI_GET(MD_PC, left_ptr, TRUE);
+
+      if (b_left->start+b_left->len == dst_start) {
+        struct block_t *b_first;
+        LI_NEXT(MD_PC, lt_hook) => (elem_ptr);
+        b_first = LI_GET(MD_PC, elem_ptr, FALSE);
+
+        if (b_first->offset == b_left->offset) {
+          LI_REMOVE(MD_PC, elem_ptr);
+          b_left->len += b_first->len;
+        }
+      }
+    }
+
+    // try to merge right
+    if (right_ptr!=@#.ld_hook) {
+      struct block_t *b_right;
+      b_right = LI_GET(MD_PC, right_ptr, TRUE);
+
+      if (b_right->start == dst_start + len) {
+        struct block_t *b_last;
+        LI_PREV(MD_PC, lt_hook) => (elem_ptr);
+        b_last = LI_GET(MD_PC, elem_ptr, FALSE);
+
+        if (b_last->offset == b_right->offset) {
+          LI_REMOVE(MD_PC, elem_ptr);
+          b_right->start = b_last->start;
+          b_right->len += b_last->len;
+        }
+      }
+    }
+
+    // move all blocks from LT to LD
+    LI_NEXT(MD_PC, lt_hook) => (elem_ptr);
+    while (elem_ptr != lt_hook) {
+      addr_t next_ptr;
+      LI_NEXT(MD_PC, elem_ptr) => (next_ptr);
+      block = LI_GET(MD_PC, elem_ptr, FALSE);
+
+      LI_REMOVE(MD_PC, elem_ptr);
+      LI_PREPEND(MD_PC, right_ptr, elem_ptr);
+
+      elem_ptr = next_ptr;
+    }
+
+    PC_FREE(MD_PC, lt_hook, sizeof(struct block_t));
+  }
+  else {
+    //insert one big block in MD_PC
+    LI_FIND_GE(MD_PC, @#.ld_hook, dst_start) => (succ, elem_ptr);
+    if (succ!=TRUE) elem_ptr=@#.ld_hook;
+    addr_t ptr;
+    block = PC_ALLOC(MD_PC, sizeof(struct block_t)) => (ptr);
+    block->start = dst_start;
+    block->len = len;
+    block->offset = -@offset;
+    LI_PREPEND(MD_PC, elem_ptr, ptr);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+@.func rec_op(addr_t _recopprefix_start, len_t _recopprefix_len, addr_t _recopprefix_elem_ptr)
+{
+  struct block_t *_recopprefix_block;
+
+  // find buffers in list that intersect with given address range
+  while (_recopprefix_elem_ptr != @#.ld_hook) {
+    addr_t _recopprefix_next_ptr;
+    LI_NEXT(MD_PC, _recopprefix_elem_ptr) => (_recopprefix_next_ptr);
+    _recopprefix_block = LI_GET(MD_PC, _recopprefix_elem_ptr, FALSE);
+
+    addr_t _recopprefix_istart;
+    addr_t _recopprefix_ilen;
+
+    intersect(_recopprefix_start, _recopprefix_len, _recopprefix_block->start, _recopprefix_block->len) => (_recopprefix_istart, _recopprefix_ilen);
+
+    if (_recopprefix_ilen>0) {
+      // found an intersection!
+
+      addr_t _recopprefix_lstart;
+      len_t _recopprefix_llen;
+      addr_t _recopprefix_rstart;
+      len_t _recopprefix_rlen;
+      
+      splitleft(_recopprefix_block->start, _recopprefix_block->len, _recopprefix_istart) => (_recopprefix_lstart, _recopprefix_llen);
+      splitright(_recopprefix_block->start, _recopprefix_block->len, _recopprefix_istart+_recopprefix_ilen) => (_recopprefix_rstart, _recopprefix_rlen);
+      
+      if (_recopprefix_llen>0) {
+        rec_op(_recopprefix_lstart, _recopprefix_llen, _recopprefix_next_ptr);
+        if (@success!=TRUE) return;
+      }
+      if (_recopprefix_rlen>0) {
+        rec_op(_recopprefix_rstart, _recopprefix_rlen, _recopprefix_next_ptr);
+        if (@success!=TRUE) return;
+      }
+
+      // We not need to search further since there are no overlaps in regions.
+      // That means there is only one intersection.
+      // calculate the new address range and exit the loop
+      _recopprefix_start = _recopprefix_istart + _recopprefix_block->offset;
+      _recopprefix_len = _recopprefix_ilen;
+      break;
+    }
+  
+    _recopprefix_elem_ptr = _recopprefix_next_ptr;
+  }
+
+  // we have the final address
+  @log_addr = _recopprefix_start;
+  @log_len = _recopprefix_len;
+  @=call :<in$op [@mandate] (@args);
+}
+
+
+
+
+// returns the address range, that starts with "start" and
+// ends with the first discontinouity in address space due
+// to move operations (translated to input address space)
+@.func first_tb (addr_t _firsttbprefix_start, len_t _firsttbprefix_len) => (addr_t _firsttbprefix_tbstart, len_t _firsttbprefix_tblen)
+{
+  struct block_t *_firsttbprefix_block;
+  addr_t _firsttbprefix_elem_ptr;
+  LI_NEXT(MD_PC, @#.ld_hook) => (_firsttbprefix_elem_ptr);
+
+  // find buffers in list that intersect with given address range
+  while (_firsttbprefix_elem_ptr != @#.ld_hook) {
+    addr_t _firsttbprefix_next_ptr;
+    LI_NEXT(MD_PC, _firsttbprefix_elem_ptr) => (_firsttbprefix_next_ptr);
+    _firsttbprefix_block = LI_GET(MD_PC, _firsttbprefix_elem_ptr, FALSE);
+
+    addr_t _firsttbprefix_istart;
+    addr_t _firsttbprefix_ilen;
+
+    intersect(_firsttbprefix_start, _firsttbprefix_len, _firsttbprefix_block->start, _firsttbprefix_block->len) => (_firsttbprefix_istart, _firsttbprefix_ilen);
+
+    if (_firsttbprefix_ilen>0) {
+      // found an intersection!
+
+      if (_firsttbprefix_istart == _firsttbprefix_start) {
+        _firsttbprefix_tbstart = _firsttbprefix_start + _firsttbprefix_block->offset;
+        _firsttbprefix_tblen = _firsttbprefix_ilen;
+        return;
+      }
+      else _firsttbprefix_len = _firsttbprefix_istart - _firsttbprefix_start;
+    }
+  
+    _firsttbprefix_elem_ptr = _firsttbprefix_next_ptr;
+  }
+
+  _firsttbprefix_tbstart = _firsttbprefix_start;
+  _firsttbprefix_tblen = _firsttbprefix_len;
+}
+
+
+
+
+operation $create,$delete,$put,$wait
+{
+  addr_t log_addr = @log_addr;
+  len_t log_len = @log_len;
+  addr_t elem_ptr;
+
+  LI_NEXT(MD_PC, @#.ld_hook) => (elem_ptr);
+  rec_op(@log_addr, @log_len, elem_ptr);
+  @log_addr = log_addr;
+  @log_len = log_len;
+
+  @.check(@success!=TRUE, "FIXME: switch to error state");
+}
+
+
+
+
+operation $get,$trans
+{
+  addr_t s_log_addr = @log_addr;
+  len_t s_log_len = @log_len;
+  addr_t start;
+  len_t len;
+
+  first_tb(@log_addr, @log_len) => (start, len);
+ 
+  @log_addr = start;
+  @log_len = len;
+  @=call :<in$OP_NAME [@mandate] (@args);
+  @log_addr = s_log_addr;
+  @log_len = s_log_len;
+}
+
+
+
+
+operation $gadr,$padr
+{
+  @=call :<in$OP_NAME [@mandate] (@args);
+}

@@ -1,0 +1,252 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #remote_client
+
+purpose marshalling/demarshalling operation calls and sending/receiving them over a stream
+
+desc
+  - byte order must match remote byte order!
+  - so far only synchronous IO!
+
+          +---------------------------------------------------+
+          |                                                   |
+    tmp --+--                        +---------------+      --+-- out
+          |                        --+ thread_ulinux +--      |
+          |                          +---------------+        |
+          |                                                   |
+          |  +-----------------+     +----------------+       |
+          |  |                 |     |                +--     |
+  strmr --+--+ adapt_complete2 +-----+ strm_multiplex |       |
+          |  |                 |     |                +--     |
+          |  +-----------------+     +----------------+       |
+          |                                                   |
+          |  +-----------------+     +----------------+       |
+          |  |                 |     |                +--     |
+  strmw --+--+ adapt_complete2 +-----+ strm_multiplex |       |
+          |  |                 |     |                +--     |
+          |  +-----------------+     +----------------+       |
+          |                                                   |
+          +---------------------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "strm_types.h"
+
+  #define RPC_VERSION (1)
+
+  #define RPC_REQ      1
+  #define RPC_RSP      2
+
+  struct rpc_header_t {
+    uns4 identification;
+    uns1 version;
+    uns1 type;
+    plen_t param_len;
+    plen_t data_len;
+  };
+
+  struct rpc_args_t {
+    struct args plain_args;
+    bool conn1_valid;
+    bool conn2_valid;
+    bool res_conn_valid;
+    struct conn_info conn1;
+    struct conn_info conn2;
+    struct conn_info res_conn;
+  };
+
+  struct packet_t {
+    addr_t start;
+    len_t len;
+    paddr_t paddr;
+  };
+}
+
+
+
+
+instance #adapt_complete2 as complr;
+alias :<in as :<strmr;
+
+instance #adapt_complete2 as complw;
+alias :<in as :<strmw;
+
+instance #strm_multiplex as mplexr;
+wire :<istrm as #remote_client#complr:>out;
+wire :>ostrm1 as :<cpr;
+wire :>ostrm2 as :<icpr;
+
+instance #strm_multiplex as mplexw;
+wire :<istrm as #remote_client#complw:>out;
+wire :>ostrm1 as :<cpw;
+wire :>ostrm2 as :<icpw;
+
+instance #thread_ulinux as th;
+wire :<exec as :>loop;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>loop$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // start thread
+  @=call #remote_client#th:>cpu$wait [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "thread failed");
+}
+
+
+
+
+// for output calls
+local input :<cpr
+local input :<cpw
+
+// for input calls
+local input :<icpr
+local input :<icpw
+
+input :<tmp
+
+
+
+
+@.include "remote_common.inc"
+@.include "remote_encode.inc"
+
+
+
+
+local output :>loop
+
+
+
+
+@.func decode_loop()
+{
+  success_t _decodeloopprefix_succ;
+  struct packet_t _decodeloopprefix_packet;
+
+  while (1) {
+    get_packet(icpr) => (_decodeloopprefix_succ, _decodeloopprefix_packet);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot get packet - FIXME: switch to error state");
+
+    decode_rev(&_decodeloopprefix_packet) => (_decodeloopprefix_succ);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot decode packet - FIXME: switch to error state");
+
+    delete_packetr(icpr, &_decodeloopprefix_packet) => (_decodeloopprefix_succ);
+    @.check(_decodeloopprefix_succ!=TRUE, "cannot delete packet - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $wait
+{
+  decode_loop();
+
+  @success = TRUE;
+}
+
+
+
+
+output :>out
+
+
+
+
+operation $get
+{
+  success_t succ;
+
+  //FIXME: get has to check whether logical address range is already created.
+  //       phys_len might be smaller than log_len -> temporary buffer with this phys_len.
+
+  // get local buffer
+  @=call :<tmp$createget [@mandate] (@log_addr, @log_len) => (succ, @phys_addr, @phys_len);
+  @.check(succ!=TRUE, "cannot allocate buffer");
+
+  // buffer cannot be up do date, since nothing has been transferred from remote site yet
+  @version = vers_undef;
+
+  @success = TRUE;
+}
+
+
+
+
+operation $put
+{
+  success_t succ;
+
+  if (@prio!=prio_none) {
+    // transfer probably modified buffer to remote
+
+    paddr_t paddr;
+    plen_t plen;
+    plen_t trlen;
+
+    // get phys address of buffer
+    @=call :<tmp$gettranswait [@mandate] (@log_addr, @log_len) => (succ, paddr, plen);
+    @.check(succ!=TRUE, "gettranswait failed");
+    @.check(@log_len!=plen, "cannot gettranswait the whole buffer");
+
+    // transfer buffer content
+    @=call :>out$transwait [@mandate] (@log_addr, @log_len, paddr, direct_write) => (succ, trlen);
+    @.check(succ!=TRUE, "transwait failed");
+    @.check(trlen!=@log_len, "cannot trans the whole buffer");
+
+    // put phys address of buffer
+    @=call :<tmp$put [@mandate] (@log_addr, @log_len, prio_none) => (succ);
+    @.check(succ!=TRUE, "put failed");
+  }
+
+  // delete local buffer
+  @=call :<tmp$putdelete [@mandate] (@log_addr, @log_len) => (succ);
+  @.check(succ!=TRUE, "cannot free buffer");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  success_t succ;
+
+  encode(@args, @param) => (succ);
+  @.check(succ!=TRUE, "cannot encode");
+
+  @success = TRUE;
+}

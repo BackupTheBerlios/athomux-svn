@@ -1,0 +1,169 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_pipe2
+
+purpose validation for pipe brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include <unistd.h>
+}
+
+
+
+
+instance #device_mem_ulinux as mem;
+instance #lock_ulinux as l;
+
+instance #adapt_tmp as at;
+wire :<mem as #demo_pipe2#mem:>out;
+
+instance #pipe as p;
+wire :<ilock as #demo_pipe2#l:>lock;
+wire :<mem as #demo_pipe2#mem:>out;
+wire :<stat as #demo_pipe2#at:>tmp;
+wire :>strmr as #demo_pipe2#pr:<in;
+wire :>strmw as #demo_pipe2#pw:<in;
+
+instance #adapt_complete2 as pr;
+wire :>out as :<reader;
+
+instance #adapt_complete2 as pw;
+wire :>out as :<writer;
+
+instance #thread_ulinux as th;
+wire :<exec as :>thread;
+
+
+
+
+@.func runr()
+{
+  success_t _runrprefix_succ;
+  plen_t _runrprefix_tlen;
+  addr_t _runrprefix_addr;
+  len_t _runrprefix_len;
+  int _runrprefix_i;
+  int _runrprefix_n=4;
+
+  char *_runrprefix_s="This is a test!";
+
+  for (_runrprefix_i=0; _runrprefix_i<_runrprefix_n; _runrprefix_i++) {
+    @=call :<writer$gadrcreate [@mandate] (strlen(_runrprefix_s+_runrprefix_i)+1) => (_runrprefix_succ, _runrprefix_addr, _runrprefix_len);
+    //printf("writer: (%lld,%lld)\n", _runrprefix_addr, _runrprefix_len);
+    @.check(_runrprefix_succ!=TRUE, "writer:gadr ERROR");
+
+    @=call :<writer$transwait [@mandate] (_runrprefix_addr, strlen(_runrprefix_s+_runrprefix_i)+1, MAKE_PADDR(_runrprefix_s+_runrprefix_i), direct_write) => (_runrprefix_succ, _runrprefix_tlen);
+    @.check(_runrprefix_succ!=TRUE, "writer:transwait ERROR");
+    @.check(_runrprefix_tlen!=_runrprefix_len, "writer:transwait tlen!=len");
+
+    @=call :<writer$padr [@mandate] (_runrprefix_addr, _runrprefix_len, FALSE) => (_runrprefix_succ);
+    @.check(_runrprefix_succ!=TRUE, "writer:create ERROR");
+
+    sleep(2);
+  }
+}
+
+
+
+
+@.func runw ()
+{
+  success_t _runwprefix_succ;
+  paddr_t _runwprefix_paddr;
+  plen_t _runwprefix_plen;
+  addr_t _runwprefix_addr;
+  len_t _runwprefix_len;
+
+  do {
+    printf("reader: waiting...\n");
+    @=call :<reader$gadr [@mandate] (1, TRUE, TRUE, action_wait, 0) => (_runwprefix_succ, _runwprefix_addr, _runwprefix_len);
+    printf("reader: ...done\n");
+    //@=call :<reader$gadr [@mandate] (1, TRUE, TRUE, action_try, 1) => (_runwprefix_succ, _runwprefix_addr, _runwprefix_len);
+    //printf("reader: (%lld,%lld)\n", _runwprefix_addr, _runwprefix_len);
+    if (_runwprefix_succ!=TRUE) break;
+
+    @=call :<reader$gettranswait [@mandate] (_runwprefix_addr, _runwprefix_len) => (_runwprefix_succ, _runwprefix_paddr, _runwprefix_plen);
+    @.check(_runwprefix_succ!=TRUE, "reader:gettranswait ERROR");
+    @.check(_runwprefix_len!=_runwprefix_plen, "reader:gettranswait len!=plen");
+
+    //char _runwprefix_c = *((char *)MAKE_PTR(_runwprefix_paddr));
+    //printf("%c", _runwprefix_c);
+    printf("received: '%s'\n", (char *)MAKE_PTR(_runwprefix_paddr));
+
+    @=call :<reader$putdeletepadr [@mandate] (_runwprefix_addr, _runwprefix_len, TRUE) => (_runwprefix_succ);
+    @.check(_runwprefix_succ!=TRUE, "reader:putdelete ERROR");
+  } while (_runwprefix_succ == TRUE);
+}
+
+
+
+
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init on local output
+  @=call :>thread$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // FIXME: init bricks
+  @=call #demo_pipe2#at:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #demo_pipe2#p:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  success_t succ;
+
+  if (@constr) {
+    // start threads
+    @=call #demo_pipe2#th:>cpu$trans [@mandate] (0, 1, 0, direct_write) => (succ);
+    @.check(succ!=TRUE, "cannot start thread");
+    @=call #demo_pipe2#th:>cpu$trans [@mandate] (0, 1, 0, direct_read) => (succ);
+    @.check(succ!=TRUE, "cannot start thread");
+    while (1);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local output :>thread
+
+
+
+
+operation $trans
+{
+  if (@direction==direct_write) runw();
+  else if (@direction==direct_read) runr();
+  else @.err("invalid direction");
+}
+
+
+
+
+local input :<reader
+local input :<writer
+
+input :<strat

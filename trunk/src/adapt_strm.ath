@@ -1,0 +1,52 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strm
+
+purpose adds logical IO (reader and writer) for physical stream
+
+desc
+
+          +----------------------------------------------------------+
+          |                                                          |
+          |                      +-------------+                     |
+    tmp --+----------------------+             |                     |
+          |                      | adapt_strmr +--+                  |
+          |  +-------------+  +--+             |  |  +------------+  |
+          |  |             +--+  +-------------+  +--+            |  |
+  pstrm --+--+ split_pstrm |                         | merge_strm +--+-- strm
+          |  |             +--+  +-------------+  +--+            |  |
+          |  +-------------+  +--+             |  |  +------------+  |
+          |                      | adapt_strmw +--+                  |
+    mem --+----------------------+             |                     |
+          |                      +-------------+                     |
+          |                                                          |
+          +----------------------------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #split_pstrm as sps;
+alias :<pstrm as :<pstrm;
+
+instance #adapt_strmr as asr;
+alias :<tmp as :<tmp;
+wire :<pstrmr as #adapt_strm#sps:>pstrmr;
+
+instance #adapt_strmw as asw;
+alias :<mem as :<mem;
+wire :<pstrmw as #adapt_strm#sps:>pstrmw;
+
+instance #merge_strm as ms;
+alias :>strm as :>strm;
+wire :<strmr as #adapt_strm#asr:>strmr;
+wire :<strmw as #adapt_strm#asw:>strmw;

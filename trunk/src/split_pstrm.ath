@@ -1,0 +1,77 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #split_pstrm
+
+purpose splits a bidirectional stream into two unidirectional streams
+
+desc
+  - implements multi user capabilities.
+
+          +-------+
+          |       |
+  pstrm --+--   --+-- pstrmr
+          |       |
+          |     --+-- pstrmw
+          |       |
+          +-------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+input :<pstrm
+
+
+
+
+output :>pstrmr
+
+
+
+
+operation $trans,$transwait
+{
+  @.check(@direction==direct_write, "cannot write in unidirectional readable stream");
+
+  @=call :<pstrm$OP_NAME [@mandate] (@args);
+}
+
+
+
+
+operation $wait
+{
+  @=call :<pstrm$wait [@mandate] (@args);
+}
+
+
+
+
+output :>pstrmw
+
+
+
+
+operation $trans,$transwait
+{
+  @.check(@direction==direct_read, "cannot read in unidirectional writable stream");
+
+  @=call :<pstrm$OP_NAME [@mandate] (@args);
+}
+
+
+
+
+operation $wait
+{
+  @=call :<pstrm$wait [@mandate] (@args);
+}

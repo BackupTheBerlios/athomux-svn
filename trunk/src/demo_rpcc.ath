@@ -1,0 +1,91 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_rpcc
+
+purpose validation for remote_client brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #remote_client_tcp as rc;
+wire :>out as :<rmem;
+
+
+
+
+@.func test()
+{
+  #define BUFSIZE 100
+
+  success_t _testprefix_succ;
+  addr_t _testprefix_start;
+  len_t _testprefix_len;
+  paddr_t _testprefix_pstart;
+  plen_t _testprefix_plen;
+  char _testprefix_buf[BUFSIZE];
+
+  // get some memory on remote
+  @=call :<rmem$gadrcreateget [@mandate] (BUFSIZE) => (_testprefix_succ, _testprefix_start, _testprefix_len, _testprefix_pstart, _testprefix_plen);
+  @.check(_testprefix_succ!=TRUE, "gadrcreateget failed");
+  @.check(_testprefix_len!=_testprefix_plen, "cannot allocate buffer");
+
+  // fill memory with string
+  char *_testprefix_s = "This is a test!";
+  memcpy(MAKE_PTR(_testprefix_pstart), _testprefix_s, strlen(_testprefix_s)+1);
+
+  printf("<----'%s'\n", _testprefix_s);
+
+  // write it
+  @=call :<rmem$putwait [@mandate] (_testprefix_start, _testprefix_len) => (_testprefix_succ);
+  @.check(_testprefix_succ!=TRUE, "putwait failed");
+
+  // read it back with $trans
+  @=call :<rmem$transwait [@mandate] (_testprefix_start, _testprefix_len, MAKE_PADDR(&_testprefix_buf), direct_read) => (_testprefix_succ, _testprefix_plen);
+  @.check(_testprefix_succ!=TRUE, "transwait failed");
+  @.check(_testprefix_len!=_testprefix_plen, "cannot transfer all");
+
+  printf("---->'%s'\n", _testprefix_buf);
+}
+
+
+
+
+operation $brick_init
+{
+  printf("usage: ./abl demo_rpcc \"host=<host> port=<port>\"\n");
+
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init brick
+  @=call #demo_rpcc#rc:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if (@constr && !@destr) {
+    test();
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<rmem
+
+input :<strat

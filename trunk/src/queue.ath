@@ -1,0 +1,409 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #queue
+
+purpose queue functionality on logical streams
+
+desc
+  - do not forget to call $padr
+    before you do another $gadr!
+  - implements single user capabilities.
+    see adapt_strm_multi if you need multi user
+    capabilities.
+  - with BUFSIZE the number of packets in the queue is limited.
+    FIXME: allow dynamic buffer size given in @param at $init...
+
+          +---------+
+          |         |
+    mem --+--     --+-- strmr
+          |         |
+  ilock --+--     --+-- strmw
+          |         |
+   stat --+--       |
+          |         |
+          +---------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_header {
+  #define QUEUE_BUFSIZE 20
+
+  struct queue_entry_t {
+    addr_t log_addr;
+    len_t log_len;
+  };
+}
+
+
+
+
+static_data {
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+
+  #define LOCK_ADDR_MOD          0
+  #define LOCK_ADDR_READER_WAIT  1
+  #define LOCK_ADDR_WRITER_WAIT  2
+
+  #define LOCK_MAND_READER       1
+  #define LOCK_MAND_WRITER       2
+
+  #define LOCK_MAND_WAIT1        1
+  #define LOCK_MAND_WAIT2        2
+
+  struct status_t {
+    int avail_start;
+    int avail_len;
+    struct queue_entry_t buffer[QUEUE_BUFSIZE];
+  };
+}
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    PC_FLUSH(QUEUE_STAT);
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // nothing to do...
+  }
+  else if (@constr) {
+    // instantiate brick
+
+    struct status_t *status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+
+    if (status==NULL) {
+      // no status available in input nest. creating new one...
+      success_t succ;
+
+      @=call :<stat$create [@mandate] (0, sizeof(struct status_t)) => (succ);
+      @.check(succ!=TRUE, "cannot allocate memory for status information");
+
+      status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+      @.check(status==NULL, "FIXME: switch to error state - cannot get pointer on status information");
+
+      // initializing status
+      status->avail_start=0;
+      status->avail_len=0;
+    }
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+output :>strmr
+
+
+
+
+operation $gadr
+{
+  struct status_t *status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+  @.check(status==NULL, "cannot get pointer on status information");
+
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  success_t succ;
+
+  @=call :<ilock$lock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  if (status->avail_len==0) {
+    if (@action!=action_wait) {
+      // we do not need to wait
+      // release locks
+      @=call :<ilock$unlock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+      return;
+    }
+
+    // wait for more data
+    while (status->avail_len==0) {
+      @=call :<ilock$lock [LOCK_MAND_WAIT1] (LOCK_ADDR_READER_WAIT, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot get lock - FIXME: error state or release other locks");
+      if (succ!=TRUE) {
+        // release modify lock
+        @=call :<ilock$unlock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+        @.err("cannot get lock");
+      }
+      
+      // release modify lock to prevent blocking the writer
+      @=call :<ilock$unlock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+      @=call :<ilock$lock [LOCK_MAND_WAIT2] (LOCK_ADDR_READER_WAIT, 1, lock_write) => (succ);
+      if (succ!=TRUE) {
+        // release wait lock
+        @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_READER_WAIT, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+        @.err("cannot get lock");
+      }
+      
+      // new data is now available
+      // release wait lock and get modify lock
+      
+      @=call :<ilock$unlock [LOCK_MAND_WAIT2] (LOCK_ADDR_READER_WAIT, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+      
+      @=call :<ilock$lock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot get lock - FIXME: error state or release other locks");
+    }
+  }
+
+  struct queue_entry_t block = status->buffer[status->avail_start];
+
+  if ((block.log_len>=@log_len) && ((block.log_len<=@try_len) || (@try_len==0))) {
+    // block matches request
+    @log_addr = block.log_addr;
+    @log_len = block.log_len;
+    @success = TRUE;
+  }
+
+  // release modify lock
+  @=call :<ilock$unlock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+}
+
+
+
+
+operation $create
+{
+  @.err("cannot create in unidirectional readable stream");
+}
+
+
+
+
+operation $delete
+{
+  struct status_t *status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+  @.check(status==NULL, "cannot get pointer on status information");
+
+  struct queue_entry_t block = status->buffer[status->avail_start];
+  @.check(@log_addr!=block.log_addr, "invalid address");
+  @.check(@log_len!=block.log_len, "invalid length");
+
+  success_t succ;
+  
+  @=call :<ilock$lock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  @=call :<mem$delete [@mandate] (@args);
+
+  if (@success==TRUE) {
+    status->avail_start = (status->avail_start+1) % QUEUE_BUFSIZE;
+    status->avail_len -= 1;
+  }
+
+  // release modify lock
+  @=call :<ilock$unlock [LOCK_MAND_READER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  success_t succ;
+
+  // wakeup writer
+  @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_WRITER_WAIT, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}
+
+
+
+
+output :>strmw
+
+
+
+
+operation $gadr
+{
+  struct status_t *status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+  @.check(status==NULL, "cannot get pointer on status information");
+
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+  
+  @=call :<ilock$lock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  int writer_start = (status->avail_start + status->avail_len) % QUEUE_BUFSIZE;
+
+  if (status->avail_len==QUEUE_BUFSIZE) {
+    if (@action!=action_wait) {
+      // we do not need to wait
+      // release locks
+      @=call :<ilock$unlock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+      return;
+    }
+
+    // wait for more data
+    while (status->avail_len==QUEUE_BUFSIZE) {
+      @=call :<ilock$lock [LOCK_MAND_WAIT1] (LOCK_ADDR_WRITER_WAIT, 1, lock_write) => (succ);
+      if (succ!=TRUE) {
+        // release modify lock
+        @=call :<ilock$unlock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+        @.err("cannot get lock");
+      }
+      
+      // release modify lock to prevent blocking the reader
+      @=call :<ilock$unlock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+      
+      @=call :<ilock$lock [LOCK_MAND_WAIT2] (LOCK_ADDR_WRITER_WAIT, 1, lock_write) => (succ);
+      if (succ!=TRUE) {
+        // release wait lock
+        @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_WRITER_WAIT, 1, lock_write) => (succ);
+        @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+        @.err("cannot get lock");
+      }
+      
+      // new free memory is now available
+      // release wait lock and get modify lock
+      
+      @=call :<ilock$unlock [LOCK_MAND_WAIT2] (LOCK_ADDR_WRITER_WAIT, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+      
+      @=call :<ilock$lock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+      @.check(succ!=TRUE, "cannot get lock");
+      
+      writer_start = (status->avail_start + status->avail_len) % QUEUE_BUFSIZE;
+    }
+  }
+
+  @=call :<mem$gadrcreate [@mandate] (@args);
+  if (@success==TRUE) {
+    status->buffer[writer_start].log_addr = @log_addr;
+    status->buffer[writer_start].log_len = @log_len;
+  }
+  else @.errmsg("gadrcreate failed");
+
+  // release modify lock
+  @=call :<ilock$unlock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+}
+
+
+
+
+operation $create
+{
+  struct status_t *status = PC_GET_DIRTY(QUEUE_STAT, 0, sizeof(struct status_t));
+  @.check(status==NULL, "cannot get pointer on status information");
+
+  int writer_start = (status->avail_start + status->avail_len) % QUEUE_BUFSIZE;
+  struct queue_entry_t block = status->buffer[writer_start];
+  @.check(@log_addr!=block.log_addr, "invalid address");
+  @.check(@log_len!=block.log_len, "invalid length");
+
+  success_t succ;
+  
+  @=call :<ilock$lock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  status->avail_len += 1;
+
+  // release modify lock
+  @=call :<ilock$unlock [LOCK_MAND_WRITER] (LOCK_ADDR_MOD, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $delete
+{
+  @.err("cannot delete in unidirectional writeable stream");
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=FALSE, "cannot read in unidirectional writable stream");
+
+  success_t succ;
+
+  // wakeup reader
+  @=call :<ilock$unlock [LOCK_MAND_WAIT1] (LOCK_ADDR_READER_WAIT, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot release lock - FIXME: switch to error state");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}
+
+
+
+
+input :<mem
+input :<ilock
+
+
+
+
+input :<stat
+use PC QUEUE_STAT [1];

@@ -2,8 +2,6 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
-
 brick #lock_ulinux
 purpose Locks
 desc
@@ -177,6 +175,8 @@ data {
 }
 
 //input :<mem
+
+input :<hook
 
 output :>lock
 

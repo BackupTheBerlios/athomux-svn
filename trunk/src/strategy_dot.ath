@@ -1,0 +1,471 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #strategy_dot
+
+purpose outputs brick graph in file
+
+desc
+  - FIXME: so far only traversing forward. All Bricks with no inputs must hook with ATHOMUX_MAINDIR!!!
+  - reads brick and wireing information from :<strat
+  - graph output in dot language can be read with $transwait on :>out
+
+          +-----------------------------------+
+          |                                   |
+          |       +-------------------+       |
+  strat --+--     | device_mem_ulinux +--   --+-- out
+          |       +-------------------+       |
+          |                                   |
+          +-----------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+
+  // FIXME: maximum length of param string
+  #define PARAMSIZE 256
+
+  typedef char param_t[PARAMSIZE];
+
+  struct g_brick_t {
+    struct link link;
+    addr_t  addr;
+    name_t  name;
+    param_t bparam;
+  };
+
+  struct g_conn_t {
+    struct link link;
+    param_t cparam;
+    sname_t src_name;
+    addr_t  src_addr;
+    sname_t dst_name;
+    addr_t  dst_addr;
+  };
+}
+
+
+
+
+data {
+  addr_t lb_hook;
+  addr_t lc_hook;
+}
+
+
+
+
+instance #device_mem_ulinux as mem;
+wire :>out as :<mem;
+
+
+
+
+@.include "li.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    PC_FLUSH(SG_PC);
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    PC_FLUSH(SG_PC);
+    PC_FREE(SG_PC, @#.lb_hook, sizeof(struct g_brick_t));
+    PC_FREE(SG_PC, @#.lc_hook, sizeof(struct g_conn_t));
+  }
+  else if (@constr) {
+    // instantiate brick
+    PC_ALLOC(SG_PC, sizeof(struct g_brick_t)) => (@#.lb_hook);
+    LI_INIT(SG_PC, @#.lb_hook);
+
+    PC_ALLOC(SG_PC, sizeof(struct g_conn_t)) => (@#.lc_hook);
+    LI_INIT(SG_PC, @#.lc_hook);
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<mem
+use PC SG_PC [1024];
+
+input :<strat
+
+
+
+
+output :>out
+
+
+
+
+@.func clear_bc()
+{
+  struct g_brick_t *_clearbcprefix_b;
+  struct g_conn_t *_clearbcprefix_c;
+  addr_t _clearbcprefix_elem_ptr;
+
+  LI_NEXT(SG_PC, @#.lb_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.lb_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(SG_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
+    _clearbcprefix_b = LI_GET(SG_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(SG_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(SG_PC, _clearbcprefix_elem_ptr, sizeof(struct g_brick_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+
+  LI_NEXT(SG_PC, @#.lc_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.lc_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(SG_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
+    _clearbcprefix_c = LI_GET(SG_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(SG_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(SG_PC, _clearbcprefix_elem_ptr, sizeof(struct g_conn_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func find_brick(const addr_t _findbrickprefix_addr) => (success_t _findbrickprefix_success, addr_t _findbrickprefix_ptr)
+{
+  _findbrickprefix_success = FALSE;
+
+  struct g_brick_t *_findbrickprefix_b;
+  addr_t _findbrickprefix_elem_ptr;
+
+  LI_NEXT(SG_PC, @#.lb_hook) => (_findbrickprefix_elem_ptr);
+  while (_findbrickprefix_elem_ptr != @#.lb_hook) {
+    addr_t _findbrickprefix_next_ptr;
+    LI_NEXT(SG_PC, _findbrickprefix_elem_ptr) => (_findbrickprefix_next_ptr);
+    _findbrickprefix_b = LI_GET(SG_PC, _findbrickprefix_elem_ptr, FALSE);
+
+    if (_findbrickprefix_b->addr == _findbrickprefix_addr) {
+      _findbrickprefix_success = TRUE;
+      _findbrickprefix_ptr = _findbrickprefix_elem_ptr;
+      return;
+    }
+
+    _findbrickprefix_elem_ptr = _findbrickprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func insert_brick(const struct g_brick_t * const _insertbrickprefix_b)
+{
+  struct g_brick_t *_insertbrickprefix_buf;
+  addr_t _insertbrickprefix_elem_ptr;
+
+  _insertbrickprefix_buf = PC_ALLOC(SG_PC, sizeof(struct g_brick_t)) => (_insertbrickprefix_elem_ptr);
+  memcpy(_insertbrickprefix_buf, _insertbrickprefix_b, sizeof(struct g_brick_t));
+  LI_PREPEND(SG_PC, @#.lb_hook, _insertbrickprefix_elem_ptr);
+}
+
+
+
+
+@.func insert_conn(const struct g_conn_t * const _insertconnprefix_c)
+{
+  struct g_conn_t *_insertconnprefix_buf;
+  addr_t _insertconnprefix_elem_ptr;
+
+  _insertconnprefix_buf = PC_ALLOC(SG_PC, sizeof(struct g_conn_t)) => (_insertconnprefix_elem_ptr);
+  memcpy(_insertconnprefix_buf, _insertconnprefix_c, sizeof(struct g_conn_t));
+  LI_PREPEND(SG_PC, @#.lc_hook, _insertconnprefix_elem_ptr);
+}
+
+
+
+
+// get info about brick at given address
+@.func binfo(addr_t _binfoprefix_addr) => (success_t _binfoprefix_success)
+{
+  _binfoprefix_success = FALSE;
+
+  success_t _binfoprefix_succ;
+  plen_t _binfoprefix_plen;
+  char _binfoprefix_buf[DEFAULT_TRANSFER];
+
+  @=call :<strat$transwait [@mandate] (_binfoprefix_addr, DEFAULT_TRANSFER, MAKE_PADDR(_binfoprefix_buf), direct_read) => (_binfoprefix_succ, _binfoprefix_plen);
+  @.check(_binfoprefix_succ!=TRUE, "trans failed");
+  _binfoprefix_buf[MIN(_binfoprefix_plen, DEFAULT_TRANSFER)-1]=0;
+
+  struct g_brick_t _binfoprefix_b;
+  struct g_conn_t _binfoprefix_c;
+
+  char *_binfoprefix_curpos = _binfoprefix_buf;
+  char *_binfoprefix_endpos;
+  char *_binfoprefix_tmppos;
+  int _binfoprefix_slen;
+
+  // ---------------------
+  // get brick information
+  // ---------------------
+
+  _binfoprefix_b.addr = _binfoprefix_addr;
+  _binfoprefix_c.src_addr = _binfoprefix_b.addr;
+
+  _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "brick=");
+  if (_binfoprefix_tmppos!=NULL) {
+    _binfoprefix_curpos = _binfoprefix_tmppos+6;
+    _binfoprefix_endpos = strstr(_binfoprefix_curpos, " {");
+    @.check(_binfoprefix_endpos==NULL, "cannot find end of brick name");
+    _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(name_t)-1);
+    strncpy(_binfoprefix_b.name, _binfoprefix_curpos, _binfoprefix_slen);
+    _binfoprefix_b.name[_binfoprefix_slen] = 0;
+    _binfoprefix_curpos = _binfoprefix_endpos+2;
+  }
+  else _binfoprefix_b.name[0] = 0;
+
+  _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "b_param ");
+  if (_binfoprefix_tmppos!=NULL) {
+    _binfoprefix_curpos = _binfoprefix_tmppos;
+    _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+    @.check(_binfoprefix_tmppos==NULL, "cannot find start of b_param");
+    _binfoprefix_curpos = _binfoprefix_tmppos+1;
+    _binfoprefix_endpos = strstr(_binfoprefix_curpos, "\n");
+    @.check(_binfoprefix_endpos==NULL, "cannot find end of b_param");
+    _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(param_t)-1);
+    strncpy(_binfoprefix_b.bparam, _binfoprefix_curpos, _binfoprefix_slen);
+    _binfoprefix_b.bparam[_binfoprefix_slen] = 0;
+    _binfoprefix_curpos = _binfoprefix_endpos+1;
+  }
+  else _binfoprefix_b.bparam[0] = 0;
+
+  addr_t _binfoprefix_tmphook;
+  find_brick(_binfoprefix_addr) => (_binfoprefix_succ, _binfoprefix_tmphook);
+  if ((_binfoprefix_succ!=TRUE) || (_binfoprefix_addr==0)) {
+    if (_binfoprefix_succ!=TRUE) insert_brick(&_binfoprefix_b);
+
+    // --------------------------
+    // get connection information
+    // --------------------------
+
+    while (1) {
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "output=");
+      if (_binfoprefix_tmppos!=NULL) {
+        _binfoprefix_curpos = _binfoprefix_tmppos+7;
+        _binfoprefix_endpos = strstr(_binfoprefix_curpos, " {");
+        @.check(_binfoprefix_endpos==NULL, "cannot find end of output name");
+        _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(sname_t)-1);
+        strncpy(_binfoprefix_c.src_name, _binfoprefix_curpos, _binfoprefix_slen);
+        _binfoprefix_c.src_name[_binfoprefix_slen] = 0;
+        _binfoprefix_curpos = _binfoprefix_endpos+2;
+      }
+      else break; // no more connections
+      
+      char *_binfoprefix_cendpos = strstr(_binfoprefix_curpos, "}");
+      @.check(_binfoprefix_cendpos==NULL, "cannot find end of output structure");
+      
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "c_param ");
+      if ((_binfoprefix_tmppos!=NULL) && (_binfoprefix_tmppos<_binfoprefix_cendpos)) {
+        _binfoprefix_curpos = _binfoprefix_tmppos;
+        _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+        @.check(_binfoprefix_tmppos==NULL, "cannot find start of c_param");
+        _binfoprefix_curpos = _binfoprefix_tmppos+1;
+        _binfoprefix_endpos = strstr(_binfoprefix_curpos, "\n");
+        @.check(_binfoprefix_endpos==NULL, "cannot find end of c_param");
+        _binfoprefix_slen = MIN(_binfoprefix_endpos-_binfoprefix_curpos, sizeof(param_t)-1);
+        strncpy(_binfoprefix_c.cparam, _binfoprefix_curpos, _binfoprefix_slen);
+        _binfoprefix_c.cparam[_binfoprefix_slen] = 0;
+        _binfoprefix_curpos = _binfoprefix_endpos+1;
+      }
+      else _binfoprefix_c.cparam[0] = 0;
+      
+      _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "connect ");
+      if ((_binfoprefix_tmppos!=NULL) && (_binfoprefix_tmppos<_binfoprefix_cendpos)) {
+        _binfoprefix_curpos = _binfoprefix_tmppos;
+        _binfoprefix_tmppos = strstr(_binfoprefix_curpos, "=");
+        @.check((_binfoprefix_tmppos==NULL) || (_binfoprefix_tmppos>=_binfoprefix_cendpos), "cannot find start of connect");
+        _binfoprefix_curpos = _binfoprefix_tmppos+1;
+
+        char *_binfoprefix_endposn = strstr(_binfoprefix_curpos, "\n");
+        @.check((_binfoprefix_endposn==NULL) || (_binfoprefix_endposn>=_binfoprefix_cendpos), "cannot find end of line");
+
+        char *_binfoprefix_endposi = strstr(_binfoprefix_curpos, ",");
+        if ((_binfoprefix_endposi==NULL) || (_binfoprefix_endposi>_binfoprefix_cendpos)) _binfoprefix_endposi=_binfoprefix_endposn;
+ 
+        while (_binfoprefix_curpos<_binfoprefix_endposn) {
+          _binfoprefix_endpos = strstr(_binfoprefix_curpos, ":");
+          @.check((_binfoprefix_endpos==NULL) || (_binfoprefix_tmppos>=_binfoprefix_endposi), "cannot find end of address");
+        
+          int _binfoprefix_nlen = _binfoprefix_endpos-_binfoprefix_curpos;
+          @.check(_binfoprefix_nlen>=20, "address string too long");
+          char _binfoprefix_nbuf[20];
+          strncpy(_binfoprefix_nbuf, _binfoprefix_curpos, _binfoprefix_nlen);
+          _binfoprefix_nbuf[_binfoprefix_nlen] = 0;
+          int _binfoprefix_ret = sscanf(_binfoprefix_nbuf, "%llx", &_binfoprefix_c.dst_addr);
+          @.check(_binfoprefix_ret!=1, "sscanf failed");
+          _binfoprefix_curpos = _binfoprefix_endpos+1;
+
+          _binfoprefix_slen = MIN(_binfoprefix_endposi-_binfoprefix_curpos, sizeof(sname_t)-1);
+          strncpy(_binfoprefix_c.dst_name, _binfoprefix_curpos, _binfoprefix_slen);
+          _binfoprefix_c.dst_name[_binfoprefix_slen] = 0;
+          _binfoprefix_curpos = _binfoprefix_endposi+1;
+        
+          binfo(_binfoprefix_c.dst_addr) => (_binfoprefix_succ);
+          @.check(_binfoprefix_succ!=TRUE, "binfo failed");
+          insert_conn(&_binfoprefix_c);
+
+          _binfoprefix_endposi = strstr(_binfoprefix_curpos, ",");
+          if ((_binfoprefix_endposi==NULL) || (_binfoprefix_endposi>_binfoprefix_cendpos)) _binfoprefix_endposi=_binfoprefix_endposn;
+        }
+      }
+      
+      _binfoprefix_curpos = _binfoprefix_cendpos;
+    }
+  }
+  
+  _binfoprefix_success = TRUE;
+}
+
+
+
+
+@.func build_graph()
+{
+  // FIXME: use operation calls instead of string parsing when new operations are available
+  success_t _buildgraphprefix_succ;
+
+  clear_bc();
+  binfo(0) => (_buildgraphprefix_succ);
+  @.check(_buildgraphprefix_succ!=TRUE, "binfo failed");
+}
+
+
+
+
+@.func gen_graph(char *_gengraphprefix_buf, plen_t _gengraphprefix_bufsize) => (success_t _gengraphprefix_success, plen_t _gengraphprefix_wlen)
+{
+  _gengraphprefix_success = FALSE;
+
+  addr_t _gengraphprefix_elem_ptr;
+  struct g_brick_t *_gengraphprefix_b;
+  struct g_conn_t *_gengraphprefix_c;
+  int _gengraphprefix_ret;
+  int _gengraphprefix_remain = _gengraphprefix_bufsize;
+
+  build_graph();
+
+  _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "digraph {\n");
+  @.check(_gengraphprefix_ret<0, "snprintf failed");
+  @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+  _gengraphprefix_remain-=_gengraphprefix_ret;
+  _gengraphprefix_buf+=_gengraphprefix_ret;
+
+  _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "  graph [rankdir=LR, sep=0.3, mindist=2, overlap=false, splines=true];\n");
+  @.check(_gengraphprefix_ret<0, "snprintf failed");
+  @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+  _gengraphprefix_remain-=_gengraphprefix_ret;
+  _gengraphprefix_buf+=_gengraphprefix_ret;
+
+  _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "  node [shape=box];\n");
+  @.check(_gengraphprefix_ret<0, "snprintf failed");
+  @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+  _gengraphprefix_remain-=_gengraphprefix_ret;
+  _gengraphprefix_buf+=_gengraphprefix_ret;
+
+  _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "  edge [dir=forward, headport=w, tailport=e];\n");
+  @.check(_gengraphprefix_ret<0, "snprintf failed");
+  @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+  _gengraphprefix_remain-=_gengraphprefix_ret;
+  _gengraphprefix_buf+=_gengraphprefix_ret;
+
+  LI_NEXT(SG_PC, @#.lb_hook) => (_gengraphprefix_elem_ptr);
+  while (_gengraphprefix_elem_ptr != @#.lb_hook) {
+    addr_t _gengraphprefix_next_ptr;
+    LI_NEXT(SG_PC, _gengraphprefix_elem_ptr) => (_gengraphprefix_next_ptr);
+    _gengraphprefix_b = LI_GET(SG_PC, _gengraphprefix_elem_ptr, FALSE);
+
+    _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "  node0x%llx [label=\"%s\\n0x%llx\\n'%s'\"];\n", _gengraphprefix_b->addr, _gengraphprefix_b->name, _gengraphprefix_b->addr, _gengraphprefix_b->bparam);
+    @.check(_gengraphprefix_ret<0, "snprintf failed");
+    @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+    _gengraphprefix_remain-=_gengraphprefix_ret;
+    _gengraphprefix_buf+=_gengraphprefix_ret;
+
+    _gengraphprefix_elem_ptr = _gengraphprefix_next_ptr;
+  }
+
+  LI_NEXT(SG_PC, @#.lc_hook) => (_gengraphprefix_elem_ptr);
+  while (_gengraphprefix_elem_ptr != @#.lc_hook) {
+    addr_t _gengraphprefix_next_ptr;
+    LI_NEXT(SG_PC, _gengraphprefix_elem_ptr) => (_gengraphprefix_next_ptr);
+    _gengraphprefix_c = LI_GET(SG_PC, _gengraphprefix_elem_ptr, FALSE);
+
+    _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "  node0x%llx -> node0x%llx [label=\"%s : %s\"];\n", _gengraphprefix_c->src_addr, _gengraphprefix_c->dst_addr, _gengraphprefix_c->src_name, _gengraphprefix_c->dst_name);
+    @.check(_gengraphprefix_ret<0, "snprintf failed");
+    @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+    _gengraphprefix_remain-=_gengraphprefix_ret;
+    _gengraphprefix_buf+=_gengraphprefix_ret;
+
+    _gengraphprefix_elem_ptr = _gengraphprefix_next_ptr;
+  }
+
+  _gengraphprefix_ret = snprintf(_gengraphprefix_buf, _gengraphprefix_remain, "}\n");
+  @.check(_gengraphprefix_ret<0, "snprintf failed");
+  @.check(_gengraphprefix_ret>=_gengraphprefix_remain, "buffer too small");
+  _gengraphprefix_remain-=_gengraphprefix_ret;
+  _gengraphprefix_buf+=_gengraphprefix_ret;
+
+  _gengraphprefix_buf[0] = 0;
+  _gengraphprefix_remain--;
+  _gengraphprefix_buf++;
+
+  _gengraphprefix_wlen = _gengraphprefix_bufsize-_gengraphprefix_remain;
+  _gengraphprefix_success = TRUE;
+}
+
+
+
+
+operation $trans,$transwait
+{
+  gen_graph(MAKE_PTR(@phys_addr), @log_len) => (@success, @phys_len);
+}
+
+
+
+
+operation $wait
+{
+  @success = TRUE;
+}

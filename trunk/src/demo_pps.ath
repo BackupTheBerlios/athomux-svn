@@ -1,0 +1,72 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_pps
+
+purpose validation for device_tcp_server_ulinux brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_tcp_server_ulinux as tcps;
+wire :>pstrm as :<src;
+
+
+
+
+@.func ping_pong_incr ()
+{
+  char _pingpongincrprefix_buf[1];
+  plen_t _pingpongincrprefix_phys_len;
+  success_t _pingpongincrprefix_succ;
+
+  while (1) {	
+    @=call :<src$transwait [@mandate] (0, sizeof(_pingpongincrprefix_buf), (paddr_t)_pingpongincrprefix_buf, direct_read) => (_pingpongincrprefix_succ, _pingpongincrprefix_phys_len);
+    @.check(!_pingpongincrprefix_succ, "read failed");
+    if ((_pingpongincrprefix_buf[0]>31) && (_pingpongincrprefix_buf[0]<127)) _pingpongincrprefix_buf[0]+=1;
+    @=call :<src$transwait [@mandate] (0, _pingpongincrprefix_phys_len, (paddr_t)_pingpongincrprefix_buf, direct_write) => (_pingpongincrprefix_succ, _pingpongincrprefix_phys_len);
+    @.check(!_pingpongincrprefix_succ, "write failed");
+  }
+}
+
+
+
+
+operation $brick_init
+{
+  printf("usage: ./abl demo_pps port=<port>\n");
+
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init bricks
+  @=call #demo_pps#tcps:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if(@constr && !@destr) {
+    ping_pong_incr();
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<src
+
+input :<strat

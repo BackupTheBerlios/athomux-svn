@@ -1,0 +1,91 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strm_multi
+
+purpose adds multi user capability to streams
+
+desc
+  - 'gadr' and 'padr' must use same granularity
+
+          +-------------------------+
+          |                         |
+  istrm --+--                     --+-- ostrm
+          |                         |
+          | +-------------+         |
+          | | lock_ulinux +--       |  
+          | +-------------+         |  
+          |                         |  
+          +-------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+instance #lock_ulinux as l;
+wire :>lock as :<ilock;
+
+
+
+
+input :<istrm
+local input :<ilock
+
+
+
+
+output :>ostrm
+
+
+
+
+operation $gadr
+{
+  success_t succ;
+
+  // @mandate should be unique for every thread
+  @=call :<ilock$lock [@mandate] (0, 1, lock_write) => (succ);
+  @.check(succ!=TRUE, "cannot get lock");
+
+  @=call :<istrm$gadr (@args);
+  
+  if (@success==FALSE) {
+    // release lock
+    @.errmsg("gadr failed");
+    @=call :<ilock$unlock [@mandate] (0,1) => (succ);
+    if (succ!=TRUE) @.err("cannot release lock - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $padr
+{
+  success_t succ;
+
+  @=call :<istrm$padr [@mandate] (@args);
+  
+  if (@success==TRUE) {
+    // release lock
+
+    @=call :<ilock$unlock [@mandate] (0,1) => (succ);
+    if (succ!=TRUE) @.err("cannot release lock - FIXME: switch to error state");
+  }
+}
+
+
+
+
+operation $op
+{
+  @=call :<istrm$op [@mandate] (@args);
+}

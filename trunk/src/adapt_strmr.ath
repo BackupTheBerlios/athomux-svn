@@ -1,0 +1,230 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strmr
+
+purpose adds logical IO (reader) for physical stream
+
+desc
+  - needs move functionality on :<tmp if you want to transfer more than 2^64 bytes
+
+           +-----------------------------+
+           |                             |
+     tmp --+--                           |
+           |                             |
+           |  +-----------------+        |
+           |  |                 |      --+-- strmr
+  pstrmr --+--+ adapt_complete2 +--      |
+           |  |                 |        |
+           |  +-----------------+        |
+           |                             |
+           +-----------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+}
+
+
+
+
+data {
+  addr_t avail_start;
+  len_t avail_len;
+}
+
+
+
+
+init {
+  @#.avail_start = 0;
+  @#.avail_len = 0;
+}
+
+
+
+
+instance #adapt_complete2 as pcompl;
+alias :<in as :<pstrmr;
+wire :>out as :<pr;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // nothing to do...
+  }
+  else if (@constr) {
+    // instantiate brick
+    // nothing to do...
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<pr
+
+input :<tmp
+
+
+
+
+output :>strmr
+
+
+
+
+operation $gadr
+{
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  if (@log_len <= @#.avail_len) {
+    // request can be satisfied immediately
+    @log_addr = @#.avail_start;
+    if (@try_len == 0) @log_len = @#.avail_len;
+    else @log_len = MIN(@try_len, @#.avail_len);
+  }
+  else if (@action == action_wait) {
+    // request can not be satisfied immediately
+    // we have to fetch more data first
+    
+    success_t succ;
+    
+    if ((addr_t)(@#.avail_start + @log_len) < @#.avail_start) {
+      // not enough space at end
+      
+      // trying to move area to address 0
+      offs_t offs;
+      @=call :<tmp$move [@mandate] (@#.avail_start, @#.avail_len, MIN(-@#.avail_start+DEFAULT_TRANSFER, 0), -@#.avail_start) => (succ, offs);
+      @.check(succ!=TRUE, "cannot move");
+      @#.avail_start += offs;
+      
+      if ((addr_t)(@#.avail_start + @log_len) < @#.avail_start) {
+        // still not enough space... cannot fix problem
+        // could be possible due to DEFAULT_TRANSFER > 1
+        return;
+      }
+    }
+    
+    @=call :<tmp$create [@mandate] (@#.avail_start + @#.avail_len, @log_len - @#.avail_len) => (succ);
+    if (succ!=TRUE) return;
+    
+    while (@#.avail_len<@log_len) {
+      addr_t undef_start = @#.avail_start + @#.avail_len;
+      addr_t undef_len = @log_len - @#.avail_len;
+      
+      paddr_t paddr;
+      plen_t plen;
+      
+      @=call :<tmp$gettranswait [@mandate] (undef_start, undef_len, TRUE) => (succ, paddr, plen);
+      if (succ!=TRUE) return;
+      
+      plen_t tlen;
+      @=call :<pr$transwait [@mandate] (0, plen, paddr, direct_read) => (succ, tlen);
+      if (succ!=TRUE) {
+        @=call :<tmp$put [@mandate] (undef_start, undef_len, prio_none) => (succ);
+        if (succ!=TRUE) @.err("FIXME: switch to error state");
+        @.err("cannot read from phys stream"); // FIXME: switch to error state if tlen is valid!
+      }
+      
+      @=call :<tmp$putwait [@mandate] (undef_start, plen, prio_normal) => (succ);
+      if (succ!=TRUE) @.err("FIXME: switch to error state");
+      
+      @#.avail_len += plen;
+    }
+  }
+  else {
+    // request cannot be satisfied
+    @.errmsg("request cannot be satisfied");
+    return;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $create
+{
+  @.err("cannot create in unidirectional readable stream");
+}
+
+
+
+
+operation $delete
+{
+  // @log_addr must be <= @#.avail_start
+  @.check(@log_addr>@#.avail_start, "cannot create a hole in valid address space");
+
+  // delete area in :<tmp
+  @=call :<tmp$delete [@mandate] (@args);
+  if (@success!=TRUE) return;
+
+  if (@log_addr + @log_len >= @#.avail_start + @#.avail_len) {
+    // the whole valid area was deleted
+    @#.avail_start = 0;
+    @#.avail_len = 0;
+  }
+  else if (@log_addr + @log_len > @#.avail_start) {
+    // some part of the valid area was deleted
+    @#.avail_len -= @log_addr + @log_len - @#.avail_start;
+    @#.avail_start = @log_addr + @log_len;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $op
+{
+  @=call :<tmp$op [@mandate] (@args);
+}

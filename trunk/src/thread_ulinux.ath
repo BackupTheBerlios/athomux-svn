@@ -2,8 +2,6 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
-
 brick #thread_ulinux
 purpose A dummy thread_* for userspace using pthreads and dummy CPU
 desc
@@ -23,13 +21,13 @@ static_data {
  * for us. Thus we have no access to the new stack until the thread
  * is actually running. Since we need to _copy_ vital data like
  * the args to the new stack, we need to synchonize upon
- * that trans (via a pthread condition).
+ * that transfer (via a pthread condition).
  *
  * This is simple, but slow and BAD.
  *
  * IN GENERAL when implementing OTHER thread_* allowing explicit
  * access to the new stack _before_ the new thread actually starts
- * execution, the trans should be done by the original thread,
+ * execution, the transfer should be done by the original thread,
  * such that NO SYNCHRONIZATION is necessary.
  * First you will need to allocate new stack space from some
  * mem input.

@@ -3,7 +3,7 @@
 
 include target-include.ulinux
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/graph_console
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/param_scanner.o $(pconf)/$(cconf)/graph_console
 
 $(pconf)/$(cconf)/athload: $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras)
 	$(CC) $(LDFLAGS) $(filter %.o,$^) -o $@

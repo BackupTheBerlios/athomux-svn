@@ -2,7 +2,7 @@
 
 include target-include.ulinux
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/param_scanner.o
 
 $(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_extras)
 	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<

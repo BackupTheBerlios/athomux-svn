@@ -1,0 +1,185 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #demo_map
+
+purpose validation for map_delta brick
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+instance #device_mem_ulinux as mem;
+wire :>out as #demo_map#md:<mem;
+wire :>out as #demo_map#md:<in;
+
+instance #map_delta as md;
+wire :>out as :<map;
+
+
+
+
+@.define printvars()
+{
+  printf("\n");
+  printf("buf_start=%lld\n", buf_start);
+  printf("buf_len=%lld\n", buf_len);
+  printf("pstart=%ld\n", pstart);
+  printf("plen=%ld\n", plen);
+}
+
+
+
+
+@.func run()
+{
+  success_t succ;
+  addr_t buf_start;
+  len_t buf_len;
+  paddr_t pstart;
+  plen_t plen;
+
+  @=call :<map$gadr [@mandate] (100000) => (succ, buf_start, buf_len);
+  @.check(succ!=TRUE, "cannot get buffer");
+  @=call :<map$create [@mandate] (buf_start, buf_len) => (succ);
+  @.check(succ!=TRUE, "cannot create buffer");
+
+  printf("test1...");
+  @=call :<map$move [@mandate] (buf_start, buf_len, +50000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=50000), "failed");
+  printf("OK\n");
+
+  printf("test2...");
+  @=call :<map$move [@mandate] (buf_start+50000, buf_len, 0) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=100000), "failed");
+  printf("OK\n");
+
+  printf("test3...");
+  @=call :<map$move [@mandate] (buf_start, buf_len, -50000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+50000) || (plen!=50000), "failed");
+  printf("OK\n");
+
+  printf("test4...");
+  @=call :<map$move [@mandate] (buf_start-50000, buf_len, 0) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=100000), "failed");
+  printf("OK\n");
+
+  printf("test5...");
+  @=call :<map$move [@mandate] (buf_start, buf_len, -200000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$move [@mandate] (buf_start-200000, buf_len, +50000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start-200000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start-200000) || (plen!=50000), "failed");
+  @=call :<map$get [@mandate] (buf_start-100000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+50000) || (plen!=50000), "failed");
+  printf("OK\n");
+
+  printf("test6...");
+  @=call :<map$move [@mandate] (buf_start-150000, buf_len, 0) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=100000), "failed");
+  printf("OK\n");
+
+  printf("test7...");
+  @=call :<map$move [@mandate] (buf_start, buf_len, -200000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$move [@mandate] (buf_start-150000, buf_len, -50000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start-200000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+50000) || (plen!=50000), "failed");
+  @=call :<map$get [@mandate] (buf_start-150000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start-100000) || (plen!=50000), "failed");
+  printf("OK\n");
+
+  printf("test8...");
+  @=call :<map$move [@mandate] (buf_start-200000, buf_len, 0) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=100000), "failed");
+  printf("OK\n");
+
+  // move in die mitte von einem block
+  printf("test9...");
+  @=call :<map$move [@mandate] (buf_start, buf_len, -200000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$move [@mandate] (buf_start-200000+70000, 10000, -50000) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+  @=call :<map$get [@mandate] (buf_start-200000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start) || (plen!=20000), "failed");
+  @=call :<map$get [@mandate] (buf_start-200000+20000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+70000) || (plen!=10000), "failed");
+  @=call :<map$get [@mandate] (buf_start-200000+30000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+30000) || (plen!=40000), "failed");
+  @=call :<map$get [@mandate] (buf_start-200000+70000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start-200000+70000) || (plen!=10000), "failed");
+  @=call :<map$get [@mandate] (buf_start-200000+80000, buf_len) => (succ, pstart, plen);
+  @.check(succ!=TRUE, "cannot get physical address");
+  @.check((pstart!=buf_start+80000) || (plen!=20000), "failed");
+  printf("OK\n");
+
+//    @=call :<map$gadr [@mandate] (0) => (succ);
+//    printvars();
+}
+
+
+
+
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+
+  // FIXME: init brick
+  @=call #demo_map#md:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if(@constr && !@destr) {
+    run();
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<map
+
+input :<strat

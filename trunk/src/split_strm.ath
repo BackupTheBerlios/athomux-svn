@@ -1,0 +1,69 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #split_strm
+
+purpose splits a bidirectional stream into two unidirectional streams
+
+desc
+  - implements multi user capabilities.
+
+         +-------+
+         |       |
+  strm --+--   --+-- strmr
+         |       |
+         |     --+-- strmw
+         |       |
+         +-------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+input :<strm
+
+
+
+
+operation $op
+{
+  // direct retracts to both outputs
+
+  @=inputcall :>strmr$op [@mandate] (@args);
+  if (@success!=TRUE) return;
+  @=inputcall :>strmw$op [@mandate] (@args);
+}
+
+
+
+
+output :>strmr
+
+
+
+
+operation $op
+{
+  @=call :<strm$op [@mandate] (@args);
+}
+
+
+
+
+output :>strmw
+
+
+
+
+operation $op
+{
+  @=call :<strm$op [@mandate] (@args);
+}

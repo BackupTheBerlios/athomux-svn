@@ -1,0 +1,148 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_tmp
+
+purpose makes tmp nest available
+
+desc
+  - creates may not overlap!
+
+        +----------------------+
+        |                      |
+        |  +-----------+       |
+        |  |           |       |
+  mem --+--+ map_delta +--   --+-- tmp
+        |  |           |       |
+        |  +-----------+       |
+        |                      |
+        +----------------------+
+
+enddesc
+
+example
+
+           +-----------+
+           |           |
+        +--+ adapt_tmp +-- tmp
+        |  |           |  
+        |  +-----------+
+  mem --+
+        |  +-----------+
+        |  |           |
+        +--+ adapt_tmp +-- tmp
+           |           |  
+           +-----------+
+
+endexample
+
+
+
+
+instance #map_delta as map;
+wire :<in as :>lmem;
+wire :<mem as :>lmem;
+wire :>out as :<md;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>lmem$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // FIXME: init brick
+  @=call #adapt_tmp#map:>init$output_init [@mandate] (@args);
+  @.check(@success!=TRUE, "init failed on local instance");
+}
+
+
+
+
+local input :<md
+
+
+
+
+// FIXME: remove workaround
+input :<mem
+local output :>lmem
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}
+
+
+
+
+output :>tmp
+
+
+
+
+operation $create
+{
+  success_t succ;
+  addr_t buf_start;
+  len_t buf_len;
+
+  @=call :<md$gadr [@mandate] (@log_len) => (succ, buf_start, buf_len);
+  @.check(succ!=TRUE, "cannot get buffer");
+
+  @=call :<md$move [@mandate] (buf_start, buf_len, @log_addr - buf_start) => (succ);
+  @.check(succ!=TRUE, "cannot move buffer");
+
+  @=call :<md$create [@mandate] (buf_start, buf_len) => (succ);
+  @.check(succ!=TRUE, "cannot create buffer");
+
+  @success = TRUE;
+}
+
+
+
+
+operation $delete
+{
+  @=call :<md$delete [@mandate] (@args);
+  @.check(@success!=TRUE, "delete failed");
+
+  // undo mappings in this address range
+  @=call :<md$move [@mandate] (@log_addr, @log_len, 0) => (@success);
+  @.check(@success!=TRUE, "move failed - FIXME: switch to error state");
+}
+
+
+
+
+operation $gadr,$padr
+{
+  // could conflict with mappings
+  @success = FALSE;
+}
+
+
+
+
+operation $op
+{
+  @=call :<md$op [@mandate] (@args);
+}

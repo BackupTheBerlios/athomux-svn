@@ -1,0 +1,139 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_pstrmr
+
+purpose removes logical IO layer from stream (only reader)
+
+desc
+  - implements single user capabilities.
+
+          +---------+
+          |         |
+  strmr --+--     --+-- pstrmr
+          |         |
+          +---------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+}
+
+
+
+
+data {
+  addr_t packet_addr;
+  len_t packet_len;
+
+  addr_t avail_start;
+  len_t avail_len;
+}
+
+
+
+
+init {
+  @#.packet_addr = 0;
+  @#.packet_len = 0;
+
+  @#.avail_start = 0;
+  @#.avail_len = 0;
+}
+
+
+
+
+operation $brick_init
+{
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+    // nothing to do...
+  }
+  else if (@constr) {
+    // instantiate brick
+    // nothing to do...
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+input :<strmr
+
+
+
+
+operation $input_init
+{
+  @success = TRUE;
+}
+
+
+
+
+output :>pstrmr
+
+
+
+
+operation $trans,$transwait
+{
+  success_t succ;
+  addr_t start;
+  len_t len;
+
+  @.check(@direction!=direct_read, "cannot write in unidirectional readable stream");
+
+  // if no more data available -> fetch next packet
+  if (@#.avail_len <= 0) {
+    @=call :<strmr$gadr [@mandate] (0, TRUE, TRUE, action_wait, 0) => (succ, start, len);
+    if (succ!=TRUE) return;
+
+    @#.avail_start = start;
+    @#.avail_len = len;
+  }
+
+  // transfer as much data as possible
+  @=call :<strmr$transwait [@mandate] (@#.avail_start, MIN(@log_len, @#.avail_len), @phys_addr, direct_read) => (succ, @phys_len);
+  if (succ!=TRUE) return;
+
+  // update read pointer
+  @#.avail_start += @phys_len;
+  @#.avail_len -= @phys_len;
+
+  // if finished reading the packet -> delete it
+  if (@#.avail_len==0) {
+    @=call :<strmr$deletepadr [@mandate] (@#.avail_start, @#.avail_len, TRUE) => (succ);
+    @.check (succ!=TRUE, "FIXME: switch to error state");
+  }
+    
+  @success = TRUE;
+}
+
+
+
+
+operation $wait
+{
+  // so far only synchronous IO
+  @success = TRUE;
+}

@@ -1,0 +1,226 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #adapt_strmr_packet
+
+purpose adds logical IO (reader) for physical stream
+
+desc
+  - decodes the packet borders from :<pstrmr
+    borders can be encoded using adapt_strmw_packet
+
+           +-----------------------------+
+           |                             |
+     mem --+--                           |
+           |                             |
+           |  +-----------------+        |
+           |  |                 |      --+-- strmr
+  pstrmr --+--+ adapt_complete2 +--      |
+           |  |                 |        |
+           |  +-----------------+        |
+           |                             |
+           +-----------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "strm_types.h"
+
+  #define MIN(a,b) ((a)<(b)?(a):(b))
+  #define MAX(a,b) ((a)>(b)?(a):(b))
+
+  struct strm_packet_header_t {
+    uns4 identification;
+    len_t length;
+  };
+}
+
+
+
+
+data {
+  addr_t avail_start;
+  len_t avail_len;
+}
+
+
+
+
+init {
+  @#.avail_start = 0;
+  @#.avail_len = 0;
+}
+
+
+
+
+instance #adapt_complete2 as pcompl;
+alias :<in as :<pstrmr; 
+wire :>out as :<pr;
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  if (@destr && @constr) {
+    // flush state
+    @.err("FIXME: flush state");
+  }
+  else if (@destr) {
+    // deinstantiate brick
+  }
+  else if (@constr) {
+    // instantiate brick
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<pr
+
+input :<mem
+
+
+
+
+output :>strmr
+
+
+
+
+operation $gadr
+{
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  if ((@log_len <= @#.avail_len) && ((@try_len >= @#.avail_len) || (@try_len == 0))) {
+    // request can be satisfied immediately
+    @log_addr = @#.avail_start;
+    @log_len = @#.avail_len;
+  }
+  else if ((@#.avail_len == 0) && (@action == action_wait)) {
+    // request can not be satisfied immediately
+    // we have to fetch next packet
+
+    success_t succ;
+    struct strm_packet_header_t header;
+
+    // reading packet header
+    @=call :<pr$transwait [@mandate] (0, sizeof(struct strm_packet_header_t), MAKE_PADDR(&header), direct_read) => (succ);
+    @.check(succ!=TRUE, "FIXME: switch to error state");
+    @.check(header.identification!=PSTRMP_IDENTIFICATION, "invalid packet id");
+
+    @=call :<mem$gadrcreate [@mandate] (header.length) => (succ, @log_addr);
+    if (succ!=TRUE) @.err("FIXME: switch to error state");
+    
+    @#.avail_start = @log_addr;
+    @#.avail_len = 0;
+
+    while (@#.avail_len<header.length) {
+      paddr_t buf_start;
+      paddr_t buf_len;
+      
+      @=call :<mem$gettranswait [@mandate] (@#.avail_start + @#.avail_len, header.length - @#.avail_len, TRUE) => (succ, buf_start, buf_len);
+      if (succ!=TRUE) @.err("FIXME: switch to error state");
+      
+      @=call :<pr$transwait [@mandate] (0, buf_len, buf_start, direct_read) => (succ);
+      if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+      @=call :<mem$putwait [@mandate] (@#.avail_start + @#.avail_len, buf_len, prio_normal) => (succ);
+      if (succ!=TRUE) @.err("FIXME: switch to error state");
+
+      @#.avail_len+=buf_len;
+    }
+
+    // can request be satisfied now?
+    if ((@log_len <= @#.avail_len) && ((@try_len >= @#.avail_len) || (@try_len == 0))) {
+      // request can be satisfied
+      @log_addr = @#.avail_start;
+      @log_len = @#.avail_len;
+    }
+    else {
+      // request cannot be satisfied
+      @.errmsg("request cannot be satisfied1");
+      return;
+    }
+  }
+  else {
+    // request cannot be satisfied
+    @.errmsg("request cannot be satisfied2");
+    return;
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+operation $create
+{
+  @.err("cannot create in unidirectional readable stream [%d]", @mandate);
+}
+
+
+
+
+operation $delete
+{
+  @.check(@log_addr!=@#.avail_start, "cannot create a hole in valid address space");
+
+  @log_len = MIN(@log_len, @#.avail_len);
+
+  // delete area in :<mem
+  @=call :<mem$delete [@mandate] (@args);
+  if (@success!=TRUE) return;
+
+  // update pointers
+  @#.avail_start += @log_len;
+  @#.avail_len -= @log_len;
+
+  @success = TRUE;
+}
+
+
+
+
+operation $padr
+{
+  @.check(@reader!=TRUE, "cannot write in unidirectional readable stream");
+
+  @=call :<mem$padr [@mandate] (@args);
+}
+
+
+
+
+operation $op
+{
+  @=call :<mem$op [@mandate] (@args);
+}

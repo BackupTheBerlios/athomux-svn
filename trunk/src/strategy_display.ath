@@ -1,0 +1,175 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #strategy_display
+
+purpose displays bricks and wireing
+
+desc
+  - $brick_init expects filename in @param ("fname=<name>")
+  - creates "<fname>.dot" and "<fname>.ps"
+
+          +----------------------------------------------------+
+          |                                                    |
+          |     +--------------+       +---------------+       |
+  strat --+-----+ strategy_dot +--   --+ thread_ulinux +--     |
+          |     +--------------+       +---------------+       |
+          |                                                    |
+          +----------------------------------------------------+
+
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "param_scanner.h"
+  #include <limits.h>
+  #include <errno.h>
+  #include <unistd.h>
+  #include <wait.h>
+}
+
+
+
+
+data {
+  #define STRBUFLEN 256
+  char fname[STRBUFLEN];
+}
+
+
+
+
+instance #strategy_dot as sg;
+alias :<strat as :<strat;
+wire :>out as :<graph;
+
+instance #thread_ulinux as th;
+wire :<exec as :>gloop;
+
+
+
+
+@.include "param_scanner.inc"
+
+
+
+
+// FIXME: use $brick_init !!!
+operation $brick_init
+{
+  char const *param_orig=@param;
+  @param="WA";
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  @param=param_orig;
+}
+output :>init
+operation $output_init
+{
+  if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+
+  // FIXME: init on local output
+  @=call :>gloop$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
+  // FIXME: init brick
+  @=call #strategy_display#sg:>init$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local instance");
+
+  if (@constr && !@destr) {
+    getoptval(@param, "fname", @#.fname, STRBUFLEN);
+
+    // start thread
+    @=call #strategy_display#th:>cpu$wait [@mandate] (@args) : "";
+    @.check(@success!=TRUE, "thread failed");
+  }
+
+  @success = TRUE;
+}
+
+
+
+
+local input :<graph
+
+local output :>gloop
+
+
+
+
+@.func gen_loop()
+{
+  #define BUFSIZE (DEFAULT_TRANSFER*10)
+  char buf[BUFSIZE];
+  success_t succ;
+  plen_t plen;
+  size_t ret;
+  pid_t pid;
+
+  char dotfile[STRBUFLEN];
+  char psfile[STRBUFLEN];
+  strcpy(dotfile, @#.fname);
+  strcpy(psfile, @#.fname);
+  strncat(dotfile, ".dot", STRBUFLEN-1);
+  strncat(psfile, ".ps", STRBUFLEN-1);
+
+  while (1) {
+    @=call :<graph$transwait [@mandate] (0, BUFSIZE, MAKE_PADDR(buf), direct_read) => (succ, plen);
+    @.check(succ!=TRUE, "cannot read graph");
+
+    // write graph to file
+    plen--;
+    FILE *fd=fopen(dotfile, "w");
+    @.check(fd==NULL, "cannot create file");
+    plen_t sum = 0;
+    while (sum < plen) {
+      ret = fwrite(buf+sum, 1, plen-sum, fd);
+      if (ret>0) sum+=ret;
+    }
+    fclose(fd);
+
+    // convert graph to postscript
+    pid = fork();
+    @.check(pid<0, "cannot fork");
+    if (pid==0) {
+      execlp("dot", "", "-Gsize=7,10", "-Tps", "-o", psfile, dotfile, NULL);
+      @.errmsg("cannot exec: %s", strerror(errno));
+      exit(1);
+    }
+    else {
+      if (waitpid(pid, NULL, 0)!=pid) @.errmsg("failed to wait for child to exit");
+    }
+
+    // display postscript
+    pid = fork();
+    @.check(pid<0, "cannot fork");
+    if (pid==0) {
+      execlp("display", "", "-density", "150", psfile, NULL);
+      @.errmsg("cannot exec: %s", strerror(errno));
+      exit(1);
+    }
+    else {
+      if (waitpid(pid, NULL, 0)!=pid) @.errmsg("failed to wait for child to exit");
+    }
+  }
+}
+
+
+
+
+operation $wait
+{
+  gen_loop();
+
+  @success = TRUE;
+}
