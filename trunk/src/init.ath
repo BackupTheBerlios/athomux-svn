@@ -14,9 +14,9 @@ int call_level = 0;
 char blanks[32];
 #endif
 
-#define ATHOMUX_INIT_INIT() memset(&initbrick, 0, sizeof(struct brick_init)); init_init(&initbrick, NULL, 0);
-#define ATHOMUX_INIT(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, TRUE, ai_brick, ai_param);
-#define ATHOMUX_CLEANUP(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, FALSE, ai_brick, ai_param);
+#define ATHOMUX_INIT_INIT() memset(&initbrick, 0, sizeof(struct brick_init)); init_init(&initbrick, NULL, 0)
+#define ATHOMUX_INIT(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, TRUE, ai_brick, ai_param)
+#define ATHOMUX_CLEANUP(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, FALSE, ai_brick, ai_param)
 #endif
 }
 
@@ -71,12 +71,10 @@ local output :>init
 
 @.func unboot(addr_t addr, char * str) => (success_t success)
 {
-  success_t mysuccess;
-
-  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (mysuccess);
-  @.fatal(!mysuccess, "tranfer '%s' failed", str);
-  @=call :<control$delete (addr, DEFAULT_TRANSFER) => (mysuccess);
-  @.fatal(!mysuccess, "delete failed");
+  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (success);
+  @.fatal(!success, "tranfer '%s' failed", str);
+  @=call :<control$delete (addr, DEFAULT_TRANSFER) => (success);
+  @.fatal(!success, "delete failed");
 }
 
 

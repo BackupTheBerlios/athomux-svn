@@ -10,17 +10,19 @@ output :>program
 
 operation $output_init
 {
-#ifdef __KERNEL__
-#define ATHLOAD_SYNTAX "insmod athomux.ko init=[program name] p""aram=[parameter string]\n\n"
-#else
-#define ATHLOAD_SYNTAX "athload [program name] [parameter string]\n\n"
-#endif
   if(!@destr) {
     printf(
 	   "ATHOMUX LOADER HELP\n"
 	   "-------------------\n\n"
-	   ATHLOAD_SYNTAX
-	   "\nProgram names and parameters:\n\n"
+#ifdef __KERNEL__
+	   "insmod athomux.ko init=[program name] p""aram=[parameter string]\n\n"
+#else
+	   "athload [options] [program name] [parameter string]\n\n"
+	   "\nOPTIONS:\n\n"
+	   "--help\n\tshow this help text\n\n"
+	   "--wait | -w\n\twait for <Ctrl>-<C> before shutdown\n\n"
+#endif
+	   "\nPROGRAM NAMES AND PARAMETERS:\n\n"
 	   "demo_helloworld\n\ta hello world implementation\n\n"
 	   "demo_echo [text]\n\t/bin/echo - do I need to say more?\n\n"
 	   "athload_help\n\tshow this help text\n\n"

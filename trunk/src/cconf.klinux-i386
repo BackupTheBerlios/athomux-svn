@@ -5,7 +5,10 @@ $(cconf)_MODPOST=$($(cconf)_LINSRC)/scripts/mod/modpost
 $(cconf)_LDEMULATION=elf_i386
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m32 -march=i586 -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -I$($(cconf)_LINSRC)/arch/i386/mach-default -D__KERNEL__ -DMODULE
 
-$(pconf)/$(cconf)/%.o : $(pconf)/%.c common.h strat.h Makefile
+$(pconf)/$(cconf)/asm:
+	ln -sf $($(cconf)_LINSRC)/include/asm-i386 $@
+
+$(pconf)/$(cconf)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
 	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
 
 $(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)

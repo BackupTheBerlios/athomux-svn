@@ -3,9 +3,12 @@
 $(cconf)_LINSRC=$(LINSRC)
 $(cconf)_MODPOST=$($(cconf)_LINSRC)/scripts/mod/modpost
 $(cconf)_LDEMULATION=elf_x86_64
-$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m64 -march=athlon-xp -mcmodel=kernel -mno-red-zone -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -D__KERNEL__ -DMODULE
+$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m64 -mcmodel=kernel -mno-red-zone -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -D__KERNEL__ -DMODULE
 
-$(pconf)/$(cconf)/%.o : $(pconf)/%.c common.h strat.h Makefile
+$(pconf)/$(cconf)/asm:
+	ln -sf $($(cconf)_LINSRC)/include/asm-x86_64 $@
+
+$(pconf)/$(cconf)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
 	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
 
 $(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)
