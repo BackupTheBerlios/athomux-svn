@@ -13,32 +13,14 @@ use Digest::MD5 qw(md5),qw(md5_hex);
 # create additional Makefile rules out of the existing sources
 # also, create defs.h and loaders.h automatically
 
-# first, get all the relevant file names
-
-my @target_files = `ls target.* | grep -v "~"`;
-map chomp, @target_files;
-my @targets = @target_files;
-map { s/target\.// } @targets;
-
-my @pconf_files = `ls pconf.* | grep -v "~"`;
-map chomp, @pconf_files;
-my @pconfs = @pconf_files;
-map { s/pconf\.// } @pconfs;
-
-my @cconf_files = `ls cconf.* | grep -v "~"`;
-map chomp, @cconf_files;
-my @cconfs = @cconf_files;
-map { s/cconf\.// } @cconfs;
-
-my @sources = `ls *.ath | grep -v common`;
-map chomp, @sources;
-
-# compute contexts of bricks
+# single filter
 
 my %contexts = ();
 
-foreach my $source (@sources, @target_files, @pconf_files, @cconf_files) {
-  $contexts{$source} = `grep -e '^#\\? *context' $source`;
+sub build_contexts {
+  foreach my $source (@_) {
+    $contexts{$source} = `grep -e '^#\\? *context' $source`;
+  }
 }
 
 sub check_context {
@@ -63,19 +45,58 @@ sub check_context {
   return 1;
 }
 
+# list filter
+
+sub filter_all {
+  my ($prefix, $type, $forwhat, $list) = @_;
+  my @res = ();
+  foreach my $src (@$list) {
+    next unless check_context("$prefix$src", $type, $forwhat);
+    push @res, $src;
+  }
+  return \@res;
+}
+
+# first, get all the relevant file names
+
+my @pconf_files = `ls pconf.* | grep -v "~"`;
+map chomp, @pconf_files;
+build_contexts(@pconf_files);
+my @pconfs = @pconf_files;
+map { s/pconf\.// } @pconfs;
+
+my @cconf_files = `ls cconf.* | grep -v "~"`;
+map chomp, @cconf_files;
+build_contexts(@cconf_files);
+my @cconfs = @cconf_files;
+map { s/cconf\.// } @cconfs;
+my %cconf_pconf = ();
+foreach my $pconf (@pconfs) {
+  $cconf_pconf{$pconf} = filter_all("cconf.", "pconf", $pconf, \@cconfs);
+}
+
+my @target_files = `ls target.* | grep -v "~"`;
+map chomp, @target_files;
+build_contexts(@target_files);
+my @targets = @target_files;
+map { s/target\.// } @targets;
+my %target_cconf = ();
+foreach my $cconf (@cconfs) {
+  $target_cconf{$cconf} = filter_all("target.", "cconf", $cconf, \@targets);
+}
+
+my @sources = `ls *.ath | grep -v common`;
+map chomp, @sources;
+build_contexts(@sources);
+
 # create subdirs
 
 foreach my $pconf (@pconfs) {
-  system "mkdir -p $pconf";
-  system "ln -sf ../common.h $pconf/";
-  system "ln -sf ../strat.h $pconf/";
-  system "ln -sf ../lib.c $pconf/";
-  system "ln -sf ../strat.c $pconf/";
-  foreach my $target (@targets) {
-    system "ln -sf ../$target.c $pconf/";
-  }
-  foreach my $cconf (@cconfs) {
-    system "mkdir -p $pconf/$cconf";
+  system "mkdir -p $pconf && (cd $pconf && ln -sf ../*.h ../*.c .)"
+    and die "cannot create subdirs / symlinks for $pconf";
+  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
+    system "mkdir -p $pconf/$cconf"
+      and die "cannot create cconf subdir $pconf/$cconf";
   }
 }
 
@@ -143,8 +164,7 @@ foreach my $pconf (@pconfs) {
   $text .= "$text1\n\n";
   $text .= "$text2\n\n";
   my $all_cconf_objs = "${pconf}_objs=";
-  foreach my $cconf (@cconfs) {
-    next unless check_context("cconf.$cconf", "pconf", $pconf);
+  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
     $all_cconf_objs .= "\$(${pconf}_${cconf}_objs) ";
     my $text3 = "${pconf}_${cconf}_objs=";
     open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
@@ -167,9 +187,7 @@ foreach my $pconf (@pconfs) {
     $text .= "$text3\n\n";
     close H;
     close LOADERS;
-    foreach my $target (@targets) {
-      next unless check_context("target.$target", "pconf", $pconf);
-      next unless check_context("target.$target", "cconf", $cconf);
+    foreach my $target (@{$target_cconf{$cconf}}) {
       $all_targets .= "${pconf}/${cconf}/$target ";
     }
   }
@@ -186,9 +204,9 @@ $text = "";
 
 foreach my $pconf (@pconfs) {
   $text .= add_file("pconf.$pconf", qr"\$[({]pconf[)}]", "$pconf");
-  foreach my $cconf (@cconfs) {
+  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
     $text .= add_file("cconf.$cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
-    foreach my $target (@targets) {
+    foreach my $target (@{$target_cconf{$cconf}}) {
       $text .= add_file("target.$target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }

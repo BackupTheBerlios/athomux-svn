@@ -2373,7 +2373,7 @@ sub gen_init {
   $code =~ s/\@param/_param/mg;
   purge(\$code);
   indent(\$code);
-  print OUT "$code\n  return _mand + 1;\n}\n\n";
+  print OUT "$code\nraw_exit:\n  return _mand + 1;\n  goto raw_exit;\n}\n\n";
   # create dynamic exit routine
   $code = $::exit_brick;
   $code = "{\n}" unless defined($code);

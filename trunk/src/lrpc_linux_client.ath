@@ -33,7 +33,7 @@ init {
   #undef OPERATION
   #define OPERATION "instance_init lrpc_linux_client"
   if(sscanf(@param, "%lu", &@#id) != 1) {
-    @.err("invalid param '%s' (should be a number)", @param);
+    @.rawerr("invalid param '%s' (should be a number)", @param);
   }
 }
 

@@ -2,6 +2,11 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+///////////////////////////////////////////////////////////////////////////
+
+// These routines can _only_ be used in an ordinary operation, but
+// not in static_init or the like!
+
 @.define @.msg (kind, text...)
 { printf(kind "OP "OPERATION" file "BASEFILE" line %d op(%s) sect(%d) mand(%d): "text"\n", __LINE__, op_names[@op_code], @sect_code, @#_mand ...);
 }
@@ -45,6 +50,56 @@
 #endif
   }
 }
+
+///////////////////////////////////////////////////////////////////////////
+
+// Here are versions for static_init
+
+@.define @.rawmsg (kind, text...)
+{ printf(kind " file "BASEFILE" line %d: "text"\n", __LINE__ ...);
+}
+
+@.macro @.rawerrmsg (text...)
+{ @.rawmsg("error: ", text...)
+}
+
+@.define @.rawerr (text...)
+{ @.rawerrmsg(text...);
+  goto raw_exit;
+}
+
+@.define @.rawabort (text...)
+{ @.rawmsg("FATAL: ", text...);
+#ifdef __KERNEL__
+  panic(text...);
+#else
+  exit(-1);
+#endif
+}
+
+@.define @.rawwarn (condition,text...)
+{ if(condition) { @.rawmsg("warning: ", "("@.string{@.protect{condition}}"): "text ...);
+    printf("breakpoint\n");
+  }
+}
+
+@.define @.rawcheck (condition,text...)
+{ if(condition) { @.rawmsg("error: ", "("@.string{@.protect{condition}}"): "text ...);
+    goto raw_exit;
+  }
+}
+
+@.define @.rawfatal (condition,text...)
+{ if(condition) { @.rawmsg("FATAL: ", "("@.string{@.protect{condition}}"): "text ...);
+#ifdef __KERNEL__
+    panic(text...);
+#else
+    exit(-1);
+#endif
+  }
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////
 
