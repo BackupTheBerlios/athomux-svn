@@ -31,7 +31,7 @@ static_data {
 // change param for static wired brick instances
 // NOTE: evil coding style - don't do that...
 #define init_lrpc_linux_client(brick, param, mand) \
-        init_lrpc_linux_client(brick, brick == &ini->_sub_controlpool ? "0" : "1", mand)
+        init_lrpc_linux_client(brick, brick == &_brick->_sub_controlpool ? "0" : "1", mand)
 }
 
 data {

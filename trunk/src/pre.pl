@@ -88,7 +88,7 @@ my $wsargmatch = qr"(?:$simplematch|\s|\($match\)|\[$match\]|\{$match\})*";
 
 # match specifiers
 my $sectmatch = qr"\(:$wsargmatch:\)";
-my $specmatch = qr"(?:(?:(?:\$|:[<>])\w+|\#\w*(?:[#.]\w+)*|$sectmatch)(?:$brackmatch)?)+";
+my $specmatch = qr"(?:#\w*|\$\w+|:[<>]\w*(?:$brackmatch)?|$sectmatch)+(?:\.\w+)?";
 my $macrospec = qr"(?:@(?:[.=])?)?\w+(?:\s*\w+)*";
 
 ##########################################################################
@@ -863,6 +863,13 @@ sub sp_complete {
     my $brick = $MATCH;
     $spec =~ s/\A\#/$brick/;
   }
+  # special treatment for empty :[<>] part
+  if($spec =~ m/:[<>]([^\w].*)/) {
+    my $pre = $PREMATCH;
+    my $post = $1;
+    $scopes =~ m/:[<>]\w+($brackmatch)?/;
+    $spec = $pre . $MATCH . $post;
+  }
   # special treatment for section part (complete it independently)
   if($scopes =~ m/\(:[^:]+:\)/) {
     my $sect = $MATCH;
@@ -912,8 +919,6 @@ sub sp_var {
   my $len = length($start);
   die "bad prefix '$start' for specifier '$spec'" unless substr($spec, 0, $len) eq $start;
   substr($spec, 0, $len) = "";
-  # starting #
-  $spec =~ s/\A\#//;
   # handle sub-instances
   $spec =~ s/\#/\._sub_/g;
   # handle operations
@@ -926,50 +931,33 @@ sub sp_var {
   }
   # handle remaining inputs/outputs
   $spec =~ s/:[<>]/\._conn_/g;
+  # remove dot prefix
+  $spec =~ s/\A\.//;
   return $spec;
 }
 
-##########################################################################
-
+# get variable name for the connector part, starting from brick level
 sub sp_conn_instance {
   my ($spec) = @_;
-  my $res = sp_part($spec, 1, 1);
-  if(defined $res) {
-    $res =~ s/(^|[#.])/$1_sub_/g;
-    $res =~ s/\#/\./g;
-    $res .= ".";
-  } else {
-    $res = "";
-  }
-  my $array = sp_part($spec, 2, 1);
-  $array = "" unless defined($array);
-  $res .= "_conn_" . sp_part($spec, 2, 0) . $array;
-#my $stripped = sp_complete(sp_part($spec, 2));
-#my $test = sp_var($stripped, sp_part($stripped, 1));
-#print"'$test' != '$res'\n" if ".$res" ne $test;
-  return $res;
+  my $stripped = sp_shorten($spec, 2);
+  return sp_var($stripped, "#" . sp_part($stripped, 1, 0));
+}
+
+# get variable name for the _base_ connector part (without array index),
+# starting from brick level
+# return the array part separately
+sub sp_conn_array {
+  my ($spec) = @_;
+  my $stripped = sp_shorten($spec, 2);
+  $stripped =~ s/(?:\[[^\]]*\])?\Z//;
+  my $array = $MATCH;
+  my $res = sp_var($stripped, "#" . sp_part($stripped, 1, 0));
+  return ($res, $array);
 }
 
 ##########################################################################
 
 # some specifier helper routines (TODO: revise)
-
-# ? this should be replaced by sp_var()
-sub spec_conn_instance {
-  my ($spec) = @_;
-  my $res = sp_part($spec, 1, 1);
-  if(defined $res) {
-    $res =~ s/(^|[#.])/$1_sub_/g;
-    $res =~ s/\#/\./g;
-    $res .= ".";
-  } else {
-    $res = "";
-  }
-  my $array = sp_part($spec, 2, 1);
-  $array = "" unless defined($array);
-  $res .= "_conn_" . sp_part($spec, 2, 0);
-  return ($res, $array);
-}
 
 sub make_tmpname {
   my $name = shift;
@@ -1321,7 +1309,7 @@ sub gen_typeconnect_init {
     die "type '$name' is not a subtype of '$othername': field $error is missing" if $error;
     my $bricktype = sp_name(spec_bricktype($innerspec), 1);
     my $innertable = "typetable_${bricktype}_$origname";
-    print OUT "  ini->$varname = $innertable;\n";
+    print OUT "  _brick->$varname = $innertable;\n";
   }
 }
 
@@ -1348,7 +1336,7 @@ sub add_connector {
   my $external_name = $name;
   $external_name = sp_part($replace, 2, 0) if defined($replace);
   die "input/output name '$external_name' too long" if length($external_name) > 7;
-  my ($fullname, $count) = spec_conn_instance($namespec);
+  my ($fullname, $count) = sp_conn_array($namespec);
   $::static =~ s/\^//;
   $::static =~ s/\^/  ${brick}_${type} ${fullname}${count}={\n^  }\n^/;
   my $typecode = $type eq "input" ? 0 : 1;
@@ -1567,6 +1555,27 @@ sub gen_paramcall {
   return $call;
 }
 
+sub eval_vars {
+  my ($code, $caller_spec, $maxtype) = @_;
+  $maxtype = 2 unless defined($maxtype);
+  my $brick_prefix = "#" . sp_part($caller_spec, 1, 0);
+  my $conn_prefix = sp_shorten($caller_spec, $maxtype);
+  my $done = "";
+  while($$code =~ m/@($specmatch)/m) {
+    $done .= $PREMATCH;
+    my $spec = $1;
+    $$code = $POSTMATCH;
+    $spec =~ s/\A\./#\./;
+    my $fullspec = sp_complete($spec, $caller_spec);
+    if($spec =~ m/\A:[<>]\./) {
+      $done .= "(_on->" . sp_var($fullspec, $conn_prefix) . ")";
+    } else {
+      $done .= "(_brick->" . sp_var($fullspec, $brick_prefix) . ")";
+    }
+  }
+  $$code = $done . $$code;
+}
+
 sub eval_code {
   my ($code, $caller_spec) = @_;
   my $optype = "output";
@@ -1611,6 +1620,8 @@ sub eval_code {
     $pre .= "({ " . gen_call($op_spec, $optype, $arg_name, $param, $caller_spec, 1, $mandate) . "})";
   }
   $$code = $pre . $$code;
+  # substitute generic type accesses
+  eval_typename_code($code);
   # check & substitute standard args
   my $op_caller = sp_part($caller_spec, 4, 0);
   if($op_caller and $op_caller ne "op") {
@@ -1630,19 +1641,8 @@ sub eval_code {
   }
   # remaining standard args are substituted unchecked! own risk!
   $$code =~ s/@(\w+)/\(_args->$1\)/mg;
-  # substitute output vars having a qualifying prefix
-  my $brick = sp_part($::current, 1, 0);
-  if($$code =~ m/@[#<>][^.]/m) {
-    die "please update the @#varname syntax to @#.varname, @< to @\:<. and @> to @\:>. (see new syntax in the preprocessor guide)\n";
-  }
-  $$code =~ s/@[:]?>\.?(\w+)($brackmatch|)\.(\w+)/\(_brick->_conn_$1$2.$3\)/mg;
-  # substitute normal output vars
-  my $out = sp_name($caller_spec, 2);
-  $$code =~ s/@[:]?>\.?(\w+)/\(_on->$1\)/mg;
-  # substitute generic type accesses
-  eval_typename_code($code);
-  # substitute brick vars
-  $$code =~ s/@\#\.?(\w+)/\(_brick->$1\)/mg;
+  # substitute variables
+  eval_vars($code, $caller_spec);
 }
 
 ##########################################################################
@@ -2328,25 +2328,18 @@ sub gen_ops {
 sub gen_conn_init {
   my ($spec, $tuple, $exit_mode) = @_;
   my $cname = sp_name($spec, 2);
-  my $res ="{\n  struct local_$cname * conn = _conn; (void)conn;\n";
+  my $res ="{\n  struct local_$cname * _on = _conn; (void)_on;\n";
   my ($def, $initcode, $exitcode) = @$tuple;
   my $code = $exit_mode ? $exitcode : $initcode;
   my $name = sp_name($spec, 2);
   if($spec =~ m/:</) {
-    $res .= "  conn->_input_.ops = ops_$name;\n" unless $exit_mode;
-    if($code =~ m/@<(\w+)/mg) {
-      warn "please update the @<varname syntax to \@:<.varname (see new syntax in the preprocessor guide)\n";
-    }
-    $code =~ s/@[:]?<\.?(\w+)/\(conn->$1\)/mg;
+    $res .= "  _on->_input_.ops = ops_$name;\n" unless $exit_mode;
   } else {
-    $res .= "  conn->_output_.ops = ops_$name;\n" unless $exit_mode;
-    if($code =~ m/@>(\w+)/mg) {
-      warn "please update the @>varname syntax to \@:>.varname (see new syntax in the preprocessor guide)\n";
-    }
-    $code =~ s/@[:]?>\.?(\w+)/\(conn->$1\)/mg;
+    $res .= "  _on->_output_.ops = ops_$name;\n" unless $exit_mode;
   }
-  $res .= "  conn->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
+  $res .= "  _on->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
   $code =~ s/\@param/_param/mg;
+  eval_vars(\$code, $spec);
   purge(\$code);
   indent(\$code);
   return "$res$code\n}\n";
@@ -2363,15 +2356,6 @@ sub gen_routine {
   print OUT "void ${name}(void)\n$code\n\n";
 }
 
-sub subst_brickvars { # this is provisionary and should vanish
-  my $code = shift;
-  if($code =~ m/@#(\w+)/mg) {
-    warn "please update the @#varname syntax to @#.varname (see new syntax in the preprocessor guide)\n";
-  }
-  $code =~ s/@#\.?(\w+)/\(ini->$1\)/mg;
-  return $code;
-}
-
 sub gen_initexit {
   local *OUT = shift;
   my $optype = shift;
@@ -2382,15 +2366,15 @@ sub gen_initexit {
   } else {
     print OUT "void exit_$brick (void * _ini_, const char * _param)\n{\n";
   }
-  print OUT "struct brick_$brick * ini = _ini_; (void)ini; int _i_; (void)_i_;\n";
+  print OUT "struct brick_$brick * _brick = _ini_; (void)_brick; int _i_; (void)_i_;\n";
   if($optype eq "init") {
-    print OUT "ini->_mand = _mand;\n  ini->ops = ops_${brick}_BRICK;\n";
+    print OUT "_brick->_mand = _mand;\n  _brick->ops = ops_${brick}_BRICK;\n";
   }
   print OUT "  // $optype connectors\n";
   while(my ($spec, $tuple) = each %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
     print OUT "  // $optype $spec\n";
-    my ($shortname, $array) = spec_conn_instance($spec);
+    my ($shortname, $array) = sp_conn_array($spec);
     $array =~ s/\[(.*)\]/$1/;
     my $index = "";
     if($array ne "") {
@@ -2403,13 +2387,13 @@ sub gen_initexit {
       if($optype eq "init") {
 	my $inittext = gen_conn_init($spec, $tuple, 0);
 	indent(\$inittext, "    ");
-	print OUT "  { void * _conn = &ini->$shortname$index; void * _brick = ini; (void)_brick;\n$inittext  }\n";
+	print OUT "  { void * _conn = &_brick->$shortname$index;\n$inittext  }\n";
       } else {
 	print OUT "  // not called\n";
       }
     } else {
       my $funcname = "${optype}_conn_" . sp_name($spec, 2);
-      print OUT "  $funcname(&ini->$shortname$index, ini);\n";
+      print OUT "  $funcname(&_brick->$shortname$index, _brick);\n";
     }
     if($array ne "") {
       print OUT"}\n";
@@ -2420,9 +2404,9 @@ sub gen_initexit {
   while(my ($name, $spec) = each %::instances) {
     my $br = sp_part($spec, 1, 0);
     if($optype eq "init") {
-      print OUT "  _mand = init_$br (&ini->_sub_$name, _param, _mand);\n";
+      print OUT "  _mand = init_$br (&_brick->_sub_$name, _param, _mand);\n";
     } else {
-      print OUT "  exit_$br (&ini->_sub_$name, _param);\n";
+      print OUT "  exit_$br (&_brick->_sub_$name, _param);\n";
     }
   }
   print OUT "\n";
@@ -2496,8 +2480,8 @@ sub gen_init {
   # wire sub-instances
   print OUT "  // wire sub-instances\n";
   while(my ($input, $output) = each %::wires) {
-    my ($in_instance,$in_array) = spec_conn_instance($input);
-    my ($out_instance,$out_array) = spec_conn_instance($output);
+    my ($in_instance,$in_array) = sp_conn_array($input);
+    my ($out_instance,$out_array) = sp_conn_array($output);
     my $whole_array_in = $in_array =~ s/\[\]/\[_i_\]/;
     my $whole_array_out = $out_array =~ s/\[\]/\[_i_\]/;
     if($whole_array_in or $whole_array_out) {
@@ -2512,9 +2496,9 @@ sub gen_init {
       $bound =~ s/\]$//;
       print OUT "for(_i_ = 0; _i_ < $bound; _i_++) {\n";
     }
-    print OUT "  ini->$in_instance$in_array._input_.connect = &ini->$out_instance$out_array._output_;\n";
-    print OUT "  ini->$in_instance$in_array._input_.rev_next = ini->$out_instance$out_array._output_.rev_chain;\n";
-    print OUT "  ini->$out_instance$out_array._output_.rev_chain = &ini->$in_instance$in_array._input_;\n";
+    print OUT "  _brick->$in_instance$in_array._input_.connect = &_brick->$out_instance$out_array._output_;\n";
+    print OUT "  _brick->$in_instance$in_array._input_.rev_next = _brick->$out_instance$out_array._output_.rev_chain;\n";
+    print OUT "  _brick->$out_instance$out_array._output_.rev_chain = &_brick->$in_instance$in_array._input_;\n";
     print OUT "}\n" if($whole_array_in or $whole_array_out);
   }
   # connect type tables
@@ -2523,16 +2507,16 @@ sub gen_init {
   print OUT "  // initialize PCs\n";
   while(my ($name, $tuple) = each %::pc_defs) {
     my ($input, $sect, $max) = @$tuple;
-    print OUT "\n  ini->_pc_$name.pc_version = 1;";
-    print OUT "\n  ini->_pc_$name.pc_input = &ini->_conn_$input._input_;\n";
-    print OUT "\n  ini->_pc_$name.pc_sect = $sect;" if defined($sect);
+    print OUT "\n  _brick->_pc_$name.pc_version = 1;";
+    print OUT "\n  _brick->_pc_$name.pc_input = &_brick->_conn_$input._input_;\n";
+    print OUT "\n  _brick->_pc_$name.pc_sect = $sect;" if defined($sect);
   }
   # user-defined part
   print OUT "\n// user-defined init part\n";
   my $code = $::init_brick;
   $code = "{\n}" unless defined($code);
-  $code = subst_brickvars($code);
   $code =~ s/\@param/_param/mg;
+  eval_vars(\$code, "#$brick", 1);
   purge(\$code);
   indent(\$code);
   print OUT "$code\nraw_exit:\n  return _mand + 1;\n  goto raw_exit;\n}\n\n";
@@ -2541,8 +2525,8 @@ sub gen_init {
   gen_initexit(*OUT, "exit");
   $code = $::exit_brick;
   $code = "{\n}" unless defined($code);
-  $code = subst_brickvars($code);
   $code =~ s/\@param/_param/mg;
+  eval_vars(\$code, "#$brick", 1);
   purge(\$code);
   indent(\$code);
   print OUT "  // brick exit code\n$code\n}\n\n";

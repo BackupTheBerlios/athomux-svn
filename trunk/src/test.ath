@@ -298,7 +298,7 @@ operation $get
 {
   int a, b, c;
   @:>.i++;
-  @:>.out_arr[2].i++;
+  @:>out_arr[2].i++;
   @=call myfunc (a, b, 3) => (c);
 }
 

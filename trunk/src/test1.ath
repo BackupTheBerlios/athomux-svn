@@ -97,8 +97,8 @@ init {
 operation $get
 {
   @:>.i++;
-  @:>.out1.outstate++;
-  @:>.out_arr[2].i++;
+  @:>out1.outstate++;
+  @:>out_arr[2].i++;
 }
 
 section (:1:)

@@ -45,9 +45,9 @@ init {
   if(!@#.boot) { // never boot myself twice
     @#.boot = TRUE;
     init_static_control_simple();
-    ini->_conn_control._input_.connect = root_strategy;
+    _brick->_conn_control._input_.connect = root_strategy;
     // is the following line required?
-    //ini->_conn_control._input_.rev_next = root_strategy->rev_chain;
+    //_brick->_conn_control._input_.rev_next = root_strategy->rev_chain;
   }
 }
 
