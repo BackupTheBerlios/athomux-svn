@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.05, 24 Nov 2004
+Version 0.06, 25 Nov 2004
 \layout Standard
 
 
@@ -118,6 +118,9 @@ s (some knowledge of Perl may also help).
 \layout Section
 
 Invocation
+\layout Subsection
+
+Invocation in General
 \layout Standard
 
 
@@ -173,6 +176,74 @@ default/*/*
 */debug/*
 \family default 
  or similar.
+\layout Subsection
+
+Target specific Options
+\layout Standard
+
+The ATHOMUX Linux kernelspace port requires a set of configured Linux kernel
+ sources.
+ If not explicit specified, the build system uses the sources of the current
+ kernel.
+ Different kernel sources can be specified by appending 
+\family typewriter 
+LINSRC=
+\family default 
+\emph on 
+/path/to/kernel/sources
+\emph default 
+ to the 
+\family typewriter 
+make
+\family default 
+ command.
+ To specify 
+\emph on 
+cconf
+\emph default 
+ dependent kernel sources, the 
+\emph on 
+cconf_name
+\family typewriter 
+\emph default 
+_LINSRC
+\family default 
+ option can be used.
+\layout Standard
+
+To create Linux kernel modules, a kernel-dependent tool called 
+\family typewriter 
+modpost
+\family default 
+ is required.
+ Because of some portability and permission issues, the current build system
+ uses a hack to avoid 
+\family typewriter 
+modpost
+\family default 
+.
+ If you run into problems compiling the 
+\family typewriter 
+athomux.ko
+\family default 
+ modules, you can reenable the usage of 
+\family typewriter 
+modpost
+\family default 
+ by appending 
+\family typewriter 
+USE_MODPOST=1
+\family default 
+ to the 
+\family typewriter 
+make
+\family default 
+ command.
+\layout Standard
+\align left 
+Example:
+\family typewriter 
+ make klinux-i386_LINSRC=/usr/src/linux USE_MODPOST=1
 \layout Section
 
 Configuration
