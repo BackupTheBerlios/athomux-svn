@@ -319,6 +319,13 @@ operation $unlock // parts of former $putaddr
 }
 
 
+operation $putaddr
+{
+  // fix missing putaddr in putdeleteputaddr from io_arbiter
+  @success = TRUE;
+}
+
+
 operation $create
 {
   ioqueue_req_addr_t req;
