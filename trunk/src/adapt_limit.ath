@@ -11,7 +11,7 @@ desc
 enddesc
 
 static_data {
-#include "linux/string.h"
+#include <string.h>
 #define ADAPT_LIMIT_LIMIT DEFAULT_TRANSFER
 }
 
