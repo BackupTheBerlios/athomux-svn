@@ -1,0 +1,9 @@
+s/^\([^\t]*\)\/[^\/\t]*/\1/;
+s/^fs[^\t]*/fs/;
+s/^kernel[^\t]*/kernel/;
+s/^lib[^\t]*/lib/;
+s/^net[^\t]*/net/;
+s/^scripts[^\t]*/scripts/;
+s/^sound[^\t]*/sound/;
+s/^arch\/i386[^\t]*/arch\/i386/;
+s/^drivers[^\t]*/drivers/;

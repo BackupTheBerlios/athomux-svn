@@ -1,0 +1,41 @@
+This is the implementation of a tool
+for analyzing the Linux kernel code structures.
+
+IT COMES WITHOUT ANY WARRANTIES AND SUPPORT AND IS PROVIDED AS-IS.
+
+The purpose of this tool was to do the analysis of the Linux sources
+for my master's thesis which can be downloaded here:
+http://www.athomux.net/papers/Diplomarbeit_jens.pdf
+
+
+The implementation was done mainly in the Makefile
+using a pipes-and-filters programming style.
+
+It requires a directory tree containing both
+the Linux source code and the compiled object files.
+
+The tool can be used to analyze structures on
+symbol, object, module, directory or subsystem level.
+
+Directories can be clustered to subsystems
+which are defined in subsys.sed.  Note that this tool
+comes with different variants of subsys.sed.
+
+Read and understand the Makefile for details!
+
+
+
+For practical application here the most common make targets
+which I also used for my thesis:
+
+linux_subsystems.dot / linux_subsystems.ps
+	Graph for Chapter 4.2.1.1 (Overview of Subsystems)
+
+dots_sys / linux_subsys
+	Graphs for Chapter 4.2.1.2+ (Structure of the Subsystems)
+
+dots
+	Graphs for Appendix A (External Dependencies of the Subsystems)
+
+stat_table.txt
+	Table for Appendix B (Interface Relevance)
