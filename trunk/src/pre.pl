@@ -1972,6 +1972,7 @@ sub parse_subinstances {
 	warn "do not start specifier $sub_conn with '##', probably means something different you dont want\n" if $sub_conn =~ m/\A\#\#/;
 	my $new_spec = sp_part($::current, 1) . "#$name";
 	my $sub_complete = sp_complete($sub_conn, $new_spec);
+	$sub_complete = wire_in2out($sub_complete);
 	my $loc_complete = sp_complete($loc_conn);
 #print "new_spec: $new_spec sub_comnplete: $sub_conn -> $sub_complete loc_complete: $loc_conn -> $loc_complete\n";
 	my $sub_core = $sub_complete;
@@ -2006,8 +2007,10 @@ sub parse_subinstances {
 	    die "sub-specifier $sub_conn must be written $sub_core\[]" unless $sub_conn =~ m/\[\]/;
 	    die "alias-specifier $loc_complete must be written $loc_core\[]" unless $loc_complete =~ m/\[\]/;
 	  }
-	  my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
-	  add_connector($conn_type, $full_spec, $type, $loc_complete, 1, "TRUE", "FALSE", "FALSE") if $remember;
+	  if($remember) {
+	    my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
+	    add_connector($conn_type, $full_spec, $type, $loc_complete, 1, "TRUE", "FALSE", "FALSE");
+	  }
 	  my $xname = sp_name(spec_bricktype($sub_complete), 2);
 	  my $yname = sp_name(spec_bricktype($loc_complete), 2);
 	  #print "xname=$xname yname=$yname ($::extern_type_defs{$xname})\n";
