@@ -3,7 +3,7 @@
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
 strategy brick #adapt_strat
-purpose convert $transfer operations into strategy operations
+purpose convert $trans operations into strategy operations
 desc
   Provisionary implementation
 enddesc
@@ -17,7 +17,7 @@ operation $op
   @=call :<strat$op @args;
 }
 
-operation $transfer
+operation $trans
 {
   if(@direction == direct_read) {
     // NYI .....

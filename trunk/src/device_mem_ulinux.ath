@@ -17,7 +17,7 @@ static_data {
 
 output :>out
 
-operation $getaddr,$getaddrcreateget
+operation $gadr,$gadrcreateget
 {
   @log_addr = (addr_t)(long)malloc(@log_len);
   @phys_addr = @log_addr;
@@ -25,7 +25,7 @@ operation $getaddr,$getaddrcreateget
   @success = @log_addr != 0;
 }
 
-operation $get,$gettr
+operation $get,$gettranswait
 {
   @phys_addr = @log_addr;
   @phys_len = @log_len;
@@ -33,14 +33,14 @@ operation $get,$gettr
   @success = TRUE;
 }
 
-operation $putaddr,$putdeleteputaddr
+operation $padr,$putdeletepadr
 {
   free((void*)(long)@log_addr);
   @success = TRUE;
 }
 
 // dummy ops
-operation $transfer,$wait,$put,$tr,$trput,$putwait
+operation $trans,$wait,$put,$transwait,$transwaitput,$putwait
 {
   @success = TRUE;
 }

@@ -70,32 +70,32 @@ operation $output_init
   while(@:>.is_running) {
     // wait for next request
     trace("io_arbiter: waiting for next request\n");
-    @=call :<queue$getaddr [mandate] (IOQUEUE_REQUEST_SIZE, TRUE) => (mysuccess, req_laddr);
+    @=call :<queue$gadr [mandate] (IOQUEUE_REQUEST_SIZE, TRUE) => (mysuccess, req_laddr);
     if(!@:>.is_running) goto shutdown;
-    @.checkjump(!mysuccess, fail, "getaddr failed");
+    @.checkjump(!mysuccess, fail, "gadr failed");
 
     // fetch it
     trace("io_arbiter: processing request %llx\n", req_laddr);
-    @=call :<queue$gettr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+    @=call :<queue$gettranswait [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
     if(!@:>.is_running) goto shutdown;
-    @.checkjump(!mysuccess, fail, "gettr failed");
+    @.checkjump(!mysuccess, fail, "gettranswait failed");
 
     req = MAKE_PTR(req_paddr);
-    @.checkjump(!req, fail, "getaddrgettr returned NULL pointer");
+    @.checkjump(!req, fail, "gadrgettranswait returned NULL pointer");
 
     // check if nobody did cancel the request
     if(req->direction != direct_stop) {
       // send it to the driver
-      trace("io_arbiter: calling transfer (laddr:%llx,llen:%llx,paddr=%p,prio=%i)\n", req->log_addr, req->log_len, MAKE_PTR(req->phys_addr), req->prio);
-      @=call :<driver$transfer [mandate] (req->log_addr, req->log_len, req->phys_addr, req->direction, req->prio) => (mysuccess, phys_len);
+      trace("io_arbiter: calling trans (laddr:%llx,llen:%llx,paddr=%p,prio=%i)\n", req->log_addr, req->log_len, MAKE_PTR(req->phys_addr), req->prio);
+      @=call :<driver$trans [mandate] (req->log_addr, req->log_len, req->phys_addr, req->direction, req->prio) => (mysuccess, phys_len);
       if(!@:>.is_running) goto shutdown;
-      @.checkjump(!mysuccess, fail, "transfer failed");
-      @.checkjump(req->log_len != phys_len, fail, "transfer could only process %lu of %llu bytes", phys_len, req->log_len);
+      @.checkjump(!mysuccess, fail, "trans failed");
+      @.checkjump(req->log_len != phys_len, fail, "trans could only process %lu of %llu bytes", phys_len, req->log_len);
     }
 
     // remove it from the IO queue
-    @=call :<queue$putdeleteputaddr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
-    @.checkjump(!mysuccess, fail, "putdeleteputaddr failed");
+    @=call :<queue$putdeletepadr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.checkjump(!mysuccess, fail, "putdeletepadr failed");
   }
 shutdown:
   @success = TRUE;

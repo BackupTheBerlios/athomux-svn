@@ -6,7 +6,7 @@ brick #helper_idpool
 purpose manage numerical IDs (0-255)
 desc
   This brick manages numerical IDs (0-255) which can be allocated
-  using $getaddr / $delete
+  using $gadr / $delete
 enddesc
 
 static_header {
@@ -32,7 +32,7 @@ init {
 output :>out
 
 
-operation $getaddr
+operation $gadr
 {
   unsigned int id = @#.pos;
 

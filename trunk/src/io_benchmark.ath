@@ -81,7 +81,7 @@ output :>out
     @.check(!mysuccess, "obtaining lock failed");
     position     += MY_TRANSFER;
     @#.bytes_done += MY_TRANSFER;
-    @=call :<device$transfer (position, sizeof(buf), (paddr_t)buf, direct_write) => (mysuccess);
+    @=call :<device$trans (position, sizeof(buf), (paddr_t)buf, direct_write) => (mysuccess);
     @.check(!mysuccess, "write failed");
   }
 

@@ -33,14 +33,14 @@ void missing_##name(const union connector * on, struct args * args, const char *
  */
 UNUSED(output_init)
 // static ops
-MISSING(transfer)
+MISSING(trans)
 MISSING(wait)
 MISSING(get)
 MISSING(put)
 MISSING(lock)
 MISSING(unlock)
-MISSING(getaddr)
-MISSING(putaddr)
+MISSING(gadr)
+MISSING(padr)
 // strategy ops
 MISSING(instbrick)
 MISSING(deinstbrick)
@@ -85,10 +85,10 @@ UNUSED(brick_init)
  * we get no drop-in replacement and/or bad semantics!
  */
 
-void missing_tr(const union connector * on, struct args * args, const char * param)
+void missing_transwait(const union connector * on, struct args * args, const char * param)
 {
-  args->op_code = opcode_transfer;
-  on->output.ops[args->sect_code][opcode_transfer](on, args, param);
+  args->op_code = opcode_trans;
+  on->output.ops[args->sect_code][opcode_trans](on, args, param);
   if(!args->success) {
     return;
   }
@@ -98,7 +98,7 @@ void missing_tr(const union connector * on, struct args * args, const char * par
   on->output.ops[args->sect_code][opcode_wait](on, args, param);
 }
 
-void missing_gettr(const union connector * on, struct args * args, const char * param)
+void missing_gettranswait(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_get;
   on->output.ops[args->sect_code][opcode_get](on, args, param);
@@ -108,8 +108,8 @@ void missing_gettr(const union connector * on, struct args * args, const char * 
   if(args->version < vers_newest) {
     args->success = FALSE;
     args->direction = direct_read;
-    args->op_code = opcode_tr;
-    on->output.ops[args->sect_code][opcode_tr](on, args, param);
+    args->op_code = opcode_transwait;
+    on->output.ops[args->sect_code][opcode_transwait](on, args, param);
     if(!args->success) { /* undo reservation once again */
       args->prio = prio_none;
       on->output.ops[args->sect_code][opcode_put](on, args, param);
@@ -118,12 +118,12 @@ void missing_gettr(const union connector * on, struct args * args, const char * 
   }
 }
 
-void missing_trput(const union connector * on, struct args * args, const char * param)
+void missing_transwaitput(const union connector * on, struct args * args, const char * param)
 {
   success_t res;
   args->direction = direct_write;
-  args->op_code = opcode_tr;
-  on->output.ops[args->sect_code][opcode_tr](on, args, param);
+  args->op_code = opcode_transwait;
+  on->output.ops[args->sect_code][opcode_transwait](on, args, param);
   res = args->success;
   args->success = FALSE;
   /*try to put always --> try to avoid memory leaks */
@@ -156,11 +156,11 @@ void missing_createget(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_get](on, args, param);
 }
 
-void missing_getaddrcreateget(const union connector * on, struct args * args, const char * param)
+void missing_gadrcreateget(const union connector * on, struct args * args, const char * param)
 {
   args->where = FALSE;
-  args->op_code = opcode_getaddr;
-  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  args->op_code = opcode_gadr;
+  on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
     return;
   }
@@ -169,20 +169,20 @@ void missing_getaddrcreateget(const union connector * on, struct args * args, co
   on->output.ops[args->sect_code][opcode_createget](on, args, param);
 }
 
-void missing_getaddrgettr(const union connector * on, struct args * args, const char * param)
+void missing_gadrgettranswait(const union connector * on, struct args * args, const char * param)
 {
   args->where = TRUE;
-  args->op_code = opcode_getaddr;
-  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  args->op_code = opcode_gadr;
+  on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_gettr;
-  on->output.ops[args->sect_code][opcode_gettr](on, args, param);
+  args->op_code = opcode_gettranswait;
+  on->output.ops[args->sect_code][opcode_gettranswait](on, args, param);
 }
 
-void missing_putputaddr(const union connector * on, struct args * args, const char * param)
+void missing_putpadr(const union connector * on, struct args * args, const char * param)
 {
   args->prio = prio_background;
   args->op_code = opcode_put;
@@ -192,8 +192,8 @@ void missing_putputaddr(const union connector * on, struct args * args, const ch
   }
   args->success = FALSE;
   args->where = TRUE;
-  args->op_code = opcode_putaddr;
-  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+  args->op_code = opcode_padr;
+  on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
 void missing_putdelete(const union connector * on, struct args * args, const char * param)
@@ -209,7 +209,7 @@ void missing_putdelete(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_delete](on, args, param);
 }
 
-void missing_putdeleteputaddr(const union connector * on, struct args * args, const char * param)
+void missing_putdeletepadr(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_putdelete;
   on->output.ops[args->sect_code][opcode_putdelete](on, args, param);
@@ -218,24 +218,24 @@ void missing_putdeleteputaddr(const union connector * on, struct args * args, co
   }
   args->success = FALSE;
   args->where = FALSE;
-  args->op_code = opcode_putaddr;
-  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+  args->op_code = opcode_padr;
+  on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_getaddrtrdeleteputaddr(const union connector * on, struct args * args, const char * param)
+void missing_gadrtranswaitdeletepadr(const union connector * on, struct args * args, const char * param)
 {
-  args->op_code = opcode_getaddr;
+  args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
   args->where = TRUE;
   args->exclu = TRUE;
-  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_tr;
+  args->op_code = opcode_transwait;
   args->direction = direct_read;
-  on->output.ops[args->sect_code][opcode_tr](on, args, param);
+  on->output.ops[args->sect_code][opcode_transwait](on, args, param);
   if(!args->success || args->phys_len != args->log_len) {
     return;
   }
@@ -246,17 +246,17 @@ void missing_getaddrtrdeleteputaddr(const union connector * on, struct args * ar
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_putaddr;
-  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+  args->op_code = opcode_padr;
+  on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_getaddrcreatetrputaddr(const union connector * on, struct args * args, const char * param)
+void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * args, const char * param)
 {
-  args->op_code = opcode_getaddr;
+  args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
   args->where = TRUE;
   args->exclu = TRUE;
-  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
     return;
   }
@@ -268,15 +268,15 @@ void missing_getaddrcreatetrputaddr(const union connector * on, struct args * ar
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_tr;
+  args->op_code = opcode_transwait;
   args->direction = direct_read;
-  on->output.ops[args->sect_code][opcode_tr](on, args, param);
+  on->output.ops[args->sect_code][opcode_transwait](on, args, param);
   if(!args->success || args->phys_len != args->log_len) {
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_putaddr;
-  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+  args->op_code = opcode_padr;
+  on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
 #define ADD_MISSING(name,sect) [opcode_##name] = &missing_##sect##_##name
@@ -284,14 +284,14 @@ void missing_getaddrcreatetrputaddr(const union connector * on, struct args * ar
 #define ADD_ALL_MISSING(sect)                                                 \
 {                                                                             \
   ADD_MISSING(output_init,sect),                                              \
-  ADD_MISSING(transfer,sect),                                                 \
+  ADD_MISSING(trans,sect),                                                 \
   ADD_MISSING(wait,sect),                                                     \
   ADD_MISSING(get,sect),                                                      \
   ADD_MISSING(put,sect),                                                      \
   ADD_MISSING(lock,sect),                                                     \
   ADD_MISSING(unlock,sect),                                                   \
-  ADD_MISSING(getaddr,sect),                                                  \
-  ADD_MISSING(putaddr,sect),                                                  \
+  ADD_MISSING(gadr,sect),                                                  \
+  ADD_MISSING(padr,sect),                                                  \
                                                                               \
   ADD_MISSING(create,sect),                                                   \
   ADD_MISSING(delete,sect),                                                   \
@@ -306,18 +306,18 @@ void missing_getaddrcreatetrputaddr(const union connector * on, struct args * ar
   ADD_MISSING(getconn,sect),                                                  \
   ADD_MISSING(findconn,sect),                                                 \
                                                                               \
-  ADD_MISSING(tr,sect),                                                       \
-  ADD_MISSING(gettr,sect),                                                    \
-  ADD_MISSING(trput,sect),                                                    \
+  ADD_MISSING(transwait,sect),                                                       \
+  ADD_MISSING(gettranswait,sect),                                                    \
+  ADD_MISSING(transwaitput,sect),                                                    \
   ADD_MISSING(putwait,sect),                                                  \
   ADD_MISSING(createget,sect),                                                \
-  ADD_MISSING(getaddrcreateget,sect),                                         \
-  ADD_MISSING(getaddrgettr,sect),                                             \
-  ADD_MISSING(putputaddr,sect),                                               \
+  ADD_MISSING(gadrcreateget,sect),                                         \
+  ADD_MISSING(gadrgettranswait,sect),                                             \
+  ADD_MISSING(putpadr,sect),                                               \
   ADD_MISSING(putdelete,sect),                                                \
-  ADD_MISSING(putdeleteputaddr,sect),                                         \
-  ADD_MISSING(getaddrtrdeleteputaddr,sect),                                   \
-  ADD_MISSING(getaddrcreatetrputaddr,sect),                                   \
+  ADD_MISSING(putdeletepadr,sect),                                         \
+  ADD_MISSING(gadrtranswaitdeletepadr,sect),                                   \
+  ADD_MISSING(gadrcreatetranswaitpadr,sect),                                   \
                                                                               \
   ADD_MISSING(input_init,sect),                                               \
   ADD_MISSING(retract,sect),                                                  \
@@ -329,14 +329,14 @@ name_t op_names[opcode_brick_max+1] = {
   // OUTPUT OPCODES
   "output_init",
   // static
-  "transfer",
+  "trans",
   "wait",
   "get",
   "put",
   "lock",
   "unlock",
-  "getaddr",
-  "putaddr",
+  "gadr",
+  "padr",
   // dynamic
   "create",
   "delete",
@@ -351,18 +351,18 @@ name_t op_names[opcode_brick_max+1] = {
   "getconn",
   "findconn",
   // combinations
-  "tr",
-  "gettr",
-  "trput",
+  "transwait",
+  "gettranswait",
+  "transwaitput",
   "putwait",
   "createget",
-  "getaddrcreateget",
-  "getaddrgettr",
-  "putputaddr",
+  "gadrcreateget",
+  "gadrgettranswait",
+  "putpadr",
   "putdelete",
-  "putdeleteputaddr",
-  "getaddrtrdeleteputaddr",
-  "getaddrcreatetrputaddr",
+  "putdeletepadr",
+  "gadrtranswaitdeletepadr",
+  "gadrcreatetranswaitpadr",
   "bad_output_max",
   // INPUT OPCODES
   "input_init",
@@ -405,11 +405,11 @@ void _PC_GET(struct pc * pc, struct pc_elem * elem, addr_t __addr, plen_t __len)
     .log_len =  __len,
     .forwrite = TRUE,
     .prio = prio_normal,
-    .op_code = opcode_gettr,
+    .op_code = opcode_gettranswait,
     .sect_code = pc->pc_sect,
   };
   const union connector * other = (void*)pc->pc_input->connect;
-  other->output.ops[pc->pc_sect][opcode_gettr](other, &args, "");
+  other->output.ops[pc->pc_sect][opcode_gettranswait](other, &args, "");
   if(!args.success || args.phys_len < __len) {
     return;
   }
@@ -438,11 +438,11 @@ struct pc_elem * _PC_ALLOC(struct pc * pc, plen_t __len, plen_t align, plen_t wh
     .exclu = TRUE,
     .melt = TRUE,
     .action = action_wait,
-    .op_code = opcode_getaddrcreateget,
+    .op_code = opcode_gadrcreateget,
     .sect_code = pc->pc_sect,
   };
   const union connector * other = (void*)pc->pc_input->connect;
-  other->output.ops[pc->pc_sect][opcode_getaddrcreateget](other, &args, "");
+  other->output.ops[pc->pc_sect][opcode_gadrcreateget](other, &args, "");
   if(!args.success || args.log_len < base_len) {
     return NULL;
   }
@@ -470,9 +470,9 @@ void  _PC_FREE(struct pc * pc, struct pc_elem * elem, addr_t __addr, plen_t __le
     .exclu = TRUE,
     .melt = TRUE,
     .action = action_wait,
-    .op_code = opcode_putdeleteputaddr,
+    .op_code = opcode_putdeletepadr,
     .sect_code = pc->pc_sect,
   };
   const union connector * other = (void*)pc->pc_input->connect;
-  other->output.ops[pc->pc_sect][opcode_putdeleteputaddr](other, &args, "");
+  other->output.ops[pc->pc_sect][opcode_putdeletepadr](other, &args, "");
 }

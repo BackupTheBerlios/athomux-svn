@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.25, 30 November 2004
+Version 0.26, 2 December 2004
 \layout Standard
 
 
@@ -264,7 +264,7 @@ direction_t
 \family default 
  Enum for the 
 \family typewriter 
-transfer
+$trans
 \family default 
  operation, has values 
 \family typewriter 
@@ -287,7 +287,7 @@ prio_t
 \family default 
  Enum for the 
 \family typewriter 
-transfer
+$trans
 \family default 
  operation, has values 
 \family typewriter 
@@ -714,8 +714,8 @@ Physical IO
 
 
 \family typewriter 
-$transfer (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t
- direction, prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
+$trans (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t direction
+, prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
 \layout Standard
 
 Start or submit an IO request (
@@ -834,12 +834,12 @@ $wait
 \family default 
  even on memory regions where never a 
 \family typewriter 
-$transfer
+$trans
 \family default 
  has been started.
  It need no be used pairwise with 
 \family typewriter 
-$transfer
+$trans
 \family default 
 .
  It just ensures that everything is in sync.
@@ -853,7 +853,7 @@ action == action_try
 , return immediately telling whether no error has occured.
  As a side effect, ensure that new 
 \family typewriter 
-$transfer
+$trans
 \family default 
  requests arriving after that will never be serviced before the old ones
  have completed (transaction barrier).
@@ -910,7 +910,7 @@ version == vers_newest
 \family default 
 , you need not issue a following 
 \family typewriter 
-$transfer
+$trans
 \family default 
  to update the buffer.
  Otherwise, you cannot be sure that the buffer contents is up to date.
@@ -1216,7 +1216,7 @@ Allocation in the Logical Address Space
 
 
 \family typewriter 
-$getaddr (len_t log_len, bool where := FALSE, bool exclu := TRUE, action_t
+$gadr (len_t log_len, bool where := FALSE, bool exclu := TRUE, action_t
  action := action_wait, len_t try_len := log_len) => (success_t success,
  addr_t log_addr, len_t log_len)
 \layout Standard
@@ -1254,13 +1254,13 @@ action != action_wait
 \noindent 
 
 \family typewriter 
-$putaddr (addr_t log_addr, len_t log_len, bool where := FALSE) => (success_t
+$padr (addr_t log_addr, len_t log_len, bool where := FALSE) => (success_t
  success)
 \layout Standard
 
 Unreserve the space of a former 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
 ; note that 
 \family typewriter 
@@ -1268,7 +1268,7 @@ where
 \family default 
  must have the same value as in the former 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
 , regardless of an intermediate 
 \family typewriter 
@@ -1283,7 +1283,7 @@ $delete
 
 Note: 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
  is no longer a 
 \emph on 
@@ -1306,7 +1306,7 @@ $delete
  The reason is granularity: you may reserve a very huge part of the address
  space by 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
  and then 
 \family typewriter 
@@ -1391,7 +1391,7 @@ The elementary operations are meant to be orthogonal to each other, i.e.
  of operation calls.
  For example, reading from a pipe involves 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
 , 
 \family typewriter 
@@ -1399,7 +1399,7 @@ $get
 \family default 
 , 
 \family typewriter 
-$transfer
+$trans
 \family default 
 , and 
 \family typewriter 
@@ -1416,7 +1416,7 @@ $delete
 \family default 
  and 
 \family typewriter 
-$putaddr
+$padr
 \family default 
  is called.
  To save the overhead of issuing each call separately, combinations are
@@ -1486,7 +1486,7 @@ not
  operation.
  For example, executing 
 \family typewriter 
-$transfer
+$trans
 \family default 
  directly after 
 \family typewriter 
@@ -1516,13 +1516,13 @@ Combined Transfer Operations
 \noindent 
 
 \family typewriter 
-$tr (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t direction,
- prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
+$transwait (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t
+ direction, prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
 \layout Standard
 
 Execute 
 \family typewriter 
-$transfer
+$trans
 \family default 
  followed by 
 \family typewriter 
@@ -1533,8 +1533,8 @@ $wait
 \noindent 
 
 \family typewriter 
-$gettr (addr_t log_addr, len_t log_len, prio_t prio := prio_normal) => (success_
-t success, paddr_t phys_addr, plen_t phys_len)
+$gettranswait (addr_t log_addr, len_t log_len, prio_t prio := prio_normal)
+ => (success_t success, paddr_t phys_addr, plen_t phys_len)
 \layout Standard
 
 Execute 
@@ -1543,20 +1543,20 @@ $get
 \family default 
  followed by 
 \family typewriter 
-$tr
+$transwait
 \family default 
  for reading the data.
 \layout Standard
 \noindent 
 
 \family typewriter 
-$trput (addr_t log_addr, len_t log_len, paddr_t phys_addr, prio_t prio :=
- prio_normal) => (success_t success)
+$transwaitput (addr_t log_addr, len_t log_len, paddr_t phys_addr, prio_t
+ prio := prio_normal) => (success_t success)
 \layout Standard
 
 Execute 
 \family typewriter 
-$tr
+$transwait
 \family default 
  for writing followed by 
 \family typewriter 
@@ -1584,7 +1584,7 @@ $wait
 .
  The implementation should force an implicit 
 \family typewriter 
-$transfer
+$trans
 \family default 
  internally in the buffer cache if it has not already done so (but most
  implementations will have done before anyway).
@@ -1611,12 +1611,12 @@ $get
 \family default 
  (note that a further 
 \family typewriter 
-$tr
+$transwait
 \family default 
  for reading would be senseless, because the data has been freshly created.
  However a 
 \family typewriter 
-$tr
+$transwait
 \family default 
  for writing zeroed blocks could be feasible, but is there anyone needing
  this?).
@@ -1656,7 +1656,7 @@ Memory Allocation at unknown address
 \noindent 
 
 \family typewriter 
-$getaddrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
+$gadrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
  action_t action := action_wait, bool melt := TRUE, len_t try_len := log_len)
  => (success_t success, addr_t log_addr, len_t log_len, paddr_t phys_addr,
  plen_t phys_len)
@@ -1664,7 +1664,7 @@ $getaddrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
 
 Execute 
 \family typewriter 
-$getaddr
+$gadr
 \family default 
 , then 
 \family typewriter 
@@ -1685,7 +1685,7 @@ malloc()
 \noindent 
 
 \family typewriter 
-$putdeleteputaddr (addr_t log_addr, len_t log_len) => (success_t success)
+$putdeletepadr (addr_t log_addr, len_t log_len) => (success_t success)
 \layout Standard
 
 Combination of 
@@ -1694,12 +1694,12 @@ $putdelete
 \family default 
  followed by 
 \family typewriter 
-$putaddr
+$padr
 \family default 
 .
  This is in essence the opposite of 
 \family typewriter 
-$getaddrcreateget
+$gadrcreateget
 \family default 
  and similar to classical 
 \family typewriter 
@@ -1732,9 +1732,10 @@ Reader
 \noindent 
 
 \family typewriter 
-$getaddrgettr (len_t log_len, bool exclu := TRUE, action_t action := action_wait
-, forwrite := FALSE, prio := prio_normal, len_t try_len := log_len) => (success_
-t success, addr_t log_addr, len_t log_len, paddr_t phys_addr, plen_t phys_len)
+$gadrgettranswait (len_t log_len, bool exclu := TRUE, action_t action :=
+ action_wait, forwrite := FALSE, prio := prio_normal, len_t try_len := log_len)
+ => (success_t success, addr_t log_addr, len_t log_len, paddr_t phys_addr,
+ plen_t phys_len)
 \layout Standard
 
 This allocates space in the defined region of the nest, allocates a physical
@@ -1749,7 +1750,7 @@ must
 \noindent 
 
 \family typewriter 
-$putdeleteputaddr (addr_t log_addr, len_t log_len) => (success_t success)
+$putdeletepadr (addr_t log_addr, len_t log_len) => (success_t success)
 \layout Standard
 
 This is the same operation as in memory allocation, but here the 
@@ -1771,7 +1772,7 @@ Writer
 \noindent 
 
 \family typewriter 
-$getaddrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
+$gadrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
  action_t action := action_wait, bool melt := TRUE, len_t try_len := log_len)
  => (success_t success, addr_t log_addr, len_t log_len, paddr_t phys_addr,
  plen_t phys_len)
@@ -1790,8 +1791,8 @@ must
 \noindent 
 
 \family typewriter 
-$putputaddr (addr_t log_addr, len_t log_len, prio := prio_background) =>
- (success_t success)
+$putpadr (addr_t log_addr, len_t log_len, prio := prio_background) => (success_t
+ success)
 \layout Paragraph
 
 Physical IO on Pipes
@@ -1802,7 +1803,7 @@ Reader
 \noindent 
 
 \family typewriter 
-$getaddrtrdeleteputaddr (paddr_t phys_addr, plen_t phys_len, action_t action
+$gadrtranswaitdeletepadr (paddr_t phys_addr, plen_t phys_len, action_t action
  := action_wait) => (success_t success)
 \layout Standard
 
@@ -1818,7 +1819,7 @@ Writer
 \noindent 
 
 \family typewriter 
-$getaddrcreatetrputaddr (paddr_t phys_addr, plen_t phys_len, action_t action
+$gadrcreatetranswaitpadr (paddr_t phys_addr, plen_t phys_len, action_t action
  := action_wait, bool melt := TRUE) => (success_t success)
 \layout Standard
 
@@ -2341,7 +2342,7 @@ end{verbatim}}
 
 When calling 
 \family typewriter 
-$tr
+$transwait
 \family default 
  for reading, you will get a string with 
 \family typewriter 
@@ -3400,7 +3401,7 @@ If you need to implement a generic operation, define a generic type for
  its parameters.
  Then implement a standard 
 \family typewriter 
-$transfer
+$trans
 \family default 
  operation (e.g.
  on a dedicated section of the nest such as section 
@@ -4133,7 +4134,7 @@ $get
 \family default 
  or 
 \family typewriter 
-$gettr
+$gettranswait
 \family default 
 .
  Once you have done a 
@@ -4290,7 +4291,7 @@ log_addr
 \emph default 
  is not already present in the cache, it will be fetched via 
 \family typewriter 
-$gettr
+$gettranswait
 \family default 
 .
  As a result, you will get a 
@@ -4302,7 +4303,7 @@ void*
 
 When your access patterns bear high locality, a 
 \family typewriter 
-$gettr
+$gettranswait
 \family default 
  will not be issued every time once again, but rather some previously cached
  pointers will be reused.
@@ -4319,7 +4320,7 @@ pointer cache
 
 NOTICE: when the underlying 
 \family typewriter 
-$gettr
+$gettranswait
 \family default 
  fails due to some reason (e.g.
  undefined 
@@ -4473,7 +4474,7 @@ by hand
 .
  This makes sense after you have called 
 \family typewriter 
-$getaddrcreateget
+$gadrcreateget
 \family default 
  by hand, in order to avoid useless traffic for re-getting the same data
  afterwards.
@@ -4612,7 +4613,7 @@ log_addr
 
 This calls 
 \family typewriter 
-$getaddrcreateget
+$gadrcreateget
 \family default 
  for you and inserts the new element into the PC, already marked as dirty.
  The logical address is returned as result parameter, and a valid C pointer
@@ -4658,7 +4659,7 @@ log_len
 This clears the cache element (if present) and returns the memory to the
  underlying nest via 
 \family typewriter 
-$putdeleteputaddr
+$putdeletepadr
 \family default 
 .
  Note that in general you 

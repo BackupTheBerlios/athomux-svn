@@ -17,7 +17,7 @@ input :<in
 
 output :>out
 
-operation $get,$put,$transfer,$wait
+operation $get,$put,$trans,$wait
 {
   addr_t copy_addr = @log_addr;
   @log_addr -= @#.offset;

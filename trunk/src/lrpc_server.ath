@@ -41,8 +41,8 @@ operation $output_init
   }
   if(@constr) {
     // we allocate lrpc id 0 and 1 now:
-    @=call ##pool:>out$getaddr @args;
+    @=call ##pool:>out$gadr @args;
     @.check(@args->log_addr != 0, "allocated wrong id from idpool");
-    @=call ##pool:>out$getaddr @args;
+    @=call ##pool:>out$gadr @args;
   }
 }

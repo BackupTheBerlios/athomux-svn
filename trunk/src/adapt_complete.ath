@@ -27,7 +27,7 @@ operation $output_init
 }
 
 
-operation $transfer,$tr
+operation $trans,$transwait
 {
 
   // NOTE: Using "@=call ... &myargs" is a bad ATHOMUX programming style.
@@ -65,11 +65,11 @@ operation $transfer,$tr
 operation $op
 {
   switch(@op_code) {
-  case opcode_transfer:
-    @=call $transfer @args;
+  case opcode_trans:
+    @=call $trans @args;
     break;
-  case opcode_tr:
-    @=call $tr @args;
+  case opcode_transwait:
+    @=call $transwait @args;
     break;
   case opcode_output_init:
     @success = TRUE;

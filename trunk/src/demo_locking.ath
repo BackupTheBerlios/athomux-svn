@@ -37,8 +37,8 @@ operation $output_init
 
     for(i=0; i<20; i++) {
       @success = FALSE;
-      @=call :<sub$transfer [i] @args;
-      @.check(!@success, "transfer failed");
+      @=call :<sub$trans [i] @args;
+      @.check(!@success, "trans failed");
     }
 
     printf("---------------------------\n");

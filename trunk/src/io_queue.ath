@@ -229,7 +229,7 @@ operation $output_init
 }
 
 
-// checks if a newly with $getaddr allocated address is inside the range
+// checks if a newly with $gadr allocated address is inside the range
 // of the queue array; if not, the content queue array is moved
 @.define make_valid(addr)
 {
@@ -272,7 +272,7 @@ operation $output_init
 }
 
 
-operation $getaddr
+operation $gadr
 {
   success_t mysuccess;
   addr_t   next_lock;
@@ -312,16 +312,16 @@ reader_retry:
 }
 
 
-operation $unlock // parts of former $putaddr
+operation $unlock // parts of former $padr
 {
   // allow the IO arbiter to process the next request
   waitlistlock_wakeup(1) => (@success);
 }
 
 
-operation $putaddr
+operation $padr
 {
-  // fix missing putaddr in putdeleteputaddr from io_arbiter
+  // fix missing padr in putdeletepadr from io_arbiter
   @success = TRUE;
 }
 
@@ -400,7 +400,7 @@ unlock:
   free_lock(IOQUEUE_GLOBAL_LOCK);
 }
 
-operation $get,$gettr
+operation $get,$gettranswait
 {
   offs_t reqid;
 
@@ -417,7 +417,7 @@ label_fail:
   free_lock(IOQUEUE_GLOBAL_LOCK);
 }
 
-operation $put,$trput,$transfer,$wait,$tr
+operation $put,$transwaitput,$trans,$wait,$transwait
 {
   @success = TRUE;
 }
@@ -426,7 +426,7 @@ operation $put,$trput,$transfer,$wait,$tr
 section (:1:)
 
 // allow external access to the @#.meta struct
-operation $get,$gettr
+operation $get,$gettranswait
 {
   @.check(@log_len != IOQUEUE_META_SIZE || @log_addr != 0, "invalid request");
   @phys_addr = MAKE_PADDR(&@#.meta);
@@ -444,7 +444,7 @@ operation $delete
   @success = TRUE;
 }
 
-// external locking: ensure that one getaddr operation during lock will not block, and that it is possible to move the queue one entry far
+// external locking: ensure that one gadr operation during lock will not block, and that it is possible to move the queue one entry far
 operation $lock
 {
   success_t mysuccess;
@@ -489,7 +489,7 @@ operation $unlock
 //  dumpqueue();
 //}
 
-operation $output_init,$transfer,$wait,$tr,$put,$trput
+operation $output_init,$trans,$wait,$transwait,$put,$transwaitput
 {
   @success = TRUE;
 }
@@ -497,7 +497,7 @@ operation $output_init,$transfer,$wait,$tr,$put,$trput
 
 section (:2:)
 
-operation $transfer
+operation $trans
 {
   ioqueue_req_addr_t i;
   @.check(@direction != direct_stop, "invalid request");

@@ -145,7 +145,7 @@ input :<hook
 
 output :>out
 
-@.define do_transfer(int index, direction_t direction)
+@.define do_trans(int index, direction_t direction)
 {
   void * addr = MAKE_PTR(@phys_addr);
   @.fatal(!addr, "bad addr");
@@ -170,14 +170,14 @@ output :>out
   @.fatal(len>0, "rest len=%lx", len);
 }
 
-operation $transfer,$tr
+operation $trans,$transwait
 {
   count(@op_code);
   int index = @log_addr / DEFAULT_TRANSFER;
   @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
   @.check(!@#.all->used[index], "illegal access at address %llx", @log_addr);
 #ifndef DIRECT_MEM
-  do_transfer(index, @direction);
+  do_trans(index, @direction);
 #else
   @phys_len = DEFAULT_TRANSFER;
 #endif
@@ -190,7 +190,7 @@ operation $wait
   @success = TRUE;
 }
 
-operation $get,$gettr
+operation $get,$gettranswait
 {
   count(@op_code);
   @.fatal(@log_len != DEFAULT_TRANSFER, "log_len != DEFAULT_TRANSFER NYI");
@@ -215,16 +215,16 @@ operation $get,$gettr
   //trace("phys_addr=%lx\n", @phys_addr);
   @log_len = @phys_len = DEFAULT_TRANSFER;
   @version = vers_undef;
-  if(@op_code == opcode_gettr) {
+  if(@op_code == opcode_gettranswait) {
 #ifndef DIRECT_MEM
-    do_transfer(index, direct_read);
+    do_trans(index, direct_read);
 #endif
     @version = vers_newest;
   }
   @success = TRUE;
 }
 
-operation $put,$trput,$putwait
+operation $put,$transwaitput,$putwait
 {
   count(@op_code);
   @.fatal(@log_len != DEFAULT_TRANSFER, "log_len != DEFAULT_TRANSFER NYI");
@@ -233,9 +233,9 @@ operation $put,$trput,$putwait
   @.warn(!@#.all->used[index], "put of undefined element at address %llx", @log_addr);
   @.warn(@prio && !@#.loc->forwrite[index], "you forgot to set the @forwrite parameter at the previous $get when now trying a $put with @prio==%d, @log_addr==%llx\n", @prio, @log_addr);
   @direction = direct_write;
-  if(@op_code == opcode_trput || @prio) {
+  if(@op_code == opcode_transwaitput || @prio) {
 #ifndef DIRECT_MEM
-    do_transfer(index, direct_write);
+    do_trans(index, direct_write);
 #endif
   } else {
 #ifdef DEBUG

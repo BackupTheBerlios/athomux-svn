@@ -92,8 +92,8 @@ operation $output_init
     // instantiate brick
 
     // allocate new memory for program brick
-    @=call :<control$getaddr (DEFAULT_TRANSFER):"" => (@success, @#.pbrick);
-    @.fatal(@success!=TRUE, "getaddr failed");
+    @=call :<control$gadr (DEFAULT_TRANSFER):"" => (@success, @#.pbrick);
+    @.fatal(@success!=TRUE, "gadr failed");
 
     // instantiate program brick
     @=call :<control$instbrick (@#.pbrick, (char *)MAKE_PTR(@args->phys_addr)):@param => (@success);

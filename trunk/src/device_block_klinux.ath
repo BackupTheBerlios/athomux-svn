@@ -12,7 +12,7 @@ desc
 
   Restrictions:
   * The current implementation allows only DBK_RINGBUFFER_SIZE
-    parallel transfer requests.
+    parallel trans requests.
   * You are only allowed to call wait for the last
     DBK_RINGBUFFER_SIZE operations.
 ( * If you call wait for a request which failed,  )
@@ -24,7 +24,7 @@ desc
   NOTE: Linux drivers might require aligned requests,
         e.g. the floppy driver uses a 512 byte alignment.
 enddesc
-//attr transfer_size=0
+//attr trans_size=0
 
 static_header {
 #include <linux/bio.h>
@@ -233,13 +233,13 @@ operation $output_init
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
   struct dbk_request *current_req;
   plen_t len = 0;
   
   if(IS_ERR(@#.bdev) || (@#.bdev == 0)) {
-    @.err("$transfer called for invalid block device!");
+    @.err("$trans called for invalid block device!");
   }
 
   switch(@direction) {
@@ -287,12 +287,12 @@ operation $transfer
 	}
 	current_req->bvec.bv_len = len;
 	current_req->bio.bi_size = len;
-	if(@op_code == opcode_tr) {
+	if(@op_code == opcode_transwait) {
 	  current_req->bio.bi_flags |= (1 << BIO_EVALERR);
-	  // give request pointer to $tr
+	  // give request pointer to $transwait
 	  @phys_addr = MAKE_PADDR(current_req);
 	}
-	dbkreq_dump (current_req, "transfer");
+	dbkreq_dump (current_req, "trans");
 	if(@direction == direct_write)
 	  submit_bio(WRITE, &current_req->bio);
 #if 0
@@ -328,13 +328,13 @@ operation $transfer
 }
 
 
-operation $tr
+operation $transwait
 {
   struct dbk_request *current_req;
   paddr_t oldpaddr = @phys_addr;
-  @op_code = opcode_tr; // to be sure...
-  device_block_klinux_out_0_transfer(on, @args, @param);
-  //on->ops[@sect_code][opcode_transfer](on, @args, @param);
+  @op_code = opcode_transwait; // to be sure...
+  device_block_klinux_out_0_trans(on, @args, @param);
+  //on->ops[@sect_code][opcode_trans](on, @args, @param);
 
   current_req = MAKE_PTR(@phys_addr);
   @phys_addr = oldpaddr;
@@ -344,7 +344,7 @@ operation $tr
   }
 
   @action = action_wait;
-  dbkreq_dump (current_req, "wait(tr)");
+  dbkreq_dump (current_req, "wait(transwait)");
   dbkreq_waiton (current_req);
 }
 

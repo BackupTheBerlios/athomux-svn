@@ -22,9 +22,9 @@ operation $output_init
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
-  printf("$transfer called for %u\n", @mandate);
+  printf("$trans called for %u\n", @mandate);
   @=call :<lock$lock [@mandate] (@mandate, 2) => (@success);
   @.check(!@success, "lock %u failed", @mandate);
   printf("greetings from %u\n", @mandate);

@@ -242,7 +242,7 @@ operation $output_init
     @#.root_addr = out_info.conn_addr;
     // reserve space for our virtual brick instance
     @#.fs_len = DEFAULT_TRANSFER * 256;
-    @=call :<strat$getaddr (@#.fs_len) => (@success, @#.fs_logaddr, @#.fs_len);
+    @=call :<strat$gadr (@#.fs_len) => (@success, @#.fs_logaddr, @#.fs_len);
     trace("got fs_logaddr %llx\n", @#.fs_logaddr);
   }
   if(@destr && @#.fs_logaddr) {
@@ -318,7 +318,7 @@ operation $disconnect
   }
   if(!next_inputinfo->conn_addr) { // create the _parent_ dir instance
     trace("creating '%s'\n", path_elem);
-    @=call :<strat$getaddr (DEFAULT_TRANSFER) => (@success, next_inputinfo->conn_addr);
+    @=call :<strat$gadr (DEFAULT_TRANSFER) => (@success, next_inputinfo->conn_addr);
     @.check (!@success, "cannot allocate space for dir instance");
     @=call :<strat$instbrick (next_inputinfo->conn_addr, "dir_simple") : "" => (@success);
     @.check (!@success, "instantiation of dir failed");
@@ -523,10 +523,10 @@ operation $findconn
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
   if(@log_addr != @#.fs_logaddr) {
-    @=call :<strat$transfer @args;
+    @=call :<strat$trans @args;
 		// virtuall append my infos to the maindir
     if(!@log_addr && @direction == direct_read && @success && @phys_len > 3) {
       @phys_len -= 3;
@@ -577,7 +577,7 @@ operation $wait
   @=call :<strat$op @args;
 }
 
-operation $get,$put,$getaddr
+operation $get,$put,$gadr
 {
   @=call :<strat$op @args;
 }

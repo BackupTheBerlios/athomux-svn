@@ -89,7 +89,7 @@ operation $output_init
   }
 }
 
-operation $transfer,$wait,$tr
+operation $trans,$wait,$transwait
 {
   @=call :<in$OP_NAME @args;
 }

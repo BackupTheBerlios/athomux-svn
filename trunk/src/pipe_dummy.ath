@@ -37,7 +37,7 @@ operation $output_init
   @.check(@log_len >= BUF_LEN, "log_len limit %x exceeded: %llx", BUF_LEN, @log_len);
 }
 
-@.define do_transfer(addr_t start, len_t len, plen_t offs)
+@.define do_trans(addr_t start, len_t len, plen_t offs)
 {
   if(@direction == direct_read) {
     memcpy(MAKE_PTR(@phys_addr+offs), @#.log_buf + start, len);
@@ -46,7 +46,7 @@ operation $output_init
   }
 }
 
-operation $transfer
+operation $trans
 {
   default_checks();
   len_t len = @log_len;
@@ -55,10 +55,10 @@ operation $transfer
     len = BUF_LEN - log_addr;
   }
   @phys_len = len;
-  do_transfer(log_addr, len, 0);
+  do_trans(log_addr, len, 0);
   if(len < @log_len) {
     len = @log_len - len;
-    do_transfer(0, len, @phys_len);
+    do_trans(0, len, @phys_len);
     @phys_len += len;
   }
   @success = TRUE;
@@ -85,7 +85,7 @@ operation $get
   @#.my_pointer += @log_len;
 }
 
-operation $getaddr
+operation $gadr
 {
   default_checks();
   if(!@where) { // writer
@@ -110,7 +110,7 @@ operation $getaddr
   @success = TRUE;
 }
 
-operation $putaddr
+operation $padr
 {
   default_checks();
   if(!@where) { // writer

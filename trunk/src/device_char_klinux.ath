@@ -54,14 +54,14 @@ operation $output_init
   @success = TRUE;
 }
 
-operation $transfer,$tr
+operation $trans,$transwait
 {
   loff_t (*llseek) (struct file *, loff_t, int);
   ssize_t result;
   mm_segment_t old_fs;
 
   @.check(!@#.cdev->f_op, "missing device operations");
-  @.check(@direction == direct_stop, "transfer: direct_stop not implemented");
+  @.check(@direction == direct_stop, "trans: direct_stop not implemented");
 
   if(@log_addr != @#.cdev->f_pos) {
     if((llseek = @#.cdev->f_op->llseek)) { // assignment!

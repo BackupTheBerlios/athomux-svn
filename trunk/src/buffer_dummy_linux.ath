@@ -109,14 +109,14 @@ operation $put
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
 #ifdef DEBUG
   struct node * node = hash_find(@#.table, @log_addr);
-  @.check(!node, "bad transfer(), log_addr %llx\n", @log_addr);
-  @.check(node->phys_addr != @phys_addr, "bad transfer() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);
+  @.check(!node, "bad trans(), log_addr %llx\n", @log_addr);
+  @.check(node->phys_addr != @phys_addr, "bad trans() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);
 #endif
-  @=call :<dev$transfer @args;
+  @=call :<dev$trans @args;
 }
 
 operation $wait

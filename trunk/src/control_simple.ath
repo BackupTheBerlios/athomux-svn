@@ -892,7 +892,7 @@ operation $findconn
   }
 }
 
-operation $transfer
+operation $trans
 {
   if(@direction == direct_read) {
     if(!@log_addr) {
@@ -908,7 +908,7 @@ operation $transfer
   } else if(@direction == direct_write) {
     trace("interpreting '%s'\n", (char*)MAKE_PTR(@phys_addr));
 #if 1
-    @=call ##adapt:>control$transfer @args;
+    @=call ##adapt:>control$trans @args;
 #else
     // this should disappear!
     char * buf = MAKE_PTR(@phys_addr);
@@ -992,7 +992,7 @@ operation $put
   @.abort("not implemented");
 }
 
-operation $getaddr
+operation $gadr
 {
   // no real freespace management, just allocate new virtual address each time
   // ignore input parameters

@@ -43,7 +43,7 @@ init {
 
 output :>out
 
-operation $transfer
+operation $trans
 {
   int success;
 
@@ -63,7 +63,7 @@ operation $transfer
       break;
     case direct_stop:
     default:
-      @.err("transfer: direct_stop not implemented");
+      @.err("trans: direct_stop not implemented");
   }
   @success = TRUE;
 }

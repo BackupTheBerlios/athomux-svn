@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
     {
       char str[DEFAULT_TRANSFER];
       struct args args = { .log_addr = addr, .log_len = DEFAULT_TRANSFER, .phys_addr = (unsigned long)str, .direction = direct_read };
-      root_strategy->ops[0][opcode_transfer]((void*)root_strategy, &args, "");
+      root_strategy->ops[0][opcode_trans]((void*)root_strategy, &args, "");
       if(args.success) {
 	 printf("%s", str);
       }
@@ -31,24 +31,24 @@ int main(int argc, char * argv[])
   bool cmd(addr_t addr, char * str, char * param)
     {
       struct args args = { .log_addr = addr, .log_len = strlen(str), .phys_addr = (unsigned long)str, .direction = direct_write };
-      root_strategy->ops[0][opcode_transfer]((void*)root_strategy, &args, param);
+      root_strategy->ops[0][opcode_trans]((void*)root_strategy, &args, param);
       return args.success;
     }
   addr_t boot(char * str, char * param)
     {
-      struct args args = { .log_len = DEFAULT_TRANSFER, .where = FALSE, .exclu = TRUE, .action = action_wait, .melt = TRUE, .try_len = DEFAULT_TRANSFER, .op_code = opcode_getaddr };
-      root_strategy->ops[0][opcode_getaddr]((void*)root_strategy, &args, param);
+      struct args args = { .log_len = DEFAULT_TRANSFER, .where = FALSE, .exclu = TRUE, .action = action_wait, .melt = TRUE, .try_len = DEFAULT_TRANSFER, .op_code = opcode_gadr };
+      root_strategy->ops[0][opcode_gadr]((void*)root_strategy, &args, param);
       if(!args.success) {
-        printf("!!!!! getaddrcreateget failed\n");
+        printf("!!!!! gadrcreateget failed\n");
 	exit(-1);
       }
       args.log_len = strlen(str);
       args.phys_addr = (unsigned long)str;
       args.direction = direct_write;
-      args.op_code = opcode_transfer;
-      root_strategy->ops[0][opcode_transfer]((void*)root_strategy, &args, param);
+      args.op_code = opcode_trans;
+      root_strategy->ops[0][opcode_trans]((void*)root_strategy, &args, param);
       if(!args.success) {
-        printf("!!!!! transfer '%s' failed\n", str);
+        printf("!!!!! trans '%s' failed\n", str);
 	exit(-1);
       }
       return args.log_addr;

@@ -104,9 +104,9 @@ operation $output_init
     if(count <= 0) {
       break;
     }
-    @=call :<in$gettr (log_addr, DEFAULT_TRANSFER, FALSE) => (success, phys_addr, phys_len);
+    @=call :<in$gettranswait (log_addr, DEFAULT_TRANSFER, FALSE) => (success, phys_addr, phys_len);
     if(!success) {
-      @.abort("gettr failed\n");
+      @.abort("gettranswait failed\n");
     }
     ptr = MAKE_PTR(phys_addr);
     if(memcmp(ptr, buf, DEFAULT_TRANSFER)) {
@@ -134,11 +134,11 @@ operation $output_init
       paddr_t phys_addr;
       plen_t phys_len;
       success_t success;
-      @=call :<in$gettr (0, DEFAULT_TRANSFER, FALSE) => (success, phys_addr, phys_len);
+      @=call :<in$gettranswait (0, DEFAULT_TRANSFER, FALSE) => (success, phys_addr, phys_len);
       @=call :<in$put (0, DEFAULT_TRANSFER, prio_none) => (success);
     }
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t1);
-    printf("gettr time=%11lld\n", ((long long)t1.tv_sec-(long long)t0.tv_sec)*1000LL + ((long long)t1.tv_nsec-(long long)t0.tv_nsec)/1000000LL);
+    printf("gettranswait time=%11lld\n", ((long long)t1.tv_sec-(long long)t0.tv_sec)*1000LL + ((long long)t1.tv_nsec-(long long)t0.tv_nsec)/1000000LL);
     printf("------------------------------------\n");
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t0);
     for(i = 0; i < 1000000; i++) {

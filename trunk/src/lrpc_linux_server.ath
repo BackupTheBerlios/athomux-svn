@@ -14,7 +14,7 @@ desc
   pointer argument semantic:
   copy in out   *args
   copy in       *param
-  copy in out   @phys_addr  ($transfer, $tr)
+  copy in out   @phys_addr  ($trans, $transwait)
   copy in out   @conn1      (out restricted to $instconn)
   copy in       @conn2
   copy    out   @res_conn[] ($getconn, $findconn)
@@ -126,8 +126,8 @@ static long athomux_lrpc_handler(unsigned long id, void __user *u_args, char __u
   }
 
   switch(k_args->op_code) {
-  case opcode_transfer:
-  case opcode_tr:
+  case opcode_trans:
+  case opcode_transwait:
 
     if(likely(k_args->log_len) && likely(k_args->direction != direct_stop)) {
       if(unlikely(k_args->log_len > (unsigned long)-1))
@@ -160,7 +160,7 @@ static long athomux_lrpc_handler(unsigned long id, void __user *u_args, char __u
   case opcode_op:
   case opcode_get:
   case opcode_put:
-  case opcode_trput:
+  case opcode_transwaitput:
   case opcode_clearget:
   case opcode_getaddrclearget:
     free_page(page);

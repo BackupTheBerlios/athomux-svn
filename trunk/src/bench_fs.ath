@@ -64,7 +64,7 @@ output :>dummy
     @#.ix[@#.last%BUFSIZE] = conn.conn_index;
 #ifdef FILE_BENCH
     addr_t test_addr = 0;
-    @=call :<strat$getaddr (DEFAULT_TRANSFER) => (@success, test_addr);
+    @=call :<strat$gadr (DEFAULT_TRANSFER) => (@success, test_addr);
     @.fatal(!@success, "test_linux address generation failed");
     @=call :<strat$instbrick (test_addr, "test_linux") : "/etc/sensors.conf" => (@success);
     @.fatal(!@success, "test_linux instantiation failed");
@@ -92,7 +92,7 @@ operation $output_init
 {
 #ifdef DEBUG
   char buf[DEFAULT_TRANSFER*8];
-  @=call :<strat$transfer (0, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  @=call :<strat$trans (0, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
   if(@success) {
     printf("%s", buf);
   }
@@ -104,7 +104,7 @@ operation $output_init
   @#.fs_logaddr = out_info.conn_addr;
   printf("---------------- init bench_fs %llx ------------------\n", @#.fs_logaddr);
 #ifdef DEBUG
-  @=call :<strat$transfer (@#.fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  @=call :<strat$trans (@#.fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
   if(@success) {
     printf("%s", buf);
   }
@@ -118,7 +118,7 @@ operation $output_init
   }
   printf("de-init all\n");
 #ifdef DEBUG
-  @=call :<strat$transfer (@#.fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  @=call :<strat$trans (@#.fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
   if(@success) {
     printf("%s", buf);
   }

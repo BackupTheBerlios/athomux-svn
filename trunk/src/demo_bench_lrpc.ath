@@ -89,8 +89,8 @@ output :>program
     .action = action_wait,
     .success = FALSE,
   };
-  @=call :<strat[addr_space]$getaddr &myargs;
-  @.check(!myargs.success, "getaddr failed");
+  @=call :<strat[addr_space]$gadr &myargs;
+  @.check(!myargs.success, "gadr failed");
   myargs.success = FALSE;
   strncpy((char *)&myargs.name, brickname, sizeof(myargs.name));
   @=call :<strat[addr_space]$instbrick &myargs : myparam;
@@ -142,7 +142,7 @@ output :>program
     };
     char myparam[16] = "";
     // get LRPC id from idpool
-    @=call :<idpool[conn->addr_space]$getaddr &myargs;
+    @=call :<idpool[conn->addr_space]$gadr &myargs;
     @.check(!myargs.success, "idpool allocation failed");
     conn->lrpc_id = myargs.log_addr;
     snprintf((char *)&myparam, sizeof(myparam), "%llu", myargs.log_addr);

@@ -107,14 +107,14 @@ typedef enum {
   // OUTPUT OPERATIONS
   opcode_output_init,
   // static
-  opcode_transfer,
+  opcode_trans,
   opcode_wait,
   opcode_get,
   opcode_put,
   opcode_lock,
   opcode_unlock,
-  opcode_getaddr,
-  opcode_putaddr,
+  opcode_gadr,
+  opcode_padr,
   // dynamic
   opcode_create,
   opcode_delete,
@@ -129,18 +129,18 @@ typedef enum {
   opcode_getconn,
   opcode_findconn,
   // combinations
-  opcode_tr,
-  opcode_gettr,
-  opcode_trput,
+  opcode_transwait,
+  opcode_gettranswait,
+  opcode_transwaitput,
   opcode_putwait,
   opcode_createget,
-  opcode_getaddrcreateget,
-  opcode_getaddrgettr,
-  opcode_putputaddr,
+  opcode_gadrcreateget,
+  opcode_gadrgettranswait,
+  opcode_putpadr,
   opcode_putdelete,
-  opcode_putdeleteputaddr,
-  opcode_getaddrtrdeleteputaddr,
-  opcode_getaddrcreatetrputaddr,
+  opcode_putdeletepadr,
+  opcode_gadrtranswaitdeletepadr,
+  opcode_gadrcreatetranswaitpadr,
   // last dummy index
   opcode_output_max,
   // INPUT OPERATIONS
@@ -254,14 +254,14 @@ union connector {
 
 #define DEF_OPERATION(sect)                                                   \
 static_operation missing_##sect##_output_init;                                \
-static_operation missing_##sect##_transfer;                                   \
+static_operation missing_##sect##_trans;                                   \
 static_operation missing_##sect##_wait;                                       \
 static_operation missing_##sect##_get;                                        \
 static_operation missing_##sect##_put;                                        \
 static_operation missing_##sect##_lock;                                       \
 static_operation missing_##sect##_unlock;                                     \
-static_operation missing_##sect##_getaddr;                                    \
-static_operation missing_##sect##_putaddr;                                    \
+static_operation missing_##sect##_gadr;                                    \
+static_operation missing_##sect##_padr;                                    \
                                                                               \
 static_operation missing_##sect##_create;                                     \
 static_operation missing_##sect##_delete;                                     \
@@ -276,18 +276,18 @@ static_operation missing_##sect##_disconnect;                                 \
 static_operation missing_##sect##_getconn;                                    \
 static_operation missing_##sect##_findconn;                                   \
                                                                               \
-static_operation missing_##sect##_tr;                                         \
-static_operation missing_##sect##_gettr;                                      \
-static_operation missing_##sect##_trput;                                      \
+static_operation missing_##sect##_transwait;                                         \
+static_operation missing_##sect##_gettranswait;                                      \
+static_operation missing_##sect##_transwaitput;                                      \
 static_operation missing_##sect##_putwait;                                    \
 static_operation missing_##sect##_createget;                                  \
-static_operation missing_##sect##_getaddrcreateget;                           \
-static_operation missing_##sect##_getaddrgettr;                               \
-static_operation missing_##sect##_putputaddr;                                 \
+static_operation missing_##sect##_gadrcreateget;                           \
+static_operation missing_##sect##_gadrgettranswait;                               \
+static_operation missing_##sect##_putpadr;                                 \
 static_operation missing_##sect##_putdelete;                                  \
-static_operation missing_##sect##_putdeleteputaddr;                           \
-static_operation missing_##sect##_getaddrtrdeleteputaddr;                     \
-static_operation missing_##sect##_getaddrcreatetrputaddr;                     \
+static_operation missing_##sect##_putdeletepadr;                           \
+static_operation missing_##sect##_gadrtranswaitdeletepadr;                     \
+static_operation missing_##sect##_gadrcreatetranswaitpadr;                     \
                                                                               \
 static_operation missing_##sect##_input_init;                                 \
 static_operation missing_##sect##_retract;                                    \
@@ -310,14 +310,14 @@ DEF_OPERATION(3)
 
 MAKE_ALL_ALIAS(output_init)
 // static ops
-MAKE_ALL_ALIAS(transfer)
+MAKE_ALL_ALIAS(trans)
 MAKE_ALL_ALIAS(wait)
 MAKE_ALL_ALIAS(get)
 MAKE_ALL_ALIAS(put)
 MAKE_ALL_ALIAS(lock)
 MAKE_ALL_ALIAS(unlock)
-MAKE_ALL_ALIAS(getaddr)
-MAKE_ALL_ALIAS(putaddr)
+MAKE_ALL_ALIAS(gadr)
+MAKE_ALL_ALIAS(padr)
 // strategy ops
 MAKE_ALL_ALIAS(instbrick)
 MAKE_ALL_ALIAS(deinstbrick)
@@ -332,18 +332,18 @@ MAKE_ALL_ALIAS(create)
 MAKE_ALL_ALIAS(delete)
 MAKE_ALL_ALIAS(move)
 // combinations
-MAKE_ALL_ALIAS(tr)
-MAKE_ALL_ALIAS(gettr)
-MAKE_ALL_ALIAS(trput)
+MAKE_ALL_ALIAS(transwait)
+MAKE_ALL_ALIAS(gettranswait)
+MAKE_ALL_ALIAS(transwaitput)
 MAKE_ALL_ALIAS(putwait)
 MAKE_ALL_ALIAS(createget)
-MAKE_ALL_ALIAS(getaddrcreateget)
-MAKE_ALL_ALIAS(getaddrgettr)
-MAKE_ALL_ALIAS(putputaddr)
+MAKE_ALL_ALIAS(gadrcreateget)
+MAKE_ALL_ALIAS(gadrgettranswait)
+MAKE_ALL_ALIAS(putpadr)
 MAKE_ALL_ALIAS(putdelete)
-MAKE_ALL_ALIAS(putdeleteputaddr)
-MAKE_ALL_ALIAS(getaddrtrdeleteputaddr)
-MAKE_ALL_ALIAS(getaddrcreatetrputaddr)
+MAKE_ALL_ALIAS(putdeletepadr)
+MAKE_ALL_ALIAS(gadrtranswaitdeletepadr)
+MAKE_ALL_ALIAS(gadrcreatetranswaitpadr)
 
 MAKE_ALL_ALIAS(input_init)
 MAKE_ALL_ALIAS(retract)

@@ -30,8 +30,8 @@ operation $op
 {
   op_t op_code = @op_code;
   switch(op_code) {
-  case opcode_getaddr:
-  case opcode_getaddrcreateget:
+  case opcode_gadr:
+  case opcode_gadrcreateget:
     fprintf(@#.file, "op_%s(:%d:) '%s' ", op_names[op_code], @sect_code, @param);
     break;
   default:
@@ -39,16 +39,16 @@ operation $op
   }
   if(@#.do_phys) {
     switch(op_code) {
-    case opcode_transfer:
-    case opcode_tr:
-    case opcode_trput:
+    case opcode_trans:
+    case opcode_transwait:
+    case opcode_transwaitput:
       fprintf(@#.file, "phys_addr=%lx ", @phys_addr);
       break;
     default:;
     }
   }
   switch(op_code) {
-  case opcode_transfer:
+  case opcode_trans:
     fprintf(@#.file, "direction=%d prio=%d", @direction, @prio);
     break;
   case opcode_wait:
@@ -63,7 +63,7 @@ operation $op
   case opcode_unlock:
     fprintf(@#.file, "try_addr=%llx try_len=%llx", @try_addr, @try_len);
     break;
-  case opcode_getaddr:
+  case opcode_gadr:
     fprintf(@#.file, "log_len=%llx where=%d exclu=%d action=%d try_len=%llx", @log_len, @where, @exclu, @action, @try_len);
     break;
   case opcode_create:
@@ -73,18 +73,18 @@ operation $op
   case opcode_move:
     fprintf(@#.file, "offset=%llx offset_max=%llx", @offset, @offset_max);
     break;
-  case opcode_tr:
+  case opcode_transwait:
     fprintf(@#.file, "direction=%d prio=%d", @direction, @prio);
     break;
-  case opcode_gettr:
+  case opcode_gettranswait:
     fprintf(@#.file, "forwrite=%d prio=%d", @forwrite, @prio);
     break;
   case opcode_put:
-  case opcode_trput:
+  case opcode_transwaitput:
   case opcode_putwait:
     fprintf(@#.file, "prio=%d", @prio);
     break;
-  case opcode_getaddrcreateget:
+  case opcode_gadrcreateget:
     fprintf(@#.file, "log_len=%llx exclu=%d action=%d create=%d melt=%d try_len=%llx", @log_len, @exclu, @action, @clear, @melt, @try_len);
     break;
   default:;
@@ -97,12 +97,12 @@ operation $op
   fprintf(@#.file, "\tsuccess=%d ", @success);
   if(@#.do_phys) {
     switch(op_code) {
-    case opcode_transfer:
-    case opcode_tr:
+    case opcode_trans:
+    case opcode_transwait:
       fprintf(@#.file, "phys_len=%lx", @phys_len);
       break;
     case opcode_get:
-    case opcode_gettr:
+    case opcode_gettranswait:
     case opcode_createget:
       fprintf(@#.file, "phys_addr=%lx phys_len=%lx ", @phys_addr, @phys_len);
       break;
@@ -117,10 +117,10 @@ operation $op
   case opcode_unlock:
     fprintf(@#.file, "try_addr=%llx try_len=%llx", @try_addr, @try_len);
     break;
-  case opcode_getaddr:
-  case opcode_getaddrcreateget:
+  case opcode_gadr:
+  case opcode_gadrcreateget:
     fprintf(@#.file, "log_addr=%llx log_len=%llx", @log_addr, @log_len);
-    if(@#.do_phys && op_code == opcode_getaddrcreateget) {
+    if(@#.do_phys && op_code == opcode_gadrcreateget) {
       fprintf(@#.file, "phys_addr=%lx phys_len=%lx ", @phys_addr, @phys_len);
     }
     break;

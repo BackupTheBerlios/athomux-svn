@@ -124,7 +124,7 @@ operation $output_init
   }
 }
 
-@.func transfer_statinfo (index_t index)
+@.func trans_statinfo (index_t index)
 {
   struct entry * entry = PC_GET(dirtable, index * ENTRY_SIZE, ENTRY_SIZE);
   struct entry_desc * desc = MAKE_PTR(@phys_addr);
@@ -150,7 +150,7 @@ operation $output_init
   @success = TRUE;
 }
 
-operation $transfer
+operation $trans
 {
   @.check(@log_len != DEFAULT_TRANSFER, "access to multiple dirinfo blocks NYI");
   struct dir_control_block * control = PC_GET(dirtable, 0, ENTRY_SIZE);
@@ -158,7 +158,7 @@ operation $transfer
   if(index >= control->entry_count) {
     return;
   }
-  transfer_statinfo(index);
+  trans_statinfo(index);
 }
 
 operation $wait
@@ -366,9 +366,9 @@ operation $move
 
 section (:STAT_SECTION:)
 
-operation $transfer
+operation $trans
 {
-  transfer_statinfo(@:>.entry_index);
+  trans_statinfo(@:>.entry_index);
 }
 
 
