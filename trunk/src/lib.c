@@ -26,6 +26,9 @@ char blanks[32] = "                               ";
 
 void open_debug()
 {
+#ifdef DEBUG
+  setvbuf(stdout, NULL, _IONBF, 0);
+#endif
 #include "../debug.init"
 }
 
@@ -69,7 +72,7 @@ void init_all_conns(const struct loader * loader, int type, void * brick, struct
   }
   if(args->constr) {
     for(load_conn = loader->conn; i > 0; load_conn++, i--) {
-      if(type >= 0 && load_conn->type != type) {
+      if(!load_conn->autoinit || (type >= 0 && load_conn->type != type)) {
 	continue;
       }
       do_it();
@@ -79,7 +82,7 @@ void init_all_conns(const struct loader * loader, int type, void * brick, struct
     }
   } else {
     for(load_conn = loader->conn + i - 1; i > 0; load_conn--, i--) {
-      if(type >= 0 && load_conn->type != type) {
+      if(!load_conn->autoinit || (type >= 0 && load_conn->type != type)) {
 	continue;
       }
       do_it();

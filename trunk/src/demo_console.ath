@@ -34,7 +34,7 @@ desc
 	
                   +-----------+
 	              | thread    |	
-	:>otherWay ---|           |--- :<workB (call $wait here to copy text from console userB to userA)
+	:>othWay -----|           |--- :<workB (call $wait here to copy text from console userB to userA)
 	              | splitterB |
 	              +-----------+
 enddesc
@@ -54,7 +54,7 @@ instance #thread_ulinux as splitterA;
 wire #:>oneWay as ##splitterA:<exec;
 wire ##splitterA:>cpu as #:<workA;
 instance #thread_ulinux as splitterB;
-wire #:>otherWay as ##splitterB:<exec;
+wire #:>othWay as ##splitterB:<exec;
 wire ##splitterB:>cpu as #:<workB;
 
 @.define copytext (PRODUCER, CONSUMER) {
@@ -89,7 +89,7 @@ local output:>oneWay
 		copytext (##userA, ##userB);
 	}
 
-local output:>otherWay
+local output:>othWay
 
 	operation $wait {
 		copytext (##userB, ##userA);
@@ -108,7 +108,7 @@ output:>program
 			@=outputcall ##userB:>read$output_init @args;
 			@=outputcall ##userB:>write$output_init @args;
 			@=outputcall #:>oneWay$output_init @args;
-			@=outputcall #:>otherWay$output_init @args;
+			@=outputcall #:>othWay$output_init @args;
 			@=outputcall ##splitterA:>cpu$output_init @args;
 			@=outputcall ##splitterB:>cpu$output_init @args;
 			

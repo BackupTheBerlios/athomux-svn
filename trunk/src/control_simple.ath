@@ -190,7 +190,7 @@ index_t find_load_conn(struct brick_header * brick, char * name)
   int i;
   for(i = 0; i < loader->conn_count; i++) {
     const struct load_conn * try = &loader->conn[i];
-    if(strcmp(try->name, name)) continue;
+    if(!try->export || strcmp(try->name, name)) continue;
     rawtrace("found '%s'\n", try->name);
     return i;
   }
@@ -596,9 +596,14 @@ const struct loader ** loader;
 for(loader = loaders; *loader; loader++) {
   (*loader)->static_init();
 }
-// [1] is the control output; beware when adding/removing connectors
-create_conn(boot, &boot->connector[1], &conns_control_simple[1], 0);
-insert_conn(boot, &boot->connector[1]);
+index_t conn_ix = find_load_conn(boot, "control");
+@.rawfatal(conn_ix < 0, "could not find own control output");
+rawtrace("conn_ix=%d\n", conn_ix);
+index_t ix2 = conns_control_simple[conn_ix].start_index;
+rawtrace("ix2=%d\n", ix2);
+create_conn(boot, &boot->connector[ix2], &conns_control_simple[conn_ix], 0);
+boot->connector[ix2].c_param = "default-control";
+insert_conn(boot, &boot->connector[ix2]);
 boot->connector[1].c_param = boot->b_param;
 boot->addr = REPRES_MAX;
 root_instance = GET_BRICK(boot);

@@ -476,6 +476,9 @@ struct load_conn {
   const init_conn exit_code;
   operation init_conn;
   bool type;
+  bool export;
+  bool preinit;
+  bool autoinit;
   index_t start_index;
   index_t count;
   poffs_t offset;
