@@ -18,9 +18,15 @@ CC=$(TIME)  gcc
 all : all_targets
 
 defs.make: Makefile makegen.pl pconf.* cconf.* target.* *.ath
+ifdef SUBMAKE
+	@echo Warning: Infinite make recursion attempt detected. There might be a problem with your file timestamps!
+else
 	./makegen.pl
-	@$(MAKE) -isf defs.make check_broken >/dev/null 2>/dev/null
-	@$(MAKE) -isf defs.make show_broken
+# do recursive calls to check for broken targets.
+# (if you want to add checks for new targets, take pconf.klinux as example)
+	@$(MAKE) SUBMAKE=1 -is check_broken >/dev/null 2>/dev/null
+	@$(MAKE) SUBMAKE=1 -s show_broken
+endif
 
 allobjs=$(objs) strat.o
 

@@ -12,8 +12,13 @@ LINSRC:=/lib/modules/$(shell uname -r)/build
 	$(MAKE) -C $(patsubst %/scripts/mod/modpost,%,$@) scripts
 	test -d $(patsubst %/modpost,%,$@) || mkdir -p $(patsubst %/modpost,%,$@) && ln -s ../modpost $@
 
+# checks for broken targets:
+# (copy and adapt the following lines to your pconf if you need checks too)
 .DELETE_ON_ERROR: $(pconf)/%/check_can_build.o
 .PHONY: check_broken
+
+# add dependencies to */check_can_build.o ...
 check_broken: $(patsubst %/,%/check_can_build.o,$(dir $(filter $(pconf)/%,$(target_list))))
 
+# ...and check if it was built
 broken_targets+=$(filter-out $(patsubst %/check_can_build.o,%/%,$(wildcard $(pconf)/*/check_can_build.o)),$(filter $(pconf)/%,$(target_list)))

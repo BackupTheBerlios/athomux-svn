@@ -300,6 +300,8 @@ foreach my $pconf (@pconfs) {
 print DEFS "\n$text\n";
 
 ###################
+# DO NOT MOVE THE FOLLOWING TARGETS TO NORMAL MAKEFILE;
+# they depend on variable evaluation at the time of inclusion of defs.make
 
 print DEFS ".IGNORE: check_broken\n";
 print DEFS ".PHONY: check_broken show_broken all_targets\n";
