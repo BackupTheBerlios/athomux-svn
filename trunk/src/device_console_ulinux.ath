@@ -1,0 +1,204 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux 
+context: cconf ulinux
+
+brick #device_console_ulinux
+
+purpose Provides a console window for user IO.
+
+desc
+	        +---------+        
+	        |         +--- read
+	buf ----+         |
+	        |         +-- write
+	        +---------+        
+
+	Each brick instance starts a terminal window and provides two pipes
+	to write text (via "write") to or to read text (via "read") from the user.
+	NOTE: currently, only physical IO is implemented on these pipes!
+	This will change as soon as a fully functional memory device brick (see below)
+	is available.
+	
+	The input "buf" is used by this brick to store it's status and as a
+	memory source for the outputs (all memory io is redirected to "buf"),
+	so a dynamic nest with memory semantics and address allocation capabilities
+	is necessary there.
+enddesc
+
+static_header {
+	#include <sys/types.h>
+	#include <sys/stat.h>
+	#include <unistd.h>
+	#include <signal.h>
+	#include <fcntl.h>
+
+	// An executable communicating with the calling brick via stdin/stdout.
+	#define DEFAULT_CHILD_PROGRAM "/home/nieserd/coding/athomux/trunk/src/ulinux/ulinux/graph_console"
+	// Indices into file descriptor arrays holding the pipes to the child prog.
+	#define READ 0
+	#define WRITE 1
+	#define READ_BUF_SIZE 1024
+}
+
+data {
+	// Necessary until there is a memory device with free access to any logical
+	// address.
+	pid_t child_pid;
+	int to_child[2], from_child[2];
+}
+
+/* Brick instantiation. */
+init {
+	@#.child_pid = -1;
+	if (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0) {
+		fputs("Error creating pipes for connection to child program!", stderr);
+		exit(1);
+	}
+	int pid = fork();
+	if (pid < 0) {
+		 fputs("Error creating child process!", stdout);
+		 exit(1);
+	}
+	else if (pid == 0) {
+		// Child process:
+		// Link the pipes to stdin/stdout, close the pipes' other ends.
+		close(@#.to_child[WRITE]);
+		close(@#.from_child[READ]);
+		if (dup2(@#.to_child[READ], STDIN_FILENO) < 0 || dup2(@#.from_child[WRITE], STDOUT_FILENO) < 0) {
+			fputs("Error linking the pipes to child process!", stderr);
+			exit(1);
+		}
+		// ...and start the specified child terminal program.
+		execl(DEFAULT_CHILD_PROGRAM, DEFAULT_CHILD_PROGRAM, NULL);
+		fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!", stderr);
+		exit(1);
+	}
+	else {
+		// Parent process:
+		// Close the pipes' ends that belong to the child.
+		@#.child_pid = pid;
+		close(@#.to_child[READ]);
+		@#.to_child[READ] = -1;
+		close(@#.from_child[WRITE]);
+		@#.from_child[WRITE] = -1;
+	}
+}
+
+/* Brick deinstantiation. */
+exit {
+	if (@#.child_pid > 0) {
+		kill(@#.child_pid, SIGTERM);
+	}
+}
+
+/* Storage for brick status. */
+input:<buf
+
+/* Input pipe, from where user input can be read. 
+ * Right now, only physical input via $gadrtranswaitdeletepadr is implemented, due to the lack of a fully functional memory device brick that could be used as buffer. */
+output:>read
+
+	data {
+		addr_t read_buf_addr;
+		len_t read_buf_pos;
+		len_t read_buf_len;
+	}
+
+	operation $output_init {
+		if (@constr == TRUE && @destr == FALSE) {
+			success_t ok;
+			@=outputcall :<buf$gadr (READ_BUF_SIZE) => (ok, @:>.read_buf_addr, @:>.read_buf_len);
+			@.fatal (!ok || @:>.read_buf_len < READ_BUF_SIZE, "Error allocating read buffer!");
+			@=outputcall :<buf$create (@:>.read_buf_addr, @:>.read_buf_len) => (ok);
+			@.fatal (!ok, "Error creating read buffer!");
+			@:>.read_buf_pos = @:>.read_buf_len;
+		}
+		else if (@constr == FALSE && @destr == TRUE) {
+			success_t ok;
+			@=outputcall :<buf$delete (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
+			@=outputcall :<buf$padr (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
+		}
+	}
+
+	/* Preparation for any kind of input from this pipe. */
+	operation $gadr {
+		@.err ("$gadr not implemented!");
+	}
+
+	/* Physical pipe input. */
+	operation $gadrtranswaitdeletepadr {
+		@.check (@phys_len <= 0, "Negative phys_len!");
+		success_t ok;
+		paddr_t read_buf_paddr;
+		plen_t read_buf_plen;
+		version_t read_buf_version;
+		// Get pointer to read buffer.
+		@=outputcall :<buf$get (@:>.read_buf_addr, READ_BUF_SIZE) => (ok, read_buf_paddr, read_buf_plen, read_buf_version);
+		@.check (!ok || read_buf_plen < READ_BUF_SIZE, "Error getting read buffer!");
+		// Update read buffer if necessary.
+		if (read_buf_version != vers_newest) {
+			@=outputcall :<buf$transwait (@:>.read_buf_addr, READ_BUF_SIZE, read_buf_paddr, direct_read) => (ok, read_buf_plen);
+			@.check (!ok || read_buf_plen < READ_BUF_SIZE, "Error updating read buffer!");
+		}
+		// Copy from read buffer to destination address until LF found or destination full.
+		char *const read_buf = MAKE_PTR (read_buf_paddr);
+		char *const dest_buf = MAKE_PTR (@phys_addr);
+		char *dest_write = dest_buf;
+		char *const dest_end = MAKE_PTR (@phys_addr + @phys_len);
+		bool hit_lf = FALSE;
+		while (!hit_lf && dest_write < dest_end) {
+			fflush(stdout);
+			// Refill read buffer if empty.
+			if (@:>.read_buf_pos == @:>.read_buf_len) {
+				@:>.read_buf_len = (len_t)read(@#.from_child[READ], read_buf, READ_BUF_SIZE);
+				@.check (@:>.read_buf_len <= 0, "Error reading from user!");
+				@:>.read_buf_pos = 0;
+			}
+			char *buf_read = (char *)MAKE_PTR (read_buf_paddr + (plen_t)@:>.read_buf_pos);
+			char *const read_buf_end = MAKE_PTR (read_buf_paddr + (plen_t)@:>.read_buf_len);
+			while (buf_read < read_buf_end && dest_write < dest_end) {
+				*dest_write++ = *buf_read;
+				if (*buf_read++ == '\n') {
+					hit_lf = TRUE;
+					break;
+				}
+			}
+			@:>.read_buf_pos = (len_t)(buf_read - read_buf);
+		}
+		// Release buffer and set return values.
+		@=outputcall :<buf$put (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
+		@phys_len = (plen_t)(dest_write - dest_buf);
+		// FIXME: BUG? shouldn't the length be returned in @phys_len?
+		@log_len = @phys_len;
+		@success = TRUE;
+	}
+	
+	/* Default operation behaviour to be implemented by :<buf. */
+	operation $op {
+		@=outputcall :<buf$op @args;
+	}
+	
+
+/* Output pipe. Strings written to it will be displayed to the user.
+ * Right now only physical output via $gadrcreatetranswaitpadr is implemented, due to the lack of a fully functional memory device brick that could be used as buffer. */
+output:>write
+
+	/* Finalization of any kind of output to this pipe. */
+	operation $padr {
+		@.err ("$padr not implemented!");
+	}
+
+	/* Physical pipe output. */
+	operation $gadrcreatetranswaitpadr {
+		@.check (@phys_len <= 0, "phys_len <= 0");
+		@phys_len = write(@#.to_child[WRITE], MAKE_PTR (@phys_addr), @phys_len);
+		@success = TRUE;
+	}
+
+	/* Default operation behaviour to be implemented by :<buf. */
+	operation $op {
+		@=outputcall :<buf$op @args;
+	}

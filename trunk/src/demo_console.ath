@@ -1,0 +1,125 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux 
+context: cconf ulinux
+
+brick #demo_console
+
+purpose Demonstrate the #device_console_ulinux brick.
+
+desc
+	Call this program via "athload --wait" or it will quit immediately.
+	This program needs the target "ulinux/ulinux/graph_console"
+	
+	local bricks, inputs and outputs:
+	                                       +----------------+
+	                                       | device_console +--- r
+	                                   +---+                |
+	+------------+   +-------------+   |   | userA          +--- w
+	| device_mem |   | adapt_multi |   |   +----------------+
+	|            +---+             +---+
+	| memory     |   | sync        |   |   +----------------+
+	+------------+   +-------------+   |   | device_console +--- r
+	                                   +---+                |
+                                           | userB          +--- w
+										   +----------------+
+										   
+	              +-----------+
+	              | thread    |
+	:>oneWay -----+           +--- :<workA (call $wait here to copy text from console userA to userB)
+	              | splitterA |
+	              +-----------+
+	
+                  +-----------+
+	              | thread    |	
+	:>otherWay ---|           |--- :<workB (call $wait here to copy text from console userB to userA)
+	              | splitterB |
+	              +-----------+
+enddesc
+
+static_header {
+	#define BUF_SIZE 1024
+}
+
+instance #device_mem_ulinux as memory;
+instance #adapt_multi as sync;
+wire ##memory:>out as ##sync:<in;
+instance #device_console_ulinux as userA;
+wire ##sync:>out as ##userA:<buf;
+instance #device_console_ulinux as userB;
+wire ##sync:>out as ##userB:<buf;
+instance #thread_ulinux as splitterA;
+wire #:>oneWay as ##splitterA:<exec;
+wire ##splitterA:>cpu as #:<workA;
+instance #thread_ulinux as splitterB;
+wire #:>otherWay as ##splitterB:<exec;
+wire ##splitterB:>cpu as #:<workB;
+
+@.define copytext (PRODUCER, CONSUMER) {
+	char buf[BUF_SIZE];
+	plen_t buf_len;
+	success_t ok;
+	while (TRUE) {
+		// Read one line of text, up to BUF_SIZE bytes.
+		@=outputcall PRODUCER:>read$gadrtranswaitdeletepadr [@mandate] (MAKE_PADDR (buf), (plen_t)BUF_SIZE) => (ok, buf_len);
+		if (!ok) {
+			puts("Fehler beim Lesen von PRODUCER!");
+			@success = FALSE;
+			break;
+		}
+		// HACK: @phys_len should be returned by $gaddrtranswaitdeletepadr
+		if (buf_len == 0) {
+			puts("Nix mehr da bei PRODUCER!");
+			@success = TRUE;
+			break;
+		}
+		@=outputcall CONSUMER:>write$gadrcreatetranswaitpadr [@mandate] (MAKE_PADDR (buf), buf_len) => (ok);
+	}
+}
+
+local input:<workA
+
+local input:<workB
+
+local output:>oneWay
+
+	operation $wait {
+		copytext (##userA, ##userB);
+	}
+
+local output:>otherWay
+
+	operation $wait {
+		copytext (##userB, ##userA);
+	}
+	
+input:<strat
+
+output:>program
+
+	operation $output_init {
+		if (@constr == TRUE && @destr == FALSE) {
+			@=outputcall ##memory:>out$output_init @args;
+			@=outputcall ##sync:>out$output_init @args;
+			@=outputcall ##userA:>read$output_init @args;
+			@=outputcall ##userA:>write$output_init @args;
+			@=outputcall ##userB:>read$output_init @args;
+			@=outputcall ##userB:>write$output_init @args;
+			@=outputcall #:>oneWay$output_init @args;
+			@=outputcall #:>otherWay$output_init @args;
+			@=outputcall ##splitterA:>cpu$output_init @args;
+			@=outputcall ##splitterB:>cpu$output_init @args;
+			
+			char buf[256];
+			success_t ok;
+			strcpy(buf, "UserA!\n");
+			@=outputcall ##userA:>write$gadrcreatetranswaitpadr (MAKE_PADDR (buf), (plen_t)strlen(buf)) => (ok);
+			strcpy(buf, "UserB!\n");
+			@=outputcall ##userB:>write$gadrcreatetranswaitpadr (MAKE_PADDR (buf), (plen_t)strlen(buf)) => (ok);
+
+			@=outputcall #:<workA$wait [40] @args;
+			@=outputcall #:<workB$wait [50] @args;
+		}
+	}
