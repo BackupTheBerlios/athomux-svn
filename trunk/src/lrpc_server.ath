@@ -29,6 +29,8 @@ instance #helper_idpool as pool;
 wire ##pool:>out as ##lrpc0:<in;
 
 
+input :<strat
+
 output :>program
 
 operation $output_init

@@ -41,7 +41,7 @@ init {
 output :>out
 
 
-operation $output_init,$trans,$wait,$transwait,$move,$create,$lock,$unlock,$delete,$gadr,$findconn,$getconn,$connect,$disconnect,$instconn,$deinstconn,$instbrick,$deinstbrick
+operation $trans,$wait,$transwait,$move,$create,$lock,$unlock,$delete,$gadr,$findconn,$getconn,$connect,$disconnect,$instconn,$deinstconn,$instbrick,$deinstbrick
 {
 #if 1
   if(lrpc_call(@#.id, @args, @param)<0) {
