@@ -88,7 +88,7 @@ operation $get
 operation $gadr
 {
   default_checks();
-  if(!@where) { // writer
+  if(!@reader) { // writer
    if(!@log_len) {
      @#.closed = TRUE;
    } else {
@@ -113,7 +113,7 @@ operation $gadr
 operation $padr
 {
   default_checks();
-  if(!@where) { // writer
+  if(!@reader) { // writer
     @=call ##lock_read:>lock$unlock (@log_addr, @log_len) => (@success);
   } else { // reader
     @=call ##lock_write:>lock$unlock (@log_addr + BUF_LEN, @log_len) => (@success);

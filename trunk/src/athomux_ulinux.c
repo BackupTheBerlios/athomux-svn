@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
   }
 
   addr_t boot(char * str, char * param) {  
-    struct args args = { .log_len = DEFAULT_TRANSFER, .where = FALSE, .exclu = TRUE, .action = action_wait, .melt = TRUE, .try_len = DEFAULT_TRANSFER, .op_code = opcode_gadr };
+    struct args args = { .log_len = DEFAULT_TRANSFER, .reader = FALSE, .exclu = TRUE, .action = action_wait, .melt = TRUE, .try_len = DEFAULT_TRANSFER, .op_code = opcode_gadr };
     root_strategy->ops[0][opcode_gadr]((void*)root_strategy, &args, param);
     if(!args.success) {
       printf("!!!!! gadr failed\n");

@@ -285,7 +285,7 @@ void missing_createget(const union connector * on, struct args * args, const cha
 
 void missing_gadrcreate(const union connector * on, struct args * args, const char * param)
 {
-  args->where = FALSE;
+  args->reader = FALSE;
   args->op_code = opcode_gadr;
   on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
@@ -298,7 +298,7 @@ void missing_gadrcreate(const union connector * on, struct args * args, const ch
 
 void missing_gadrcreateget(const union connector * on, struct args * args, const char * param)
 {
-  args->where = FALSE;
+  args->reader = FALSE;
   args->op_code = opcode_gadr;
   on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
@@ -311,7 +311,7 @@ void missing_gadrcreateget(const union connector * on, struct args * args, const
 
 void missing_gadrgettranswait(const union connector * on, struct args * args, const char * param)
 {
-  args->where = TRUE;
+  args->reader = TRUE;
   args->op_code = opcode_gadr;
   on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
@@ -331,7 +331,7 @@ void missing_putpadr(const union connector * on, struct args * args, const char 
     return;
   }
   args->success = FALSE;
-  args->where = TRUE;
+  args->reader = TRUE;
   args->op_code = opcode_padr;
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
@@ -369,7 +369,6 @@ void missing_putdeletepadr(const union connector * on, struct args * args, const
     return;
   }
   args->success = FALSE;
-  args->where = FALSE;
   args->op_code = opcode_padr;
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
@@ -378,7 +377,7 @@ void missing_gadrtranswaitdeletepadr(const union connector * on, struct args * a
 {
   args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
-  args->where = TRUE;
+  args->reader = TRUE;
   args->exclu = TRUE;
   on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
@@ -393,6 +392,7 @@ void missing_gadrtranswaitdeletepadr(const union connector * on, struct args * a
   }
   args->success = FALSE;
   args->op_code = opcode_delete;
+  args->log_len = args->phys_len;
   on->output.ops[args->sect_code][opcode_delete](on, args, param);
   if(!args->success) {
     return;
@@ -406,16 +406,17 @@ void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * a
 {
   args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
-  args->where = TRUE;
+  args->reader = TRUE;
   args->exclu = TRUE;
   on->output.ops[args->sect_code][opcode_gadr](on, args, param);
   if(!args->success) {
     return;
   }
   args->success = FALSE;
-  args->op_code = opcode_delete;
+  args->op_code = opcode_create;
   args->clear = FALSE;
-  on->output.ops[args->sect_code][opcode_delete](on, args, param);
+  args->melt = TRUE;
+  on->output.ops[args->sect_code][opcode_create](on, args, param);
   if(!args->success) {
     return;
   }
@@ -428,6 +429,7 @@ void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * a
   }
   args->success = FALSE;
   args->op_code = opcode_padr;
+  args->log_len = args->phys_len;
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 

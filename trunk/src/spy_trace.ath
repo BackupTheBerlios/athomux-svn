@@ -64,7 +64,7 @@ operation $op
     fprintf(@#.file, "try_addr=%llx try_len=%llx", @try_addr, @try_len);
     break;
   case opcode_gadr:
-    fprintf(@#.file, "log_len=%llx where=%d exclu=%d action=%d try_len=%llx", @log_len, @where, @exclu, @action, @try_len);
+    fprintf(@#.file, "log_len=%llx reader=%d exclu=%d action=%d try_len=%llx", @log_len, @reader, @exclu, @action, @try_len);
     break;
   case opcode_create:
   case opcode_createget:

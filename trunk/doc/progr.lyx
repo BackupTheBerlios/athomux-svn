@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.32, 19 December 2004
+Version 0.33, 23 December 2004
 \layout Standard
 
 
@@ -1216,7 +1216,7 @@ Allocation in the Logical Address Space
 
 
 \family typewriter 
-$gadr (len_t log_len, bool where := FALSE, bool exclu := TRUE, action_t
+$gadr (len_t log_len, bool reader := FALSE, bool exclu := TRUE, action_t
  action := action_wait, len_t try_len := log_len) => (success_t success,
  addr_t log_addr, len_t log_len)
 \layout Standard
@@ -1232,7 +1232,7 @@ try_len
 .
  When 
 \family typewriter 
-where == FALSE
+reader == FALSE
 \family default 
 , reserve the space in a formerly undefined region (default for memory allocator
 s and for writers on a pipe), otherwise reserve at defined regions (used
@@ -1254,7 +1254,7 @@ action != action_wait
 \noindent 
 
 \family typewriter 
-$padr (addr_t log_addr, len_t log_len, bool where := FALSE) => (success_t
+$padr (addr_t log_addr, len_t log_len, bool reader := FALSE) => (success_t
  success)
 \layout Standard
 
@@ -1264,7 +1264,7 @@ $gadr
 \family default 
 ; note that 
 \family typewriter 
-where
+reader
 \family default 
  must have the same value as in the former 
 \family typewriter 
@@ -1846,7 +1846,7 @@ $gadrcreate (len_t log_len, bool clear := FALSE, bool exclu := TRUE, action_t
 \noindent 
 
 \family typewriter 
-$deletepadr (addr_t log_addr, len_t log_len, bool where := FALSE) => (success_t
+$deletepadr (addr_t log_addr, len_t log_len, bool reader := FALSE) => (success_t
  success)
 \layout Subsection
 

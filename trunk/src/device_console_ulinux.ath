@@ -171,8 +171,6 @@ output:>read
 		// Release buffer and set return values.
 		@=outputcall :<buf$put (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
 		@phys_len = (plen_t)(dest_write - dest_buf);
-		// FIXME: BUG? shouldn't the length be returned in @phys_len?
-		@log_len = @phys_len;
 		@success = TRUE;
 	}
 	

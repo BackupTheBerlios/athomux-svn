@@ -276,7 +276,7 @@ operation $gadr
 {
   success_t mysuccess;
   addr_t   next_lock;
-  int      locknr = @where ? 1 : 0;
+  int      locknr = @reader ? 1 : 0;
 
   // obtain lock id
   get_lock(IOQUEUE_GLOBAL_LOCK);

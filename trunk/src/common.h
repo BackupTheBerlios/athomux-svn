@@ -199,7 +199,7 @@ struct args {
   bool   melt;
   direction_t direction;
   prio_t prio;
-  bool   where;
+  bool   reader;
   bool   exclu;
   lock_t data_lock;
   lock_t addr_lock;
