@@ -17,7 +17,7 @@ CC=$(TIME)  gcc
 
 all : all_targets
 
-defs.make: Makefile makegen.pl pconf.* cconf.* target.*
+defs.make: Makefile makegen.pl pconf.* cconf.* target.* *.ath
 	./makegen.pl
 
 allobjs=$(objs) strat.o
