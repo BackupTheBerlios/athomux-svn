@@ -94,8 +94,8 @@ operation $output_init
     }
 
     // remove it from the IO queue
-    @=call :<queue$putdelete [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
-    @.checkjump(!mysuccess, fail, "putdelete failed");
+    @=call :<queue$putdeleteputaddr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.checkjump(!mysuccess, fail, "putdeleteputaddr failed");
   }
 shutdown:
   @success = TRUE;

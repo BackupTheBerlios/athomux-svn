@@ -114,6 +114,7 @@ typedef enum {
   opcode_lock,
   opcode_unlock,
   opcode_getaddr,
+  opcode_putaddr,
   // dynamic
   opcode_create,
   opcode_delete,
@@ -134,10 +135,10 @@ typedef enum {
   opcode_putwait,
   opcode_createget,
   opcode_getaddrcreateget,
-  opcode_getaddrget,
   opcode_getaddrgettr,
-  opcode_putcreate,
+  opcode_putputaddr,
   opcode_putdelete,
+  opcode_putdeleteputaddr,
   // last dummy index
   opcode_output_max,
   // INPUT OPERATIONS
@@ -258,6 +259,7 @@ static_operation missing_##sect##_put;                                        \
 static_operation missing_##sect##_lock;                                       \
 static_operation missing_##sect##_unlock;                                     \
 static_operation missing_##sect##_getaddr;                                    \
+static_operation missing_##sect##_putaddr;                                    \
                                                                               \
 static_operation missing_##sect##_create;                                     \
 static_operation missing_##sect##_delete;                                     \
@@ -278,10 +280,10 @@ static_operation missing_##sect##_trput;                                      \
 static_operation missing_##sect##_putwait;                                    \
 static_operation missing_##sect##_createget;                                  \
 static_operation missing_##sect##_getaddrcreateget;                           \
-static_operation missing_##sect##_getaddrget;                                 \
 static_operation missing_##sect##_getaddrgettr;                               \
-static_operation missing_##sect##_putcreate;                                  \
+static_operation missing_##sect##_putputaddr;                                 \
 static_operation missing_##sect##_putdelete;                                  \
+static_operation missing_##sect##_putdeleteputaddr;                           \
                                                                               \
 static_operation missing_##sect##_input_init;                                 \
 static_operation missing_##sect##_retract;                                    \
@@ -311,6 +313,7 @@ MAKE_ALL_ALIAS(put)
 MAKE_ALL_ALIAS(lock)
 MAKE_ALL_ALIAS(unlock)
 MAKE_ALL_ALIAS(getaddr)
+MAKE_ALL_ALIAS(putaddr)
 // strategy ops
 MAKE_ALL_ALIAS(instbrick)
 MAKE_ALL_ALIAS(deinstbrick)
@@ -331,10 +334,10 @@ MAKE_ALL_ALIAS(trput)
 MAKE_ALL_ALIAS(putwait)
 MAKE_ALL_ALIAS(createget)
 MAKE_ALL_ALIAS(getaddrcreateget)
-MAKE_ALL_ALIAS(getaddrget)
 MAKE_ALL_ALIAS(getaddrgettr)
-MAKE_ALL_ALIAS(putcreate)
+MAKE_ALL_ALIAS(putputaddr)
 MAKE_ALL_ALIAS(putdelete)
+MAKE_ALL_ALIAS(putdeleteputaddr)
 
 MAKE_ALL_ALIAS(input_init)
 MAKE_ALL_ALIAS(retract)

@@ -1,5 +1,5 @@
-#LyX 1.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 220
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
 \textclass article
 \language english
 \inputencoding auto
@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.23, 18 September 2004
+Version 0.24, 29 November 2004
 \layout Standard
 
 
@@ -1221,7 +1221,7 @@ $getaddr (len_t log_len, bool where := FALSE, bool exclu := TRUE, action_t
  addr_t log_addr, len_t log_len)
 \layout Standard
 
-Atomically pre-reserve space of minimum size 
+Atomically reserve space of minimum size 
 \family typewriter 
 log_len
 \family default 
@@ -1241,8 +1241,8 @@ s and for writers on a pipe), otherwise reserve at defined regions (used
 \family typewriter 
 exclu == FALSE
 \family default 
-, you get a valid area, but it is not actually reserved for you (concurrent
- lookahead without reservation).
+, you get a valid area, but it is not atomically reserved for your exclusive
+ use (concurrent lookahead without reservation).
  With 
 \family typewriter 
 action != action_wait
@@ -1251,16 +1251,26 @@ action != action_wait
  hurt you existentially (e.g.
  useful for speculative memory preallocation strategies).
 \layout Standard
+\noindent 
 
-Attention! 
+\family typewriter 
+$putaddr (addr_t log_addr, len_t log_len, bool where := FALSE) => (success_t
+ success)
+\layout Standard
+
+Unreserve the space of a former 
 \family typewriter 
 $getaddr
 \family default 
- is a 
-\emph on 
-pre
-\emph default 
--reservation; it does not actually reserve or unreserve space via 
+; note that 
+\family typewriter 
+where
+\family default 
+ must have the same value as in the former 
+\family typewriter 
+$getaddr
+\family default 
+, regardless of an intermediate 
 \family typewriter 
 $create
 \family default 
@@ -1268,20 +1278,42 @@ $create
 \family typewriter 
 $delete
 \family default 
-, you have to do that by hand afterwards if needed (or use a combined operation).
- It merely is a synchonisation primitive for pipes, not more.
+.
 \layout Standard
 
-NOTE: the former operation 
+Note: 
 \family typewriter 
-$putaddr
+$getaddr
 \family default 
- has disappeared.
- Use 
+ is no longer a 
+\emph on 
+pre
+\emph default 
+-reservation as in a former version of the nest interface, but it executes
+ full reservations completely 
+\emph on 
+independent
+\emph default 
+ from 
+\family typewriter 
+$create
+\family default 
+ / 
 \family typewriter 
 $delete
 \family default 
- instead!
+.
+ The reason is granularity: you may reserve a very huge part of the address
+ space by 
+\family typewriter 
+$getaddr
+\family default 
+ and then 
+\family typewriter 
+$create
+\family default 
+ only sparse parts of it (e.g.
+ like in hash tables).
 \layout Subsubsection
 
 Dynamic Nests
@@ -1588,6 +1620,33 @@ $tr
 \family default 
  for writing zeroed blocks could be feasible, but is there anyone needing
  this?).
+\layout Standard
+
+
+\family typewriter 
+$putdelete (addr_t log_addr, len_t log_len) => (success_t success)
+\layout Standard
+
+Execute 
+\family typewriter 
+$put
+\family default 
+ followed by 
+\family typewriter 
+$delete
+\family default 
+ with 
+\family typewriter 
+prio = prio_none
+\family default 
+; this is the antagonist of 
+\family typewriter 
+$createget
+\family default 
+.
+ It can also be used to free an invalid buffer without writing back anymore;
+ the internal implementation should choose to cancel any pending IO request
+ for it.
 \layout Paragraph
 
 Memory Allocation at unknown address
@@ -1623,31 +1682,19 @@ malloc()
 \family default 
 .
 \layout Standard
-
-NOTE: 
-\family typewriter 
-$deleteputaddr
-\family default 
- has disappeared.
- Use 
-\family typewriter 
-$putdelete
-\family default 
- instead.
-\layout Standard
 \noindent 
 
 \family typewriter 
-$putdelete (addr_t log_addr, len_t log_len) => (success_t success)
+$putdeleteputaddr (addr_t log_addr, len_t log_len) => (success_t success)
 \layout Standard
 
 Combination of 
 \family typewriter 
-$put
+$putdelete
 \family default 
  followed by 
 \family typewriter 
-$delete
+$putaddr
 \family default 
 .
  This is in essence the opposite of 
@@ -1659,9 +1706,7 @@ $getaddrcreateget
 free()
 \family default 
 .
- It can also be used to free an invalid buffer without writing back anymore;
- the internal implementation may choose to cancel any pending IO request
- for it.
+ 
 \layout Paragraph
 
 Logical IO on Pipes
@@ -1692,8 +1737,8 @@ $getaddrgettr (len_t log_len, bool exclu := TRUE, action_t action := action_wait
 t success, addr_t log_addr, len_t log_len, paddr_t phys_addr, plen_t phys_len)
 \layout Standard
 
-This pre-allocates space in the defined region of the nest, allocates a
- physical buffer and fills it with the data.
+This allocates space in the defined region of the nest, allocates a physical
+ buffer and fills it with the data.
  After that, you may access the data.
  After accessing the data, you 
 \emph on 
@@ -1704,14 +1749,14 @@ must
 \noindent 
 
 \family typewriter 
-$putdelete (addr_t log_addr, len_t log_len) => (success_t success)
+$putdeleteputaddr (addr_t log_addr, len_t log_len) => (success_t success)
 \layout Standard
 
 This is the same operation as in memory allocation, but here the 
 \emph on 
 purpose
 \emph default 
- is slightly different at 
+ is slightly different at the 
 \emph on 
 semantic
 \emph default 
@@ -1723,12 +1768,13 @@ Writer
 \newline 
 
 \layout Standard
-
+\noindent 
 
 \family typewriter 
-$getaddrget (len_t log_len, bool exclu := TRUE, action_t action := action_wait,
- len_t try_len := log_len) => (success_t success, addr_t log_addr, len_t
- log_len, paddr_t phys_addr, plen_t phys_len)
+$getaddrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
+ action_t action := action_wait, bool melt := TRUE, len_t try_len := log_len)
+ => (success_t success, addr_t log_addr, len_t log_len, paddr_t phys_addr,
+ plen_t phys_len)
 \layout Standard
 
 This pre-allocates space in the undefined part of the logical address space
@@ -1741,11 +1787,11 @@ must
  The buffer muste then be made available to the reader by the following
  operation:
 \layout Standard
-
+\noindent 
 
 \family typewriter 
-$putcreate (addr_t log_addr, len_t log_len, melt := TRUE, prio :=p rio_backgroun
-d) => (success_t success)
+$putputaddr (addr_t log_addr, len_t log_len, prio := prio_background) =>
+ (success_t success)
 \layout Paragraph
 
 Physical IO on Pipes

@@ -33,7 +33,7 @@ operation $get,$gettr
   @success = TRUE;
 }
 
-operation $delete,$putdelete
+operation $putaddr,$putdeleteputaddr
 {
   free((void*)(long)@log_addr);
   @success = TRUE;
@@ -45,7 +45,7 @@ operation $transfer,$wait,$put,$tr,$trput,$putwait
   @success = TRUE;
 }
 
-operation $create,$createget
+operation $create,$createget,$delete,$putdelete
 {
   @success = FALSE;
 }

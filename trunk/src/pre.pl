@@ -1328,6 +1328,7 @@ sub add_attr {
   "lock"     => ["log_addr,log_len,data_lock:=lock_write,addr_lock:=lock_read,try_addr:=_tmp_.log_addr,try_len:=_tmp_.log_len,action:=action_wait", "success,try_addr,try_len" ],
   "unlock"   => ["log_addr,log_len,try_addr:=_args->log_addr,try_len:=_tmp_.log_len", "success,try_addr,try_len"],
   "getaddr"  => ["log_len,where:=FALSE,exclu:=TRUE,action:=action_wait,try_len:=_tmp_.log_len", "success,log_addr,log_len"],
+  "putaddr"  => ["log_addr,log_len,where:=FALSE", "success"],
 # dynamic ops
   "create"   => ["log_addr,log_len,clear:=FALSE,melt:=TRUE", "success"],
   "delete"   => ["log_addr,log_len", "success"],
@@ -1339,10 +1340,10 @@ sub add_attr {
   "putwait"  => ["log_addr,log_len,prio:=prio_normal", "success", "direction,action"],
   "createget"=> ["log_addr,log_len,clear:=FALSE,melt:=TRUE", "success,phys_addr,phys_len", "forwrite,version"],
   "getaddrcreateget" => ["log_len,clear:=FALSE,exclu:=TRUE,action:=action_wait,melt:=TRUE,try_len:=_tmp_.log_len", "success,log_addr,log_len,phys_addr,phys_len", "forwrite"],
-  "getaddrget" => ["log_len,exclu:=TRUE,action:=action_wait,try_len:=_tmp_.log_len", "success,log_addr,log_len,phys_addr,phys_len", "where,forwrite"],
   "getaddrgettr" => ["log_len,exclu:=TRUE,action:=action_wait,forwrite:=FALSE,prio:=prio_normal,try_len:=_tmp_.log_len", "success,log_addr,log_len,phys_addr,phys_len", "where,forwrite,direction,action,version"],
-  "putcreate" => ["log_addr,log_len,melt:=TRUE,prio:=prio_background", "success" ],
-  "putdelete" => ["log_addr,log_len,prio:=prio_none", "success" ],
+  "putputaddr" => ["log_addr,log_len,prio:=prio_background", "success", "where" ],
+  "putdelete" => ["log_addr,log_len", "success", "prio" ],
+  "putdeleteputaddr" => ["log_addr,log_len", "success", "where,prio"],
 # strategy ops
   "instbrick"    => ["log_addr,name", "success"],
   "deinstbrick"  => ["log_addr", "success"],
