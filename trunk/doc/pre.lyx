@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.27, 16 Nov 2004
+Version 0.28, 24 Nov 2004
 \layout Standard
 
 
@@ -231,6 +231,9 @@ TODO: after the experimental stage is left and the language became stable,
 \layout Subsection
 
 Brick header
+\layout Subsubsection
+
+Legal Issues
 \layout Standard
 
 Each 
@@ -343,7 +346,7 @@ PATENT-LICENSE
  (e.g.
  in the field of software patents), but you also may complicate legal issues
  a lot when a larger Athomux system is composed out of incompatible licenses.
-\layout Subsection
+\layout Subsubsection
 
 Build versions
 \layout Standard
@@ -361,7 +364,17 @@ make
 \family typewriter 
 context
 \family default 
- ...
+ 
+\emph on 
+name
+\family typewriter 
+\emph default 
+: 
+\family default 
+\emph on 
+list
+\emph default 
+...
  
 \family typewriter 
 
@@ -369,8 +382,11 @@ context
 n
 \layout Standard
 
-Currently, one of two further keywords have to specified immediately after
- 
+Currently, a further keyword 
+\emph on 
+name
+\emph default 
+ and a colon must follow immediately after 
 \family typewriter 
 context
 \family default 
@@ -390,9 +406,21 @@ cconf
 \family typewriter 
 cconf.*)
 \family default 
-.
- After this second keyword, a comma-separated list of names denotes the
- configurations where the current input file is to be included.
+, or 
+\family typewriter 
+target
+\family default 
+ (denoting a 
+\family typewriter 
+make
+\family default 
+ target).
+ After this second keyword and the colon, a comma-separated 
+\emph on 
+list
+\emph default 
+ of names denotes the configurations where the current input file is to
+ be included.
  For example, the name 
 \family typewriter 
 default
@@ -433,6 +461,57 @@ excluded
 .
  As a consequence, it is recommended that you should uniformly specify either
  exeptions for inclusion or exeptions for exclusion, but not mix them up.
+\layout Standard
+
+A more detailed description can be found the documentation titeled 
+\emph on 
+The Build System of Athomux
+\emph default 
+.
+\layout Subsubsection
+
+
+\family typewriter 
+buildrules
+\layout Standard
+
+After optional 
+\family typewriter 
+context
+\family default 
+ statements, any number of 
+\family typewriter 
+buildrules
+\family default 
+ statements may follow:
+\layout Standard
+\noindent 
+
+\family typewriter 
+buildrules 
+\family default 
+\emph on 
+kind
+\family typewriter 
+\emph default 
+:
+\family default 
+ 
+\emph on 
+makefile-rules-text
+\emph default 
+....
+\family typewriter 
+
+\backslash 
+n endrules
+\layout Standard
+
+A detailed description can be found the documentation titeled 
+\emph on 
+The Build System of Athomux
+\emph default 
+.
 \layout Subsection
 
 
@@ -442,7 +521,7 @@ brick
  statement
 \layout Standard
 
-After the header, a 
+After the header information, a 
 \family typewriter 
 brick
 \family default 

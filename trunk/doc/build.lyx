@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.04, 24 Nov 2004
+Version 0.05, 24 Nov 2004
 \layout Standard
 
 
@@ -927,29 +927,13 @@ commonname
 \emph default 
 -subversion2
 \family default 
- and so on; for 
-\family typewriter 
-pconf
-\family default 
-s and 
-\family typewriter 
-target
-\family default 
-s you should do the same analogously.
- This means, you should produce subversions of configurations by means of
- hierarchical 
-\family typewriter 
-pconf
-\family default 
-, 
-\family typewriter 
-cconf
-\family default 
- and 
-\family typewriter 
-target
-\family default 
- names, where each hierarchy level is separated by dashes in the name.
+ and so on.
+ 
+\layout Standard
+
+This means, you should produce subversions of configurations by means of
+ hierarchical file names, where each hierarchy level is separated by dashes
+ in the name.
  For example, if you want to discriminate different machine architectures
  for a common runtime environment type, you should create names like 
 \family typewriter 
@@ -1016,6 +1000,60 @@ include
 \family default 
  statements for independent inclusion of independent things, in order to
  keep things as orthogonal as possible.
+\layout Standard
+
+For 
+\family typewriter 
+pconf
+\family default 
+s, 
+\family typewriter 
+target
+\family default 
+s and 
+\family typewriter 
+buildrules
+\family default 
+ sections of 
+\family typewriter 
+*.ath
+\family default 
+ files you should use the analogous conventions 
+\family typewriter 
+pconf-include.
+\emph on 
+commonname
+\family default 
+\emph default 
+, 
+\family typewriter 
+target-include.
+\emph on 
+commonname
+\family default 
+\emph default 
+ and 
+\family typewriter 
+ath-include-
+\emph on 
+brickname
+\emph default 
+-
+\emph on 
+kind
+\emph default 
+.
+\emph on 
+commonname
+\family default 
+\emph default 
+ where 
+\family typewriter 
+\emph on 
+commonname
+\family default 
+\emph default 
+ may itself be hierarchically structured.
 \layout Section
 
 Internals

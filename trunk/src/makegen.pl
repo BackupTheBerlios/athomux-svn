@@ -39,9 +39,8 @@ sub build_contexts {
 	$text = $POSTMATCH;
 	next;
       }
-      if($text =~ m/^\s*buildrules\s+(\w+)\s*:((?:.|\n)*?)endrules/m) {
+      if($text =~ m/^\s*buildrules\s+(\w+)\s*:\s*\n?((?:.*\n)*?)\s*endrules/m) {
 	$buildrules{"$source:$1"} = $2;
-print"$source:$1: $2\n";
 	$text = $POSTMATCH;
 	next;
       }
@@ -179,14 +178,14 @@ sub process_makerules {
     $done .= add_file($subname, @_);
   }
   $text = $done . $text;
-  my $sub = "substitution ";
+  my $sub = "";
   while(1) {
     my $search = shift or last;
     my $subst = shift or last;
     $sub .= "s/$search/$subst/gm ";
     $text =~ s/$search/$subst/gm;
   }
-  return "\n\n#start file $fname substitution $sub\n\n$text\n#end $fname\n\n";
+  return "\n\n#start include from file '$fname' substitution '$sub'\n\n$text\n#end '$fname'\n\n";
 }
 
 sub add_file {
