@@ -43,12 +43,14 @@ sub check_context {
 return 1;
   my ($src, $type, $forwhat) = @_;
   my $context = $contexts{$src} or return 1;
-  if($context =~ m/^#?context\s+$type\s*(.+)\n/m) {
+  if($context =~ m/^#?context\s+$type(?:\s*:)?\s+(.+)\n/m) {
     my $found = $1;
-    my @list = split /\s+/, $found;
+    my @list = split /\s*,\s*/, $found;
     my $nr_negative = 0;
     foreach my $elem (@list) {
-      my $res = not ($elem =~ s/^\s*!\s*//);
+      $elem =~ s/\s//g;
+      next unless $elem;
+      my $res = not ($elem =~ s/^!//);
       $nr_negative++ unless $res;
       if($forwhat =~ m/^$elem$/) {
 	return $res;

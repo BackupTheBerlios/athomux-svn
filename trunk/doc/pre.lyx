@@ -206,9 +206,9 @@ n
 \family typewriter 
 }
 \family default 
- pairs is obeyed by the preprocessor; most syntax errors are resulting from
+ pairs is obeyed by the preprocessor; most syntax errors will result from
  incorrect nesting! Currently the preprocessor will issue syntax errors
- for all bad syntax 
+ for all wrong syntax 
 \emph on 
 at the preprocessor level
 \emph default 
@@ -328,7 +328,7 @@ License: see files
 , a list of file names residing in the root directory of the Athomux release
  should be specified.
  As an author of a new brick, you can freely choose whatever license you
- want.
+ like.
  However, it is strongly recommended to use both the default 
 \family typewriter 
 SOFTWARE-LICENSE
@@ -391,8 +391,8 @@ cconf
 cconf.*)
 \family default 
 .
- After this second keyword, a whitespace-separated list of names denotes
- the configurations where the current input file is to be included.
+ After this second keyword, a comma-separated list of names denotes the
+ configurations where the current input file is to be included.
  For example, the name 
 \family typewriter 
 default
@@ -1868,7 +1868,7 @@ owners
 \emph on 
 transferred
 \emph default 
- amoung brick instances.
+ among brick instances.
  Currently, mandates are only used for locks (but this may soon change!).
 \layout Standard
 
@@ -3674,7 +3674,7 @@ body1
  ...
 \layout Standard
 
-Use this to change the order amoung the bodies.
+Use this to change the order among the bodies.
  First, all the bodies are expanded in their original order, but not copied
  to the output.
  The 
@@ -3829,12 +3829,8 @@ before
 \emph on 
 only
 \emph default 
- be expanded in the scope of the called macro, but not in nested scopes
- of 
-\emph on 
-recursively
-\emph default 
- called macros (if you don't 
+ be expanded in the scope of the callee, but not in (recursively) nested
+ scopes (if you don't 
 \emph on 
 explicitly
 \emph default 
@@ -3876,8 +3872,9 @@ after
 \family typewriter 
 @!->:
 \family default 
-, the actual parameter will not be expanded at all (however you may force
- a re-expansion by an external 
+, the actual parameter will not be expanded at all before substitution (however
+ you may force a re-expansion of the already substituted parameter by an
+ external 
 \family typewriter 
 @.deep(2)
 \family default 
@@ -3895,8 +3892,18 @@ after
 \emph on 
 lazy
 \emph default 
- expansion, but it can have strange side effects: if anyone re-defines the
- same macro name inside nested macros (e.g.
+ expansion, but it can also result in strange side effects: normally, expansion
+ will carry over to nested macro calls (which is often the desired effect
+ of 
+\begin_inset Quotes eld
+\end_inset 
+
+pumping in
+\begin_inset Quotes erd
+\end_inset 
+
+ parameters), but if anyone re-defines the same macro name inside nested
+ macros (e.g.
  with another 
 \family typewriter 
 @def:
@@ -3906,17 +3913,20 @@ lazy
 shadowed
 \emph default 
  (i.e.
- obey the scope nesting, but get a totally different meaning).
+ obey the scope nesting, but get a totally different meaning), which might
+ not be expected or could look strange (if you don't know what you are actually
+ doing).
  To avoid some strange effects resulting therefrom, you should use the combinati
 on 
 \family typewriter 
 @!def:
 \family default 
-, which will first expand the actual parameter at the 
+ which will first expand the actual parameter at the 
 \emph on 
 old
 \emph default 
- scope before potentially destroying an old macro definition.
+ scope before potentially overwriting an old macro definition at the new
+ scope (however notice that this results in eager evaluation).
 \layout Standard
 
 WARNING: when using 
@@ -4179,6 +4189,13 @@ op1
 op2
 \emph default 
  and so on is generated.
+\layout Standard
+
+Advice: try to avoid these predefined low-level substitutions by using 
+\family typewriter 
+$op
+\family default 
+ instead (which avoids code bloat).
 \layout Subsection
 
 Qualified instance variables
@@ -4357,8 +4374,8 @@ The architectural philosophy of ATHOMUX is explained in more depth in the
 \layout Standard
 
 Please forget anything you know on object oriented design, and forget many
- things (but not all!) you know on operating system architecture, and on
- how to build higher-level abstractions.
+ things (but not all!) you know on operating system architecture, in particular
+ on how to build higher-level abstractions.
  ATHOMUX is almost the converse of OO, and very different from classical
  OS kernel architectures.
  It does not fit in such categories like 
@@ -4604,8 +4621,8 @@ Composition
  of brick instances to networks is regarded as a basic building principle,
  similar to LEGO brick systems in the area of toys or other LEGO-like mechanical
  systems (e.g.
- look at the mechanical/pneumatic components of the German engineering company
- Festo, and others).
+ look at the mechanical / pneumatical components of the German engineering
+ company Festo, and others like Bosch-Rexroth motion kits).
  We deal with composition networks 
 \emph on 
 explicitly
@@ -4690,8 +4707,15 @@ personalities
 adaptors.
 
 \emph default 
- Such adaptors should be principally optional configurations, interoperable
- with each other.
+ Such adaptors should be principally 
+\emph on 
+optional
+\emph default 
+ 
+\emph on 
+configurations
+\emph default 
+, interoperable with each other.
 \layout Standard
 
 At current stage, ATHOMUX is at its very infancy.
