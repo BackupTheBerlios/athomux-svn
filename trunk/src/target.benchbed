@@ -1,0 +1,2 @@
+benchbed: $(bricks) $(allobjs) common.c benchbed.c 
+	$(CC) $(CFLAGS) $(LDFLAGS) $(allobjs) common.c -o benchbed benchbed.c
