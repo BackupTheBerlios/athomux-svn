@@ -19,7 +19,7 @@ all : all_targets
 
 defs.make: Makefile makegen.pl pconf.* cconf.* target.* *.ath
 	./makegen.pl
-	@$(MAKE) -isf defs.make check_broken 2>/dev/null
+	@$(MAKE) -isf defs.make check_broken >/dev/null 2>/dev/null
 	@$(MAKE) -isf defs.make show_broken
 
 allobjs=$(objs) strat.o

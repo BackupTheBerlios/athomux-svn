@@ -15,7 +15,7 @@ static_data {
 #include <asm/unistd.h>
 #ifndef __NR_athomux_lrpc
 #ifdef __x86_64__
-#define __NR_athomux_lrpc 247
+#define __NR_athomux_lrpc 248
 #else
 #ifdef __i386__
 #define __NR_athomux_lrpc 223
