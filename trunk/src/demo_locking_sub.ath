@@ -1,0 +1,35 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #demo_locking_sub
+purpose sub-brick with test-function for demo_locking
+
+static_data {
+#include <unistd.h>
+}
+
+
+input :<lock
+
+output :>out
+
+
+
+operation $output_init
+{
+  printf("$output_init\n");
+  @success = TRUE;
+}
+
+operation $transfer
+{
+  printf("$transfer called for %u\n", @mandate);
+  @=call :<lock$lock [@mandate] (@mandate, 2) => (@success);
+  @.check(!@success, "lock %u failed", @mandate);
+  printf("greetings from %u\n", @mandate);
+  sleep(1);
+  printf("unlocking %u\n", @mandate);
+  @=call :<lock$unlock [@mandate] (@mandate, 2) => (@success);
+  @.check(!@success, "unlock %u failed", @mandate);
+}

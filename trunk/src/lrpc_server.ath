@@ -1,0 +1,48 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf klinux
+
+brick #lrpc_server
+purpose Serve root_strategy (control_simple) via LRPC
+
+
+static_data {
+extern struct output * root_strategy;
+
+// change param for static wired brick instances
+// NOTE: evil coding style - don't do that...
+#define init_lrpc_linux_server(brick, param, mand) \
+        init_lrpc_linux_server(brick, brick == &ini->_sub_lrpc0 ? "0" : "1", mand)
+}
+
+init {
+  // do static wire to root_strategy output
+  ini->_sub_lrpc1._conn_in._input_.connect = root_strategy;
+}
+
+
+instance #lrpc_linux_server as lrpc0;
+instance #lrpc_linux_server as lrpc1;
+instance #helper_idpool as pool;
+wire #.pool:>out as #.lrpc0:<in;
+
+
+output :>program
+
+operation $output_init
+{
+  // NOTE: For new code, consider using "@=call ... (...) => (...)"
+  //       instead of "@=call ... a r g s".
+  if(@destr) {
+    @=call #.pool:>out$delete @args;
+    @=call #.pool:>out$delete @args;
+  }
+  if(@constr) {
+    // we allocate lrpc id 0 and 1 now:
+    @=call #.pool:>out$getaddr @args;
+    @.check(@args->log_addr != 0, "allocated wrong id from idpool");
+    @=call #.pool:>out$getaddr @args;
+  }
+}

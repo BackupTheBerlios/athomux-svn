@@ -23,8 +23,16 @@ operation $output_init
 	   "--wait | -w\n\twait for <Ctrl>-<C> before shutdown\n\n"
 #endif
 	   "\nPROGRAM NAMES AND PARAMETERS:\n\n"
+#ifdef __KERNEL__
+	   "lrpc_server\n\tstart the LRPC server\n\n"
+	   "demo_bench_io\n\ta kernelspace IO benchmark\n\n"
+#else
+	   "demo_bench_io\n\tan userspace IO benchmark\n\n"
+	   "demo_bench_lrpc device\n\ta block device IO benchmark using the LRPC bridge\n\n"
+#endif
 	   "demo_helloworld\n\ta hello world implementation\n\n"
 	   "demo_echo [text]\n\t/bin/echo - do I need to say more?\n\n"
+	   "demo_locking\n\ttest locks and threads\n\n"
 	   "athload_help\n\tshow this help text\n\n"
 	   );
   }

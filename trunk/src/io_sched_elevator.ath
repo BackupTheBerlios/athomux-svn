@@ -1,0 +1,268 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #io_sched_elevator
+purpose IO Scheduler (elevator strategy)
+desc
+  Usage:
+               +----------+     +------------+
+               |  driver  |-----|            |
+               +----------+     |            |
+                                | io_arbiter |
+               +----------+     |            |
+               |          |-----|            |
+  +------+     |          |     +------------+
+  | lock |-----| io_queue |
+  +------+     |          |     +------------+     +-------------+
+               |          |-----| io_sched_* |-----| application |
+               +----------+     +------------+     +-------------+
+
+  This IO scheduler has the following features:
+  - sorts requests by priority, then log_addr
+  - allows raising of priority by submitting
+    equal requests with a higher priority
+  - choice of linear or binary search strategy
+enddesc
+
+static_data {
+#include "io_queue.h"
+}
+
+
+input :<queue(:3:)
+
+
+output :>out
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+
+// helper function; should go to common.ath
+@.define @.checkjump (condition,target,text...)
+{ if(condition) {
+    printf("OP "OPERATION" file "BASEFILE" line %d (#condition): "text"\n", __LINE__-1 ...);
+    goto target;
+  }
+}
+
+@.define linear_search(from, to, check) => (success, next) {
+  success = FALSE;
+  if(from <= to) {
+    if((from <= check) && (check <= to)) {
+      linear_search2(check, to) => (success, next);
+      if(!success) {
+	linear_search2(from, check - IOQUEUE_REQUEST_SIZE) => (success, next);
+      }
+    } else {
+      linear_search2(from, to) => (success, next);
+    }
+  }
+}
+
+@.func linear_search2(addr_t from, addr_t to) => (success_t success, addr_t next)
+{
+  addr_t                  check;
+  paddr_t                 req_paddr;
+  struct ioqueue_request *req;
+  success_t                mysuccess;
+
+  for(check = from; (offs_t)check <= (offs_t)to; check += IOQUEUE_REQUEST_SIZE) {
+    @=call :<queue$gettr [@mandate] (check, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+    @.fatal(!mysuccess,"gettr failed (maybe empty queue entry?)");
+    req = MAKE_PTR(req_paddr);
+    if((req->log_addr > @log_addr) ||
+       ((req->log_addr == @log_addr) && (req->log_len == @log_len) && (req->phys_addr == @phys_addr) && (req->direction == @direction))) {
+      success = (req->log_addr == @log_addr);
+      next = check;
+      return;
+    }
+  }
+  if(next < check)
+    next = check;
+}
+
+@.func binary_search(addr_t from, addr_t to, addr_t check) => (success_t success, addr_t next)
+{
+  paddr_t                 req_paddr;
+  struct ioqueue_request *req;
+  success_t                mysuccess;
+
+  // binary search
+  success = FALSE;
+  if((check < from) || (check > to)) {
+    check = from + (((to - from) >> (IOQUEUE_REQUEST_SHIFT + 1)) << IOQUEUE_REQUEST_SHIFT);
+  }
+  while((offs_t)from <= (offs_t)to) {
+    @=call :<queue$gettr [@mandate] (check, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+    @.fatal(!mysuccess,"gettr1 failed (maybe empty queue entry?)");
+    req = MAKE_PTR(req_paddr);
+    if(req->log_addr < @log_addr) { // too small
+      from = check + IOQUEUE_REQUEST_SIZE;
+    } else if(req->log_addr > @log_addr) { // too big
+      to = check - IOQUEUE_REQUEST_SIZE;
+      next = check;
+    } else { // found!
+      next = check;
+      // did we match the exact request?
+      if((req->log_len != @log_len) || (req->phys_addr != @phys_addr) || (req->direction != @direction)) {
+	// if not, do a local linear search...
+	addr_t check2 = check;
+	while(1) { // ...backwards...
+	  check2 -= IOQUEUE_REQUEST_SIZE;
+	  if((offs_t)check2 < (offs_t)from) break;
+	  @=call :<queue$gettr [@mandate] (check2, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+	  @.check(!mysuccess,"gettr2 failed (maybe empty queue entry?)");
+	  req = MAKE_PTR(req_paddr);
+	  if(req->log_addr != @log_addr) break;
+	  if((req->log_len == @log_len) && (req->phys_addr == @phys_addr) && (req->direction == @direction)) {
+	    next = check2;
+	    success = TRUE;
+	    return;
+	  }
+	}
+	next = check;
+	while(1) { // ...and forwards!
+	  next += IOQUEUE_REQUEST_SIZE;
+	  if(next > to) break;
+	  @=call :<queue$gettr [@mandate] (next, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+	  @.check(!mysuccess,"gettr3 failed (maybe empty queue entry?)");
+ 	  req = MAKE_PTR(req_paddr);
+	  if(req->log_addr != @log_addr) break;
+	  if((req->log_len == @log_len) && (req->phys_addr == @phys_addr) && (req->direction == @direction)) {
+	    success = TRUE;
+	    return;
+	  }
+	}
+      } else {
+	success = TRUE;
+      }
+      return;
+    }
+    check = from + (((to - from) >> (IOQUEUE_REQUEST_SHIFT + 1)) << IOQUEUE_REQUEST_SHIFT);
+  }
+}
+
+@.define search(meta,next,prio) => (success) {
+  next[prio] =  meta->queue_idx[ioqueue_sched_background - prio + 1];
+  // perform search (use binary_search or linear_search here)
+  binary_search(meta->queue_idx[ioqueue_sched_background - prio],
+		meta->queue_idx[ioqueue_sched_background - prio + 1] - IOQUEUE_REQUEST_SIZE,
+		meta->queue_idx[ioqueue_sched_insert_background - prio]) => (success, next[prio]);
+}
+
+@.define insertrequest(newreq, pos)
+{
+  if(newreq > pos) {
+    success_t mysuccess;
+    offs_t   movelen = newreq - pos + IOQUEUE_REQUEST_SIZE;
+    @=call :<queue$move [@mandate] (pos, movelen, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.check (!mysuccess, "move1 failed");
+    @=call :<queue$move [@mandate] (newreq + IOQUEUE_REQUEST_SIZE,
+				    IOQUEUE_REQUEST_SIZE, -movelen) => (mysuccess);
+    @.check (!mysuccess, "move2 failed");
+  }
+  int i;
+  for (i = @prio-1; i >= prio_background; i--) {
+    meta->queue_idx[ioqueue_sched_background - i] += IOQUEUE_REQUEST_SIZE;
+  }
+  meta->queue_idx[ioqueue_sched_insert_background - @prio] = pos;
+}
+
+operation $transfer
+{
+  if(@direction == direct_stop) {
+
+    @=call :<queue(:2:)$transfer @args;
+
+  } else {
+
+    success_t mysuccess;
+    addr_t   next[3];
+    addr_t   newreq_laddr;
+    paddr_t  newreq_paddr;
+    struct ioqueue_request *newreq;
+    paddr_t  meta_addr;
+    struct ioqueue_meta *meta;
+    int      pr;
+
+    // get global lock
+    @=call :<queue(:1:)$lock [@mandate] (0, -1) => (mysuccess);
+    @.check(!mysuccess, "lock(:1:) failed");
+    // get queue metadata pointer
+    @=call :<queue(:1:)$gettr [@mandate] (0, IOQUEUE_META_SIZE, TRUE) => (mysuccess, meta_addr);
+    @.check(!mysuccess, "gettr(:1:) failed");
+    meta = MAKE_PTR(meta_addr);
+
+    trace("transfer(addr=%llx, len=%llx, prio=%i)\n", @log_addr, @log_len, @prio);
+
+    // ensure validity of ioqueue_sched_* indices
+    if(meta->queue_idx[ioqueue_sched_normal] < meta->queue_idx[ioqueue_sched_urgent]) {
+      meta->queue_idx[ioqueue_sched_normal] = meta->queue_idx[ioqueue_sched_urgent];}
+    if(meta->queue_idx[ioqueue_sched_background] < meta->queue_idx[ioqueue_sched_normal])
+       meta->queue_idx[ioqueue_sched_background] = meta->queue_idx[ioqueue_sched_normal];
+
+    // for all priority classes...
+    for(pr = prio_urgent; pr >= prio_background; pr--) {
+      // ...search for identical requests or insert positions
+      search(meta, next, pr) => (mysuccess);
+      if(mysuccess) {
+	// found identical request
+	if(@prio > pr) {
+	  // update priority
+	  @=call :<queue$gettr [@mandate] (next[pr], IOQUEUE_REQUEST_SIZE, TRUE) => (mysuccess, newreq_paddr);
+	  @.check(!mysuccess, "puttr failed");
+	  newreq = MAKE_PTR(newreq_paddr);
+	  newreq->prio = @prio;
+	  @=call :<queue$trput [@mandate] (next[pr], IOQUEUE_REQUEST_SIZE, newreq_paddr) => (mysuccess);
+	  @.check(!mysuccess, "trput failed");
+	}
+	@success = TRUE;
+	@=call :<queue$put [@mandate] (0, -1) => ();
+	goto done;
+      }
+    }
+
+    // fetch new request block and address
+    @=call :<queue$getaddrcreateget [@mandate] (IOQUEUE_REQUEST_SIZE) => (mysuccess, newreq_laddr, , newreq_paddr);
+    @.check(!mysuccess, "getaddrcreateget failed");
+    newreq = MAKE_PTR(newreq_paddr);
+    @.check(!newreq, "getaddrcreateget returned NULL pointer");
+
+    // copy arguments to request block
+    newreq->log_addr  = @log_addr;
+    newreq->log_len   = @log_len;
+    newreq->phys_addr = @phys_addr;
+    newreq->direction = @direction;
+    newreq->prio      = @prio;
+
+    // submit and insert request, and cleanup
+    @=call :<queue$trput [@mandate] (newreq_laddr, IOQUEUE_REQUEST_SIZE, newreq_paddr) => (@success);
+    @=call :<queue$put [@mandate] (0, -1) => ();
+    @=call :<queue$unlock [@mandate] (newreq_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.check(!mysuccess, "putaddr(unlock) failed");
+
+    insertrequest(newreq_laddr, next[@prio]);
+
+done:
+    //@=call :<queue(:1:)$deinstbrick @args; // DEBUG OPERATION: dump queue
+    // return metadate pointer 
+    @=call :<queue(:1:)$trput [@mandate] (0, IOQUEUE_META_SIZE, meta_addr) => ();
+    // free global lock
+    @=call :<queue(:1:)$unlock [@mandate] (0, -1) => ();
+    if(@success) {
+      @phys_len = @log_len;
+    }
+  }
+  @sect_code = 0;
+}
+
+
+operation $wait
+{
+  @=call :<queue(:2:)$wait @args;
+  @sect_code = 0;
+}

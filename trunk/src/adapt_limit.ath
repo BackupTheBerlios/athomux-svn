@@ -1,0 +1,81 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #adapt_limit
+purpose Limit request size
+desc
+  If a request is bigger than ADAPT_LIMIT_LIMIT,
+  this brick automatically splits the request into
+  subrequests which are ADAPT_LIMIT_LIMIT bytes long.
+enddesc
+
+static_data {
+#include "linux/string.h"
+#define ADAPT_LIMIT_LIMIT DEFAULT_TRANSFER
+}
+
+
+input :<in
+
+
+output :>out
+
+
+operation $output_init
+{
+  @=call :<in$OP_NAME @args;
+}
+
+
+operation $transfer,$tr
+{
+
+  // NOTE: Using "@=call ... &myargs" is a bad ATHOMUX programming style.
+  //       For new code, please use "@=call ... (...) => (...)" if possible!
+  //       "@=call ... & a r g s" should only be used for argument forwarding.
+
+  struct args myargs;
+  plen_t mylen = 0;
+
+  memcpy(&myargs, @args, sizeof(myargs));
+
+  if(myargs.log_len > ADAPT_LIMIT_LIMIT)
+    myargs.log_len = ADAPT_LIMIT_LIMIT;
+
+  do {
+    myargs.success = FALSE;
+    @=call :<in$OP_NAME &myargs;
+    if(myargs.success) {
+      mylen += myargs.phys_len;
+      if(mylen < @log_len) {
+	myargs.log_addr  += myargs.phys_len;
+	myargs.phys_addr += myargs.phys_len;
+      } else {
+	break;
+      }
+    } else {
+      break;
+    }
+  } while(1);
+
+  if(mylen) {
+    @success   = TRUE;
+    @phys_len = mylen;
+  }
+}
+
+
+operation $op
+{
+  switch(@op_code) {
+  case opcode_transfer:
+    @=call $transfer @args;
+    break;
+  case opcode_tr:
+    @=call $tr @args;
+    break;
+  default:
+    @=call :<in$op @args;
+  }
+}

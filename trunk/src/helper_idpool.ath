@@ -1,0 +1,54 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #helper_idpool
+purpose manage numerical IDs (0-255)
+desc
+  This brick manages numerical IDs (0-255) which can be allocated
+  using $getaddr / $delete
+enddesc
+
+static_header {
+#define HELPER_IDPOOL_MAXID 256
+}
+
+static_data {
+#define id_is_free(poolelem) (poolelem == 0)
+#define id_is_used(poolelem) !id_is_free(poolelem)
+}
+
+data {
+  unsigned int pos;
+  char         pool[HELPER_IDPOOL_MAXID];
+}
+
+init {
+  @#pos = 0;
+  memset(&@#pool, 0, sizeof(@#pool));
+}
+
+
+output :>out
+
+
+operation $getaddr
+{
+  unsigned int id = @#pos;
+
+  while(id_is_used(@#pool[id])) {
+    if (++id >= HELPER_IDPOOL_MAXID) id = 0;
+    if (id == @#pos) return;
+  }
+  
+  @#pool[id] = 1;
+  @log_addr  = id;
+  @log_len   = 1;
+  @success   = TRUE;
+}
+
+operation $delete
+{
+  @#pool[@log_addr] = 0;
+  @success = TRUE;
+}

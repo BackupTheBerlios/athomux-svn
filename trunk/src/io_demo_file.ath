@@ -1,0 +1,95 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #io_demo_file
+purpose IO Demo
+desc
+  Usage:
+               +----------+     +------------+
+               |  driver  |-----|            |
+               +----------+     |            |
+                                | io_arbiter |
+               +----------+     |            |
+               |          |-----|            |
+  +------+     |          |     +------------+
+  | lock |-----| io_queue |
+  +------+     |          |     +------------+     +-------------+
+               |          |-----| io_sched_* |-----| application |
+               +----------+     +------------+     +-------------+
+enddesc
+
+@.if("PCONF" ne "klinux") {
+static_data {
+#define init_device_dummy_linux(brick, param, mand) \
+        init_device_dummy_linux(brick, "testfile", mand)
+}
+}
+
+instance #lock_ulinux as lock0;
+instance #lock_ulinux as lock1;
+instance #lock_ulinux as lock2;
+instance #lock_ulinux as lock3;
+instance #thread_ulinux as thread;
+instance #io_queue as queue;
+@.if("PCONF" eq "klinux") {
+instance #device_block_klinux as driver;
+} @.else {
+instance #device_dummy_linux as driver;
+}
+instance #io_arbiter as arbiter;
+instance #io_sched_elevator as sched;
+instance #adapt_limit as adlim;
+
+wire #.lock0:>lock as #.queue:<lock[0];
+wire #.lock1:>lock as #.queue:<lock[1];
+wire #.lock2:>lock as #.queue:<lock[2];
+wire #.lock3:>lock as #.queue:<lock[3];
+wire #.driver:>out as #.arbiter:<driver;
+wire #.arbiter:>dummy as #.thread:<exec;
+wire #.queue:>queue as #.arbiter:<queue;
+wire #.queue:>queue as #.sched:<queue;
+wire #.sched:>out as #.adlim:<in;
+wire #.adlim:>out as :<in;
+
+local input :<in
+
+output :>out
+
+operation $output_init
+{
+  if(@destr) {
+    @=call :<in$output_init @args;
+    @=call #.arbiter:>dummy$output_init @args;
+    @=call #.driver:>out$output_init @args;
+    @=call #.queue:>queue(:0:)$output_init @args;
+    @=call #.queue:>queue(:1:)$output_init @args;
+    @=call #.queue:>queue(:2:)$output_init @args;
+    @sect_code = 0;
+    @=call #.lock0:>lock$output_init @args;
+    @=call #.lock1:>lock$output_init @args;
+    @=call #.lock2:>lock$output_init @args;
+    @=call #.lock3:>lock$output_init @args;
+  }
+  if(@constr) {
+    @=call #.lock0:>lock$output_init @args;
+    @=call #.lock1:>lock$output_init @args;
+    @=call #.lock2:>lock$output_init @args;
+    @=call #.lock3:>lock$output_init @args;
+    @=call #.queue:>queue(:0:)$output_init @args;
+    @=call #.queue:>queue(:1:)$output_init @args;
+    @=call #.queue:>queue(:2:)$output_init @args;
+    @sect_code = 0;
+    @.if("PCONF" eq "klinux") {
+      @param = "/dev/athomux-partition";
+    }
+    @=call #.driver:>out$output_init @args;
+    @=call #.thread:>cpu$output_init @args;
+    @=call :<in$output_init @args;
+  }
+}
+
+operation $transfer,$wait,$tr
+{
+  @=call :<in$OP_NAME @args;
+}

@@ -1,0 +1,266 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf klinux
+
+brick #lrpc_linux_server
+purpose LRPC Linux Userspace To Kernelspace
+desc
+  This brick implements the kernelspace LRPC server.
+  It allows LRPCs for most operations, except
+  get, put, op and combined operations which contain them.
+
+  pointer argument semantic:
+  copy in out   *args
+  copy in       *param
+  copy in out   @phys_addr  ($transfer, $tr)
+  copy in out   @conn1      (out restricted to $instconn)
+  copy in       @conn2
+  copy    out   @res_conn[] ($getconn, $findconn)
+
+enddesc
+
+static_header {
+#define LRPC_LINUX_SERVER_MAXCONN 256
+}
+
+static_data {
+#include <linux/gfp.h>
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/module.h>
+#include <asm/uaccess.h>
+
+#ifdef __arch_um__
+#define __strncpy_from_user strncpy_from_user
+#endif
+
+struct brick_lrpc_linux_server *instance[LRPC_LINUX_SERVER_MAXCONN];
+
+typedef long (*athomux_lrpc_syscall_handler_t)(unsigned long id, void __user *u_args, char __user *u_param);
+extern int register_athomux_syscall_handler(athomux_lrpc_syscall_handler_t handler, struct module *owner);
+extern void unregister_athomux_syscall_handler(athomux_lrpc_syscall_handler_t handler, struct module *owner);
+
+
+static long athomux_lrpc_handler(unsigned long id, void __user *u_args, char __user *u_param)
+{
+  unsigned long page, pageallocpos;
+  unsigned long loglen = 0, buf = 0;
+  unsigned int  buf_order = 0;
+  long          res_conn_len = 0;
+  struct args  *k_args, *backup_args;
+  char         *k_param;
+
+  //printf("athomux_lrpc(%lu, %p, %p)\n", id, u_args, u_param);
+
+  // check parameters
+
+  if(unlikely(id >= LRPC_LINUX_SERVER_MAXCONN))
+    return -EINVAL;
+
+  const struct brick_lrpc_linux_server *brick = instance[id];
+
+  if(unlikely(!brick))
+    return -EINVAL;
+
+  if(unlikely(DEREF(brick, struct brick_lrpc_linux_server, id) != id))
+    return -EINVAL;
+
+  if(unlikely(!u_args) || !access_ok(VERIFY_WRITE, u_args, sizeof(struct args)))
+    return -EFAULT;
+
+  if(likely(u_param) && !access_ok(VERIFY_READ, u_param, 1))
+    return -EFAULT;
+
+  // allocate a free page and copy all required structures from userspace to there
+  // (except for @phys_addr - they get as many pages as they need)
+
+  page = __get_free_page(GFP_KERNEL);
+  if(unlikely(!page))
+    return -ENOMEM;
+
+  k_args = (struct args *)page;
+
+  if(unlikely(__copy_from_user(k_args, u_args, sizeof(struct args))))
+    goto ret_EFAULT;
+  backup_args = (struct args *)(page + sizeof(struct args));
+  if(unlikely(__copy_from_user(backup_args, u_args, sizeof(struct args))))
+    goto ret_EFAULT;
+
+  pageallocpos = 2 * sizeof(struct args);
+
+  if(unlikely(k_args->conn1)) {
+    k_args->conn1 = (struct conn_info *)page + pageallocpos;
+    if(unlikely(copy_from_user(k_args->conn1, backup_args->conn1, sizeof(struct conn_info))))
+      k_args->conn1 = NULL;
+    else
+      pageallocpos += sizeof(struct conn_info);
+  }
+  if(unlikely(k_args->conn2)) {
+    k_args->conn2 = (struct conn_info *)page + pageallocpos;
+    if(unlikely(copy_from_user(k_args->conn2, backup_args->conn2, sizeof(struct conn_info))))
+      k_args->conn2 = NULL;
+    else
+      pageallocpos += sizeof(struct conn_info);
+  }
+
+  k_param = (char *)page + pageallocpos;
+
+  long cplen = __strncpy_from_user(k_param, u_param, PAGE_SIZE - pageallocpos);
+  if(unlikely(IS_ERR((void *)cplen)))
+    goto ret_EFAULT;
+  pageallocpos += cplen;
+
+  if(unlikely(k_args->res_conn)) {
+    res_conn_len = PAGE_SIZE - pageallocpos;
+    if(unlikely(res_conn_len <= 0)) {
+      k_args->res_conn = NULL;
+      k_args->conn_len = 0;
+    } else {
+      k_args->res_conn = (struct conn_info *)page + pageallocpos;
+      if(k_args->conn_len > res_conn_len)
+	k_args->conn_len = res_conn_len;
+      memset(k_args->res_conn, 0, res_conn_len);
+    }
+  }
+
+  switch(k_args->op_code) {
+  case opcode_transfer:
+  case opcode_tr:
+
+    if(likely(k_args->log_len) && likely(k_args->direction != direct_stop)) {
+      if(unlikely(k_args->log_len > (unsigned long)-1))
+	loglen = -1;
+      else
+	loglen = k_args->log_len;
+
+      // get as much pages for @phys_addr as needed and available
+      buf_order = fls((loglen - 1) / PAGE_SIZE);
+      do {
+	buf = __get_free_pages(GFP_KERNEL|__GFP_NOWARN, buf_order);
+	if(buf) break;
+	buf_order--;
+	loglen = 1UL << (buf_order + PAGE_SHIFT);
+      } while(buf_order);
+      if(unlikely(!buf)) {
+	free_page(page);
+	return -ENOMEM;
+      }
+      if(unlikely(!access_ok((k_args->direction == direct_write) ? VERIFY_WRITE : VERIFY_READ, k_args->phys_addr, loglen)))
+	goto ret_EFAULT_2;
+      loglen -= __copy_from_user((void *)buf, (void *)k_args->phys_addr, loglen);
+      if(unlikely(!loglen))
+	goto ret_EFAULT_2;
+      k_args->log_len = loglen;
+      k_args->phys_addr = buf;
+    }
+    break;
+#if 0
+  case opcode_op:
+  case opcode_get:
+  case opcode_put:
+  case opcode_trput:
+  case opcode_clearget:
+  case opcode_getaddrclearget:
+    free_page(page);
+    return -EINVAL;
+#endif
+  default:
+    break;
+  }
+
+  // do the athomux call here
+  const struct output *other = DEREF(brick, struct brick_lrpc_linux_server, _conn_in._input_.connect);
+  if(unlikely(!other))
+    goto ret_EFAULT_2;
+  other->ops[k_args->sect_code][k_args->op_code]((void *)other, k_args, k_param);
+
+  // copy @phys_addr buffer back (if required)
+  if(buf) {
+    k_args->log_len   = backup_args->log_len;
+    k_args->phys_addr = backup_args->phys_addr;
+    if(loglen > k_args->phys_len)
+      loglen = k_args->phys_len;
+    if(k_args->direction == direct_read)
+      __copy_to_user((void *)k_args->phys_addr, (void *)buf, loglen);
+    free_pages(buf, buf_order);
+  }
+
+  // copy @conn1 back (if required)
+  if(unlikely(k_args->conn1)) {
+    if (unlikely(k_args->op_code == opcode_instconn))
+      copy_to_user(backup_args->conn1, k_args->conn1, sizeof(struct conn_info));
+    k_args->conn1 = backup_args->conn1;
+  }
+  k_args->conn2   = backup_args->conn2;
+
+  // copy @res_conn array back (if required)
+  if(unlikely(k_args->res_conn)) {
+    switch(k_args->op_code) {
+    case opcode_getconn:
+    case opcode_findconn:
+      if(likely(k_args->conn_len > 0)) {
+	if(unlikely(k_args->conn_len > res_conn_len)) {
+	  k_args->conn_len = res_conn_len;
+	  printf(BASEFILE ": returned conn_len is larger than reserved space\n");
+	}
+	copy_to_user(backup_args->res_conn, k_args->res_conn, k_args->conn_len);
+      }
+    default:
+      ;
+    }
+    k_args->res_conn = backup_args->res_conn;
+  }
+
+  // copy *args back
+  __copy_to_user(u_args, k_args, sizeof(struct args));
+  free_page(page);
+  return 0;
+
+ret_EFAULT_2:
+  free_pages(buf, buf_order);
+ret_EFAULT:
+  free_page(page);
+  return -EFAULT;
+}
+
+}
+
+static_init {
+  int i;
+  for(i = 0; i < LRPC_LINUX_SERVER_MAXCONN; i++)
+     instance[i] = NULL;
+
+  if(IS_ERR((void *)(unsigned long)register_athomux_syscall_handler(athomux_lrpc_handler, THIS_MODULE))) {
+    printf(BASEFILE ": could not register syscall handler\n");
+  }
+}
+
+static_exit {
+  unregister_athomux_syscall_handler(athomux_lrpc_handler, THIS_MODULE);
+}
+
+data {
+  unsigned long id;
+}
+
+init {
+  unsigned long id;
+  if(sscanf(@param, "%lu", &id) == 1) {
+    if(unlikely(instance[id])) {
+      printf(BASEFILE ": id %lu is already in use!\n", id);
+    } else {
+      instance[id] = ini;
+      DEREF(ini, struct brick_lrpc_linux_server, id) = id;
+    }
+  }
+}
+
+exit {
+  unsigned long id = DEREF(exi, struct brick_lrpc_linux_server, id);
+  instance[id] = NULL;
+  DEREF(exi, struct brick_lrpc_linux_server, id) = 0;
+}
+
+input :<in

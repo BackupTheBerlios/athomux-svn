@@ -1,0 +1,81 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #io_sched_none
+purpose IO Scheduler FIFO (no scheduling)
+desc
+  Usage:
+               +----------+     +------------+
+               |  driver  |-----|            |
+               +----------+     |            |
+                                | io_arbiter |
+               +----------+     |            |
+               |          |-----|            |
+  +------+     |          |     +------------+
+  | lock |-----| io_queue |
+  +------+     |          |     +------------+     +-------------+
+               |          |-----| io_sched_* |-----| application |
+               +----------+     +------------+     +-------------+
+
+  This IO scheduler has the following features:
+  - sorts requests by incoming order
+  - doesnt allow raising of priority by submitting
+    equal requests with a higher priority
+enddesc
+
+static_data {
+#include "io_queue.h"
+}
+
+
+input :<queue(:3:)
+
+
+output :>out
+
+operation $output_init
+{
+  @success = TRUE;
+}
+
+
+operation $transfer
+{
+  if(@direction == direct_stop) {
+
+    @=call :<queue(:2:)$transfer @args;
+    @sect_code = 0;
+
+  } else {
+
+    success_t mysuccess;
+    addr_t   newreq_laddr;
+    paddr_t  newreq_paddr;
+    struct ioqueue_request *newreq;
+
+    @=call :<queue$getaddrcreateget (IOQUEUE_REQUEST_SIZE) => (mysuccess, newreq_laddr, , newreq_paddr);
+    @.check(!mysuccess, "getaddrcreateget failed");
+    newreq = MAKE_PTR(newreq_paddr);
+    @.check(!newreq, "getaddrcreateget returned NULL pointer");
+
+    newreq->log_addr  = @log_addr;
+    newreq->log_len   = @log_len;
+    newreq->phys_addr = @phys_addr;
+    newreq->direction = @direction;
+    newreq->prio      = @prio;
+    @=call :<queue$trput (newreq_laddr, IOQUEUE_REQUEST_SIZE, newreq_paddr) => (@success);
+    if(@success) {
+      @phys_len = @log_len;
+    }
+    @=call :<queue$unlock (newreq_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.check(!mysuccess, "putaddr(unlock) failed");
+  }
+}
+
+
+operation $wait
+{
+  @=call :<queue(:2:)$wait @args;
+  @sect_code = 0;
+}

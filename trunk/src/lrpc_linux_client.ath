@@ -1,0 +1,54 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf !klinux
+
+brick #lrpc_linux_client
+purpose LRPC Linux Userspace To Kernelspace
+desc
+  This brick is a wrapper for sys_athomux()
+enddesc
+static_data {
+#include <stdio.h>
+#include <unistd.h>
+#include <asm/unistd.h>
+#ifndef __NR_athomux_lrpc
+#ifdef __x86_64__
+#define __NR_athomux_lrpc 247
+#else
+#ifdef __i386__
+#define __NR_athomux_lrpc 223
+#endif
+#endif
+#endif
+#define lrpc_call(id, args, param) syscall(__NR_athomux_lrpc, (unsigned long)id, args, param)
+}
+
+data {
+  unsigned long id;
+}
+
+init {
+  #undef OPERATION
+  #define OPERATION "instance_init lrpc_linux_client"
+  if(sscanf(@param, "%lu", &@#id) != 1) {
+    @.err("invalid param '%s' (should be a number)", @param);
+  }
+}
+
+
+output :>out
+
+
+operation $output_init,$transfer,$wait,$tr,$move,$create,$lock,$unlock,$delete,$getaddr,$findconn,$getconn,$connect,$disconnect,$instconn,$deinstconn,$instbrick,$deinstbrick
+{
+#if 1
+  if(lrpc_call(@#id, @args, @param)<0) {
+    @success = FALSE;
+  }
+#else
+//  lrpc_call(@#id, @args, @param);
+  printf("lrpc(%li, a""rgs, '%s') = %li\n", @#id, @param, lrpc_call(@#id, @args, @param));
+#endif
+}

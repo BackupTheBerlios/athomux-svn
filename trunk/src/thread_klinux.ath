@@ -1,0 +1,69 @@
+  Author: Thomas Schoebel-Theuer (thread_ulinux.ath), Jens-Christian Korth (port to kernel space)
+  Copyright: University of Stuttgart, Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf klinux
+
+brick #thread_klinux
+purpose A dummy thread_* for kernelspace using kernelthreads and dummy CPU
+desc
+  This is a kernelspace-specific implementation.
+  By calling $op on the :>cpu output, a new thread is created
+  executing the operation on the :<exec input in parallel to
+  the caller.
+  If you want to wait on termination of the thread, use an
+  explicit synchronization mechanism for that.
+enddesc
+
+static_data {
+#include "control_simple.h"
+#include <linux/sched.h>
+#include <asm/semaphore.h>
+
+struct threadinfo {
+  struct semaphore mutex;
+  const struct output * on;
+  struct args * myargs;
+  const char * myparam;
+};
+
+int thread_handler(void * _info)
+{
+  // copy all vital data to the local stack
+  struct threadinfo * info = _info;
+  const struct output * on = info->on;
+  struct args myargs;
+  memcpy(&myargs, info->myargs, sizeof(struct args));
+  // HACK (not correct)
+  // TODO: use atomic increment opcode instead
+  myargs.mandate = base_mand++;
+  int len = strlen(info->myparam);
+  char myparam[len+1];
+  strcpy(myparam, info->myparam);
+  // signal that the old data will no longer be accessed
+  up(&info->mutex);
+  on->ops[myargs.sect_code][myargs.op_code]((void *)on, &myargs, myparam);
+  return 0;
+}
+
+}
+
+
+input :<exec
+
+output :>cpu
+
+operation $op
+{ 
+  struct threadinfo info;
+
+  sema_init(&info.mutex, 0);
+  info.on = @#_conn_exec._input_.connect;
+  info.myargs = @args;
+  info.myparam = @param;
+
+  int code = kernel_thread(thread_handler, &info, CLONE_KERNEL);
+  // wait until all data has been copied to the new stack
+  down(&info.mutex);
+  @success = (code > 0);
+}

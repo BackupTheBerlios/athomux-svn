@@ -1,0 +1,552 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #io_queue
+purpose IO Queue
+desc
+  Usage:
+               +----------+     +------------+
+               |  driver  |-----|            |
+               +----------+     |            |
+                                | io_arbiter |
+               +----------+     |            |
+               |          |-----|            |
+  +------+     |          |     +------------+
+  | lock |-----| io_queue |
+  +------+     |          |     +------------+     +-------------+
+               |          |-----| io_sched_* |-----| application |
+               +----------+     +------------+     +-------------+
+
+  Implementation:
+  This IO Queue implementation uses a fixed number of statically allocated
+  request blocks (@#request[IOQUEUE_MAX_REQUESTS]).
+  To allow cheap sorting, the request blocks are referenced by an array
+  of indices (@#queue[IOQUEUE_TOTAL_REQUESTS]) which represents the queue.
+
+  The queue array has four zones:
+  0                                                     IOQUEUE_TOTAL_REQUESTS
+  +-----------+--------+-------------+------------------+
+  |free(again)| locked | schedulable |free(not used yet)|
+  +-----------+--------+-------------+------------------+
+              ^        ^queue_head   ^queue_tail
+              |queue_locked_head
+
+  New request allocations are done at queue_tail.
+  When the 4th zone (free; not used yet) is empty, the next allocation request
+  moves the locked and schedulable zones to the beginning of the array
+  and adapts the @#offset variable to allow a transparent view.
+
+  The meta nest exports the queue_* indices and other informations.
+
+  This brick has an error state which cancels all requests, unlocks all locks
+  and doesnt accept any further requests. The IO arbiter does switch this
+  brick to its error state when an error occurs. This should be done by calling
+  the delete operation on the meta nest.
+  
+enddesc
+
+static_header {
+#define IOQUEUE_MAX_REQUESTS 512
+#define IOQUEUE_ADD_REQUESTS 128
+#define IOQUEUE_TOTAL_REQUESTS (IOQUEUE_MAX_REQUESTS + IOQUEUE_ADD_REQUESTS)
+#define IOQUEUE_REQUEST_SHIFT 6
+#define IOQUEUE_REQUEST_SIZE (1 << IOQUEUE_REQUEST_SHIFT) // = 64
+#define IOQUEUE_META_SIZE    sizeof(struct ioqueue_meta)
+
+typedef uns2 ioqueue_req_addr_t;
+
+struct ioqueue_request {
+  addr_t              log_addr;
+  len_t               log_len;
+  paddr_t             phys_addr;
+  direction_t         direction;
+  prio_t              prio;
+  addr_t              lock_id;
+  ioqueue_req_addr_t  freelist_next;
+};
+
+typedef enum {
+  // start of locked zone
+  ioqueue_locked_head,
+  // start of schedulable zone; on sorted queues also start of urgent requests
+  ioqueue_head,
+  // start of normal requests on sorted queues
+  ioqueue_sched_normal,
+  // start of background requests on sorted queues
+  ioqueue_sched_background,
+  // start of free zone
+  ioqueue_tail,
+
+  // insert positions of IO scheduler
+  ioqueue_sched_insert_urgent,
+  ioqueue_sched_insert_normal,
+  ioqueue_sched_insert_background,
+
+  // position of the read/write head of disk devices
+  // (= log_addr of the last operation)
+  ioqueue_current_addr,
+
+  // dummy enum element (to define array size)
+  IOQUEUE_INDEX_SIZE
+} PACKED ioqueue_index;
+#define ioqueue_sched_urgent ioqueue_head
+
+struct ioqueue_meta {
+  // some indices on the request queue
+  addr_t queue_idx[IOQUEUE_INDEX_SIZE];
+
+  bool error_state;
+};
+
+struct ioqueue_lockinfo {
+  volatile addr_t next_lock;
+  volatile addr_t next_unlock;
+};
+
+}
+
+static_data {
+#include <stdlib.h>
+#include "control_simple.h"
+#define IOQUEUE_GLOBAL_LOCK 0
+#define IOQUEUE_QUEUE_LENGTH (IOQUEUE_TOTAL_REQUESTS * IOQUEUE_REQUEST_SIZE)
+#define IOQUEUE_NULLPTR ((ioqueue_req_addr_t) -1)
+#define IOQUEUE_IS_NULLPTR(reqaddr) ((ioqueue_req_addr_t)reqaddr == IOQUEUE_NULLPTR)
+#define MAKE_REQID(reqoffs) ((reqoffs) >> IOQUEUE_REQUEST_SHIFT)
+}
+
+data {
+  struct ioqueue_meta     meta;
+  struct ioqueue_lockinfo lockinfo[3];
+  len_t                   offset;
+  bool                    extlock;
+  ioqueue_req_addr_t      freelist_head;
+  ioqueue_req_addr_t      queue  [IOQUEUE_TOTAL_REQUESTS];
+  struct ioqueue_request  request[IOQUEUE_MAX_REQUESTS];
+}
+
+
+input :<lock[4]
+/* lock[0] free request available (FIFO waitlist)
+ * lock[1] unprocessed request available (FIFO waitlist)
+ * lock[2] request processed
+ * lock[3] IOQUEUE_GLOBAL_LOCK
+ */
+
+
+
+
+output :>queue(:3:)
+
+@.func break_all_locks()
+{
+  @#meta.error_state = TRUE;
+  @=call :<lock[2](:0:)$unlock [0] (0, -1) => ();
+  @=call :<lock[1](:0:)$unlock [0] (0, -1) => ();
+  @=call :<lock[0](:0:)$unlock [0] (0, -1) => ();
+}
+
+operation $output_init
+{
+  if (@destr) {
+    break_all_locks();
+  }
+  if (@constr) {
+    success_t mysuccess;
+    ioqueue_req_addr_t i;
+    @#lockinfo[0].next_unlock = IOQUEUE_MAX_REQUESTS;
+
+    // add all request blocks to freelist
+    for(i = 0; i < IOQUEUE_MAX_REQUESTS - 1; i++) {
+      @#request[i].freelist_next = i+1;
+    }
+    @#request[IOQUEUE_MAX_REQUESTS - 1].freelist_next = IOQUEUE_NULLPTR;
+
+    // initialize the locks
+    @=call :<lock[0]$lock [0] (IOQUEUE_MAX_REQUESTS, -(IOQUEUE_MAX_REQUESTS+1)) => (mysuccess);
+    @.check (!mysuccess, "locking lock0 failed");
+    @=call :<lock[1]$lock [0] (0, -1) => (mysuccess);
+    @.check (!mysuccess, "locking lock1 failed");
+    @=call :<lock[2]$lock [0] (0, -1) => (mysuccess);
+    @.check (!mysuccess, "locking lock2 failed");
+  }
+}
+
+@.define get_lock(id)
+{
+  trace("locking on lock3 (mandate = %iu)\n", @mandate);
+  @=call :<lock[3](:0:)$lock [@mandate] (id, 1) => ();
+  trace("locking on lock3 - ok\n");
+}
+
+@.define free_lock(id)
+{
+  trace("unlocking lock3 (extlock = %i)\n", @#extlock);
+  if(!@#extlock) {
+    @=call :<lock[3](:0:)$unlock [@mandate] (id, 1) => ();
+  }
+}
+
+@.define waitlistlock_getid(nr) => (id)
+{
+  id = @#lockinfo[nr].next_lock++;
+}
+
+@.define waitlistlock_wakeup(nr) => (status)
+{
+  @=call :<lock[nr]$unlock [0] (@#lockinfo[nr].next_unlock++, 1) => (status);
+}
+
+
+// debug function: displays the content of the queue
+@.define dumpqueue()
+{
+  int i;
+  addr_t compare = @#offset;
+  if (@#meta.queue_idx[ioqueue_locked_head] == compare)             printf("[LH]");
+  if (@#meta.queue_idx[ioqueue_head] == compare)                    printf("[H]");
+  if (@#meta.queue_idx[ioqueue_sched_normal] == compare)            printf("[SN]");
+  if (@#meta.queue_idx[ioqueue_sched_background] == compare)        printf("[SB]");
+  if (@#meta.queue_idx[ioqueue_tail] == compare)                    printf("[T]");
+  if (@#meta.queue_idx[ioqueue_sched_insert_urgent] == compare)     printf("[IU]");
+  if (@#meta.queue_idx[ioqueue_sched_insert_normal] == compare)     printf("[IN]");
+  if (@#meta.queue_idx[ioqueue_sched_insert_background] == compare) printf("[IB]");
+  for(i = 0; i < IOQUEUE_TOTAL_REQUESTS; i++) {
+    printf(" %x\t", @#queue[i]);
+    compare = @#offset + ((i+1) << IOQUEUE_REQUEST_SHIFT);
+    if (@#meta.queue_idx[ioqueue_locked_head] == compare)             printf("[LH]");
+    if (@#meta.queue_idx[ioqueue_head] == compare)                    printf("[H]");
+    if (@#meta.queue_idx[ioqueue_sched_normal] == compare)            printf("[SN]");
+    if (@#meta.queue_idx[ioqueue_sched_background] == compare)        printf("[SB]");
+    if (@#meta.queue_idx[ioqueue_tail] == compare)                    printf("[T]");
+    if (@#meta.queue_idx[ioqueue_sched_insert_urgent] == compare)     printf("[IU]");
+    if (@#meta.queue_idx[ioqueue_sched_insert_normal] == compare)     printf("[IN]");
+    if (@#meta.queue_idx[ioqueue_sched_insert_background] == compare) printf("[IB]");
+    if(i % 16 == 15) printf("\n");
+  }
+  printf("\n");
+}
+
+
+// checks if a newly with $getaddr allocated address is inside the range
+// of the queue array; if not, the content queue array is moved
+@.define make_valid(addr)
+{
+  if((addr - @#offset) >= IOQUEUE_QUEUE_LENGTH) {
+    ioqueue_req_addr_t c = MAKE_REQID(@#meta.queue_idx[ioqueue_locked_head] - @#offset);
+    ioqueue_req_addr_t last = MAKE_REQID(@#meta.queue_idx[ioqueue_tail] - @#offset);
+
+    memmove(&@#queue[0],
+	    &@#queue[c],
+	    (last-c) * sizeof(ioqueue_req_addr_t));
+    @#offset += ((len_t)c) << IOQUEUE_REQUEST_SHIFT;
+  }
+}
+
+
+// common function of some operations
+@.define getlock_precheck_getreqid(lockid, jumplabel) => (reqid)
+{
+  // validate request size
+  @.check(@log_len > IOQUEUE_REQUEST_SIZE, "ony one request allowed");
+
+  // get lock
+  get_lock(lockid);
+
+  // validate request range
+  offs_t myreq = @log_addr - @#offset;
+  @.checkjump((myreq < 0) || (myreq >= IOQUEUE_QUEUE_LENGTH), jumplabel, "request out of range");
+
+  // calculate request id
+  reqid = MAKE_REQID(myreq);
+}
+
+
+// helper function; should go to common.ath
+@.define @.checkjump (condition,target,text...)
+{ if(condition) {
+    printf("OP "OPERATION" file "BASEFILE" line %d (#condition): "text"\n", __LINE__-1 ...);
+    goto target;
+  }
+}
+
+
+operation $getaddr
+{
+  success_t mysuccess;
+  addr_t   next_lock;
+  int      locknr = @where ? 1 : 0;
+
+  // obtain lock id
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+reader_retry:
+  waitlistlock_getid (locknr) => (next_lock);
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+
+  // wait on lock id
+  //trace("locking on lock%i:%llu\n", locknr, next_lock);
+  @=call :<lock[locknr]$lock [1] (next_lock, 1) => (mysuccess);
+  @.check (!mysuccess, "obtaining lock%i failed", locknr);
+  if (@#meta.error_state) return;
+  //trace("locking on lock%i:%llu - ok\n", locknr, next_lock);
+
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+  if(locknr) { // reader
+    // get next request from queue head
+    @log_addr = @#meta.queue_idx[ioqueue_head];
+    @#meta.queue_idx[ioqueue_head] += IOQUEUE_REQUEST_SIZE;
+    ioqueue_req_addr_t req = @#queue[MAKE_REQID(@log_addr - @#offset)];
+    if(IOQUEUE_IS_NULLPTR(req)) goto reader_retry;
+    @#meta.queue_idx[ioqueue_current_addr] = @#request[req].log_addr + @#request[req].log_len;
+  } else { // writer
+    // get empty request from queue tail
+    @log_addr = @#meta.queue_idx[ioqueue_tail];
+    @#meta.queue_idx[ioqueue_tail] += IOQUEUE_REQUEST_SIZE;
+    make_valid(@log_addr);
+    @#queue[MAKE_REQID(@log_addr - @#offset)] = IOQUEUE_NULLPTR;
+  }
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+  @log_len = IOQUEUE_REQUEST_SIZE;
+  @success = TRUE;
+}
+
+
+operation $unlock // parts of former $putaddr
+{
+  // allow the IO arbiter to process the next request
+  waitlistlock_wakeup(1) => (@success);
+}
+
+
+operation $create
+{
+  ioqueue_req_addr_t req;
+  offs_t reqid;
+
+  getlock_precheck_getreqid (IOQUEUE_GLOBAL_LOCK, label_fail) => (reqid);
+
+  // fetch one request block from the freelist
+  req = @#freelist_head;
+  @.checkjump(IOQUEUE_IS_NULLPTR(req), label_fail, "freelist is empty");
+  @#freelist_head = @#request[req].freelist_next;
+
+  // put it into the queue
+  @#queue[reqid] = req;
+  // and initialize it
+  memset(&@#request[req], 0, sizeof(struct ioqueue_request));
+  waitlistlock_getid(2) => (@#request[req].lock_id);
+
+  @success = TRUE;
+
+label_fail:
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+}
+
+operation $delete
+{
+  offs_t reqid;
+
+  getlock_precheck_getreqid (IOQUEUE_GLOBAL_LOCK, label_fail) => (reqid);
+
+  ioqueue_req_addr_t reqaddr = @#queue[reqid];
+  if(!IOQUEUE_IS_NULLPTR(reqaddr)) {
+    // mark request as unused
+    @#queue[reqid] = IOQUEUE_NULLPTR;
+    // add it to the freelist
+    @#request[reqaddr].freelist_next = @#freelist_head;
+    @#freelist_head = reqaddr;
+    // and tell anybody who is waiting on it that it is completed
+    @=call :<lock[2]$unlock [0] (@#request[reqaddr].lock_id, 1) => ();
+
+    // see how many unused requests are at the beginning of the locked zone
+    // of the queue, and make them available to the IO scheduler
+    ioqueue_req_addr_t last = MAKE_REQID(@#meta.queue_idx[ioqueue_tail] - @#offset);
+    ioqueue_req_addr_t c = MAKE_REQID(@#meta.queue_idx[ioqueue_locked_head] - @#offset);
+    while((c < last) && (@#queue[c] == IOQUEUE_NULLPTR)) {
+      c++;
+      // allow the IO scheduler to add one more new request
+      waitlistlock_wakeup(0) => ();
+    }
+    @#meta.queue_idx[ioqueue_locked_head] = @#offset + (((len_t)c) << IOQUEUE_REQUEST_SHIFT);
+
+  }
+  @success = TRUE;
+
+label_fail:
+  free_lock(IOQUEUE_GLOBAL_LOCK);  
+}
+
+operation $move
+{
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+  offs_t src = @log_addr - @#offset;
+  offs_t dest = src + @offset;
+  @.checkjump((src < 0) || (src+@log_len > IOQUEUE_QUEUE_LENGTH) || (dest < 0) || (dest+@log_len > IOQUEUE_QUEUE_LENGTH), unlock, "request out of range");
+
+  memmove(&@#queue[MAKE_REQID(dest)],
+	  &@#queue[MAKE_REQID(src)],
+	  MAKE_REQID(@log_len) * sizeof(ioqueue_req_addr_t));
+
+  @success = TRUE;
+unlock:
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+}
+
+operation $get,$gettr
+{
+  offs_t reqid;
+
+  getlock_precheck_getreqid (IOQUEUE_GLOBAL_LOCK, label_fail) => (reqid);
+
+  ioqueue_req_addr_t reqaddr = @#queue[reqid];
+  if(IOQUEUE_IS_NULLPTR(reqaddr)) goto label_fail;
+  @phys_addr = MAKE_PADDR(&@#request[reqaddr]);
+  @phys_len  = sizeof(struct ioqueue_request);
+  @version   = vers_newest;
+  @success    = TRUE;
+
+label_fail:
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+}
+
+operation $put,$trput,$transfer,$wait,$tr
+{
+  @success = TRUE;
+}
+
+
+section (:1:)
+
+// allow external access to the @#meta struct
+operation $get,$gettr
+{
+  @.check(@log_len != IOQUEUE_META_SIZE || @log_addr != 0, "invalid request");
+  @phys_addr = MAKE_PADDR(&@#meta);
+  @phys_len = IOQUEUE_META_SIZE;
+  @version = vers_newest;
+  @success = TRUE;
+}
+
+// use this to switch the brick to the error state
+operation $delete
+{
+  if(!@#meta.error_state) {
+    break_all_locks();
+  }
+  @success = TRUE;
+}
+
+// external locking: ensure that one getaddr operation during lock will not block, and that it is possible to move the queue one entry far
+operation $lock
+{
+  success_t mysuccess;
+  addr_t   next_lock;
+
+retry:
+  // obtain lock id
+  next_lock = @#lockinfo[0].next_lock + 1;
+
+  // wait on lock id
+  //trace("locking on lock0:%llu\n", next_lock);
+  @=call :<lock[0](:0:)$lock [1] (next_lock, 1) => (mysuccess);
+  @.check (!mysuccess, "obtaining lock0 failed");
+  if (@#meta.error_state) return;
+  //trace("locking on lock0:%llu - ok\n", next_lock);
+
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+  // check if a race occured
+  if(next_lock != @#lockinfo[0].next_lock + 1) {
+    trace("lost race, trying again\n");
+    free_lock(IOQUEUE_GLOBAL_LOCK);
+    goto retry;
+  }
+  // move queue if nessessary
+  make_valid(@#meta.queue_idx[ioqueue_tail] + IOQUEUE_REQUEST_SIZE);
+  trace("enabling extlock\n");
+  @#extlock = TRUE;
+  @success = TRUE;
+}
+
+operation $unlock
+{
+  @#extlock = FALSE;
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+  @success = TRUE;
+}
+
+//// this is used for debug purposes, and has nothing to do with a brick deinstanciation
+//
+//operation $deinstbrick
+//{
+//  dumpqueue();
+//}
+
+operation $output_init,$transfer,$wait,$tr,$put,$trput
+{
+  @success = TRUE;
+}
+
+
+section (:2:)
+
+operation $transfer
+{
+  ioqueue_req_addr_t i;
+  @.check(@direction != direct_stop, "invalid request");
+
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+  for(i = MAKE_REQID(@#meta.queue_idx[ioqueue_head] - @#offset); i < MAKE_REQID(@#meta.queue_idx[ioqueue_tail] - @#offset); i++) {
+    ioqueue_req_addr_t id = @#queue[i];
+    if(!IOQUEUE_IS_NULLPTR(id)) {
+      if((@#request[id].log_addr >= @log_addr) &&
+	 (@#request[id].log_addr + @#request[id].log_len <= @log_addr + @log_len)) {
+	// cancel request
+	@#request[id].direction = direct_stop;
+      }
+    }
+  }
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+  @success = TRUE;
+}
+
+operation $wait
+{
+  addr_t wait_on = -1, wait_range = 1;
+
+  get_lock(IOQUEUE_GLOBAL_LOCK);
+  // does the queue contain at least one element?
+  if(@#meta.queue_idx[ioqueue_locked_head] < @#meta.queue_idx[ioqueue_tail]) {
+    // get last queue element
+    ioqueue_req_addr_t id = MAKE_REQID(@#meta.queue_idx[ioqueue_tail] - @#offset) - 1;
+    // check if id references a valid element in the queue
+    if(id < IOQUEUE_TOTAL_REQUESTS) {
+      id = @#queue[id];
+      if(!IOQUEUE_IS_NULLPTR(id))
+	wait_on = @#request[id].lock_id;
+    }
+  }
+  if(wait_on == -1) {
+    // could not get request to wait on; wait on all previous requests
+    wait_on    = 0;
+    wait_range = @#lockinfo[2].next_lock;
+  }
+  free_lock(IOQUEUE_GLOBAL_LOCK);
+
+  if(wait_range) {
+    // wait now
+    @=call :<lock[2](:0:)$lock   [@mandate] (wait_on, wait_range) => (@success);
+    @=call :<lock[2](:0:)$unlock [@mandate] (wait_on, wait_range) => ();
+  } else {
+    @success = TRUE;
+  }
+  // check if the brick went to its error state
+  if(@#meta.error_state) {
+    @success = FALSE;
+  }
+}
+
+operation $output_init
+{
+  @success = TRUE;
+}

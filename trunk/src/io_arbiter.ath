@@ -1,0 +1,107 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #io_arbiter
+purpose ATHOMUX driver arbiter
+desc
+  Usage:
+               +----------+     +------------+
+               |  driver  |-----|            |
+               +----------+     |            |     +--------+
+                                | io_arbiter |-----|thread_*|-----
+               +----------+     |            |     +--------+
+               |          |-----|            |
+  +------+     |          |     +------------+
+  | lock |-----| io_queue |
+  +------+     |          |     +------------+     +-------------+
+               |          |-----| io_sched_* |-----| application |
+               +----------+     +------------+     +-------------+
+
+  This IO arbiter fetches IO requests from the IO queue and sends
+  them to a driver.
+
+  You can call $output_init through a thread_* brick multiple times
+  if you want multiple IO arbiter threads.
+
+enddesc
+
+static_data {
+#include "control_simple.h"
+#include "io_queue.h"
+}
+
+
+input :<driver
+
+input :<queue
+
+
+
+output :>dummy
+data {
+  volatile bool is_running;
+}
+
+// helper function; should go to common.ath
+@.define @.checkjump (condition,target,text...)
+{ if(condition) {
+    printf("OP "OPERATION" file "BASEFILE" line %d (#condition): "text"\n", __LINE__-1 ...);
+    goto target;
+  }
+}
+
+operation $output_init
+{
+  success_t mysuccess;
+  addr_t   req_laddr;
+  paddr_t  req_paddr;
+  plen_t   phys_len;
+  mand_t   mandate = 0;
+  struct ioqueue_request *req;
+
+  @>is_running = !@destr;
+
+  if(@constr) {
+    // this hack avoids problems with identical mandates
+    mandate = -(base_mand++);
+  }
+  // main loop
+  while(@>is_running) {
+    // wait for next request
+    trace("io_arbiter: waiting for next request\n");
+    @=call :<queue$getaddr [mandate] (IOQUEUE_REQUEST_SIZE, TRUE) => (mysuccess, req_laddr);
+    if(!@>is_running) goto shutdown;
+    @.checkjump(!mysuccess, fail, "getaddr failed");
+
+    // fetch it
+    trace("io_arbiter: processing request %llx\n", req_laddr);
+    @=call :<queue$gettr [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess, req_paddr);
+    if(!@>is_running) goto shutdown;
+    @.checkjump(!mysuccess, fail, "gettr failed");
+
+    req = MAKE_PTR(req_paddr);
+    @.checkjump(!req, fail, "getaddrgettr returned NULL pointer");
+
+    // check if nobody did cancel the request
+    if(req->direction != direct_stop) {
+      // send it to the driver
+      trace("io_arbiter: calling transfer (laddr:%llx,llen:%llx,paddr=%p,prio=%i)\n", req->log_addr, req->log_len, MAKE_PTR(req->phys_addr), req->prio);
+      @=call :<driver$transfer [mandate] (req->log_addr, req->log_len, req->phys_addr, req->direction, req->prio) => (mysuccess, phys_len);
+      if(!@>is_running) goto shutdown;
+      @.checkjump(!mysuccess, fail, "transfer failed");
+      @.checkjump(req->log_len != phys_len, fail, "transfer could only process %lu of %llu bytes", phys_len, req->log_len);
+    }
+
+    // remove it from the IO queue
+    @=call :<queue$putdelete [mandate] (req_laddr, IOQUEUE_REQUEST_SIZE) => (mysuccess);
+    @.checkjump(!mysuccess, fail, "putdelete failed");
+  }
+shutdown:
+  @success = TRUE;
+  return;
+
+fail:
+  // switch IO queue to error state
+  @=call :<queue(:1:)$delete [mandate] (0, IOQUEUE_META_SIZE) => ();
+}

@@ -1,0 +1,337 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf !klinux
+
+brick #demo_bench_lrpc
+purpose LRPC Benchmark Brick
+desc
+  Do benchmark over LRPC
+enddesc
+
+static_header {
+  struct connref {
+    struct conn_info native;
+    struct conn_info foreign;
+    struct conn_info connection;
+    unsigned int     addr_space;
+    unsigned int     lrpc_id;
+  };
+}
+
+static_data {
+  #define STRAT_ADDRSPACE_SHIFT 32
+  #define STRAT_ADDRSPACE_SIZE (1LL << STRAT_ADDRSPACE_SHIFT)
+  #define STRAT_ADDRSPACE_MASK (STRAT_ADDRSPACE_SIZE - 1LL)
+
+  #define MY_STRAT_LEN 1000
+
+  extern struct output * root_strategy;
+
+// change param for static wired brick instances
+// NOTE: evil coding style - don't do that...
+#define init_lrpc_linux_client(brick, param, mand) \
+        init_lrpc_linux_client(brick, brick == &ini->_sub_controlpool ? "0" : "1", mand)
+}
+
+data {
+  addr_t device_ref, bench_ref;
+  struct connref device_out, bench_in, bench_out;
+}
+
+init {
+  // do static wire to root_strategy output
+  ini->_conn_strat[0]._input_.connect = root_strategy;
+}
+
+
+instance #lrpc_linux_client as controlpool;
+instance #lrpc_linux_client as control_klinux;
+
+
+instance #adapt_complete as acomp;
+wire #.acomp:>out as :<bdev;
+
+
+wire #.control_klinux:>out as :<strat[1];
+wire #.controlpool:>out as :<idpool[1];
+
+local input :<strat[2]
+local input :<idpool[2]
+
+local input :<bdev
+
+output :>program
+
+// helper function; should go to common.ath
+@.define @.checkjump (condition,target,text...)
+{ if(condition) {
+    printf("OP "OPERATION" file "BASEFILE" line %d (#condition): "text"\n", __LINE__-1 ...);
+    goto target;
+  }
+}
+
+@.func myinstbrick (int addr_space, char * brickname, const char * myparam) => (addr_t brickref)
+{
+  brickref = 0;
+
+  // NOTE: Using "@ = c a l l ... &myargs" is a bad ATHOMUX programming style.
+  //       For new code, please use "@ = c a l l ... (...) => (...)" if possible!
+  //       "@ = c a l l ... & a r g s" should only be used for argument forwarding.
+
+  struct args myargs = {
+    .log_addr = 0,
+    .log_len = MY_STRAT_LEN,
+    .try_len = MY_STRAT_LEN,
+    .where = FALSE,
+    .exclu = TRUE,
+    .action = action_wait,
+    .success = FALSE,
+  };
+  @=call :<strat[addr_space]$getaddr &myargs;
+  @.check(!myargs.success, "getaddr failed");
+  myargs.success = FALSE;
+  strncpy((char *)&myargs.name, brickname, sizeof(myargs.name));
+  @=call :<strat[addr_space]$instbrick &myargs : myparam;
+  @.check(!myargs.success, "instbrick failed");
+
+  brickref = myargs.log_addr + (STRAT_ADDRSPACE_SIZE * addr_space);
+}
+
+@.func mydeinstbrick (addr_t brickref) => (success_t mysuccess)
+{
+  long addr_space = brickref >> STRAT_ADDRSPACE_SHIFT;
+
+  // NOTE: Using "@ = c a l l ... &myargs" is a bad ATHOMUX programming style.
+  //       For new code, please use "@ = c a l l ... (...) => (...)" if possible!
+  //       "@ = c a l l ... & a r g s" should only be used for argument forwarding.
+
+  struct args myargs = {
+    .log_addr = brickref & STRAT_ADDRSPACE_MASK,
+    .log_len = MY_STRAT_LEN,
+    .success = FALSE,
+  };
+
+  @=call :<strat[addr_space]$deinstbrick &myargs;
+  mysuccess = myargs.success;
+
+  @.check(!myargs.success, "deinstbrick failed");
+  @=call :<strat[addr_space]$delete &myargs;
+}
+
+@.func myinstconn (struct connref * conn) => (success_t mysuccess)
+{
+  conn->addr_space = conn->native.conn_addr >> STRAT_ADDRSPACE_SHIFT;
+  mysuccess = FALSE;
+
+  if(conn->addr_space) {
+
+    // NOTE: Using "@ = c a l l ... &myargs" is a bad ATHOMUX programming style.
+    //       For new code, please use "@ = c a l l ... (...) => (...)" if possible!
+    //       "@ = c a l l ... & a r g s" should only be used for argument forwarding.
+
+    struct args myargs = {
+      .log_addr = 0,
+      .log_len = 1,
+      .try_len = 1,
+      .where = FALSE,
+      .exclu = TRUE,
+      .action = action_wait,
+      .success = FALSE,
+    };
+    char myparam[16] = "";
+    // get LRPC id from idpool
+    @=call :<idpool[conn->addr_space]$getaddr &myargs;
+    @.check(!myargs.success, "idpool allocation failed");
+    conn->lrpc_id = myargs.log_addr;
+    snprintf((char *)&myparam, sizeof(myparam), "%llu", myargs.log_addr);
+
+    // fill out other struct conns
+    memcpy(&conn->foreign, &conn->native, sizeof(conn->foreign));
+    conn->foreign.conn_addr  = conn->native.conn_addr & STRAT_ADDRSPACE_MASK;
+    conn->native.conn_index  = 0;
+    strcpy(conn->native.conn_name,"out");
+    conn->connection.conn_index  = 0;
+    strcpy(conn->connection.conn_name,"in");
+
+    // inst LRPC server
+    myinstbrick(conn->addr_space, "lrpc_linux_server", (char *)&myparam) => (conn->connection.conn_addr);
+    @.check(!conn->connection.conn_addr, "could not allocate LRPC server");
+    conn->connection.conn_addr &= STRAT_ADDRSPACE_MASK;
+
+#if 1
+    // inst LRPC client
+    myinstbrick(0, "lrpc_linux_client", (char *)&myparam) => (conn->native.conn_addr);
+    @.check(!conn->native.conn_addr,  "could not allocate LRPC client");
+
+    // instconn LRPC client
+    myargs.conn1 = &conn->native;
+    myargs.success = FALSE;
+    @=call :<strat[0]$instconn &myargs;
+    @.check(!myargs.success, "LRPC instconn local failed");
+#endif
+
+    // instconn LRPC server
+    myargs.conn1 = &conn->foreign;
+    myargs.success = FALSE;
+    @=call :<strat[conn->addr_space]$instconn &myargs;
+    @.check(!myargs.success, "LRPC instconn failed");
+
+    // connect LRPC server to requested brick instance
+    myargs.success = FALSE;
+    myargs.conn1 = &conn->connection;
+    myargs.conn2 = &conn->foreign;
+    @=call :<strat[conn->addr_space]$connect &myargs;
+    @.check(!myargs.success, "LRPC connect failed");
+
+#if 0    
+    //0 inst LRPC client
+    myinstbrick(0, "lrpc_linux_client", (char *)&myparam) => (conn->native.conn_addr);
+    @.check(!conn->native.conn_addr,  "could not allocate LRPC client");
+#endif
+
+#if 0
+    #define printinfo(c,n) printf("%s: %llx %x %s\n",n,c.conn_addr,c.conn_index,c.conn_name);
+    printf("LRPC ID is %s\n", &myparam);
+    printinfo(conn->native, "native");
+    printinfo(conn->foreign, "foreign");
+    printinfo(conn->connection, "connection");
+#endif
+
+#if 0
+    //0 instconn LRPC client
+    myargs.conn1 = &conn->native;
+    myargs.success = FALSE;
+    @=call :<strat[0]$instconn &myargs;
+    @.check(!myargs.success, "LRPC instconn local failed");
+#endif
+    mysuccess = myargs.success;
+  } else {
+    /*
+    myargs.conn1 = &conn->native;
+    myargs.success = FALSE;
+    @=call :<strat[0]$instconn &myargs;
+    mysuccess = myargs.success;
+    */
+    @=call :<strat[0]$instconn (&conn->native) => (mysuccess);
+  }
+}
+
+@.func mydeinstconn (struct connref * conn) => (success_t mysuccess)
+{
+  mysuccess = FALSE;
+
+  if(conn->addr_space) {
+
+    // NOTE: Using "@ = c a l l ... &myargs" is a bad ATHOMUX programming style.
+    //       For new code, please use "@ = c a l l ... (...) => (...)" if possible!
+    //       "@ = c a l l ... & a r g s" should only be used for argument forwarding.
+
+    struct args myargs = {
+      .conn1 = &conn->connection,
+      .success = FALSE,
+    };
+    // disconnect LRPC server
+    @=call :<strat[conn->addr_space]$disconnect &myargs;
+    @.check(!myargs.success, "LRPC disconnect failed");
+
+    // deinstconn LRPC server
+    myargs.conn1 = &conn->foreign;
+    myargs.success = FALSE;
+    @=call :<strat[conn->addr_space]$deinstconn &myargs;
+    @.check(!myargs.success, "LRPC deinstconn failed");
+
+    // deinstconn LRPC client
+    myargs.conn1 = &conn->native;
+    myargs.success = FALSE;
+    @=call :<strat[0]$deinstconn &myargs;
+    @.check(!myargs.success, "LRPC deinstconn local failed");
+
+    // deinst LRPC client
+    mydeinstbrick(conn->native.conn_addr) => (mysuccess);
+    @.check(!mysuccess,  "could not deallocate LRPC client");
+
+    // deinst LRPC server
+    mydeinstbrick(conn->connection.conn_addr + (STRAT_ADDRSPACE_SIZE * conn->addr_space)) => (mysuccess);
+    @.check(!conn->connection.conn_addr, "could not deallocate LRPC server");
+
+    // release LRPC id
+    myargs.log_addr = conn->lrpc_id;
+    myargs.log_len = 1;
+    @=call :<idpool[conn->addr_space]$delete &myargs;
+
+    mysuccess = TRUE;
+
+  } else {
+    @=call :<strat[0]$deinstconn (&conn->native) => (mysuccess);
+  }
+}
+
+operation $output_init
+{
+  if(!@constr) {
+    printf("Unloading "BASEFILE"\n");
+  } else {
+    printf("Starting "BASEFILE"\n");
+  }
+
+  success_t s;
+  if(@constr) {
+    myinstbrick (1, "io_demo_file", @param) => (@#device_ref);
+    @.check(!@#device_ref, "generic_instbrick(1) failed");
+
+    myinstbrick (0, "io_benchmark", @param) => (@#bench_ref);
+    @.checkjump(!@#bench_ref, init1, "generic_instbrick(2) failed");
+
+    @#device_out.native.conn_addr = @#device_ref;
+    @#device_out.native.conn_index = 0;
+    strcpy((char *)&@#device_out.native.conn_name, "out");
+    myinstconn (&@#device_out) => (s);
+    @.checkjump(!s, init2, "generic_instconn(1) failed");
+
+    @#bench_in.native.conn_addr = @#bench_ref;
+    @#bench_in.native.conn_index = 0;
+    strcpy((char *)&@#bench_in.native.conn_name, "device");
+#if 0
+    myinstconn (&@#bench_in) => (s);
+    @.checkjump(!s, init3, "generic_instconn(2) failed");
+#endif
+
+    @=call :<strat[0]$connect (&@#bench_in.native, &@#device_out.native) => (s);
+    @.checkjump(!s, init4, "connect failed");
+
+    @#bench_out.native.conn_addr = @#bench_ref;
+    @#bench_out.native.conn_index = 0;
+    strcpy((char *)&@#bench_out.native.conn_name, "out");
+    myinstconn (&@#bench_out) => (s);
+    @.checkjump(!s, init5, "generic_instconn(3) failed");
+
+  } else {
+    mydeinstconn (&@#bench_out) => (s);
+    @.check(!s, "generic_deinstconn(3) failed");
+init5:
+    @=call :<strat[0]$disconnect (&@#bench_in.native) => (s);
+    @.check(!s, "disconnect failed");
+init4:
+#if 0
+    mydeinstconn (&@#bench_in) => (s);
+    @.check(!s, "generic_deinstconn(2) failed");
+init3:
+#endif
+    mydeinstconn (&@#device_out) => (s);
+    @.check(!s, "generic_deinstconn(1) failed");
+init2:
+    mydeinstbrick (@#bench_ref) => (s);
+    @.check(!s, "generic_deinstbrick(2) failed");
+init1:
+    mydeinstbrick (@#device_ref) => (s);
+    @.check(!s, "generic_deinstbrick(1) failed");
+    if(@constr) {
+      @success = FALSE;
+    }
+  }
+
+  @success = TRUE;
+}
+
