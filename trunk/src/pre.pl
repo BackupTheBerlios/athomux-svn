@@ -884,7 +884,7 @@ sub sp_complete {
   $scopes = $::current unless $scopes;
   # special treatment for empty #brick
   if($spec =~ m/\A#[^\w]/) {
-    $scopes =~ m/\A\#\w+/;
+    $scopes =~ m/\A\#\w+(?:\#\w+)*/;
     my $brick = $MATCH;
     $spec =~ s/\A\#/$brick/;
   }
@@ -1003,18 +1003,72 @@ sub spec_bricktype {
   return $spec;
 }
 
-# check whether a specifier is an alias and replace it
-sub spec_alias {
-  my ($spec) = @_;
-  #my $search = spec_prefix($$spec, 2);
-  my $search = sp_shorten($$spec, 2);
-  $search =~ s/$brackmatch//;
-  #print "SEARCH: $search\n";
-  my $replace = $::aliases{$search};
-  if(defined($replace)) {
-    #print "REPLACE: $search -> $replace\n";
-    $$spec =~ s/$search/$replace/;
+##########################################################################
+
+# wire handling
+
+%::in2out = ();
+%::out2in = ();
+
+# remember a wire association between an input and an output
+sub make_wire {
+  my ($in_spec, $out_spec) = @_;
+  my $old = $::in2out{$in_spec};
+  die "input specifier '$in_spec' has already an alias '$old' while creating wire '$out_spec'" if $old;
+  $::in2out{$in_spec} = $out_spec;
+  my $list = $::out2in{$out_spec};
+  if($list) {
+    $list = [ $in_spec, @$list ];
+  } else {
+    $list = [ $in_spec ];
   }
+  $::out2in{$out_spec} = $list;
+}
+
+# remember an alias association between same type
+sub make_alias {
+  my ($alias_spec, $true_spec) = @_;
+  my $old = $::in2out{$alias_spec};
+  die "alias specifier '$alias_spec' has already an alias '$old' while creating alias '$true_spec'" if $old;
+  $::in2out{$alias_spec} = $true_spec;
+}
+
+#
+# transitively replace any wired part of $spec as far as possible
+sub wire_in2out {
+  my ($spec) = @_;
+  my $short = sp_shorten($spec, 2);
+  my $core = $short;
+  $core =~ s/$brackmatch//;
+  while(my $subst = ($::in2out{$short} || (($short = $core) && $::in2out{$short}))) {
+    $short =~ s/([.\[\]])/\\$1/g;
+    $spec =~ s/$short/$subst/ or die "cannot substitute $subst for $short in $spec";
+    $short = $subst;
+    $core = $subst;
+    $core =~ s/$brackmatch//;
+  }
+  return $spec;
+}
+
+# the same in opposite direction, return a list of inputs
+sub wire_out2in {
+  my @res = ();
+  foreach my $spec (@_) {
+    my $short = sp_shorten($spec, 2);
+    my $core = $short;
+    $core =~ s/$brackmatch//;
+    if(my $subst_l = ($::out2in{$short} || $::out2in{$core})) {
+      my @sublist = alias_out2in(@$subst_l);
+      foreach my $subst (@sublist) {
+	my $new = $spec;
+	$new =~ s/$short/$subst/;
+	push @res, $new;
+      }
+    } else {
+      push @res, $spec;
+    }
+  }
+  return @res;
 }
 
 ##########################################################################
@@ -1478,7 +1532,9 @@ sub gen_call {
   my $call = "";
   $call .= "call_level++; " if $indent_trace;
   my $brick = sp_part($caller_spec, 1, 0);
-  spec_alias(\$target) if $optype eq "output";
+  if($optype eq "output") {
+    $target = wire_in2out($target);
+  }
   my ($targetbrick, $conn_name, $array, $section, $op) = sp_parts($target);
   if($section ne "(:0:)" and $target =~ m/\$\w+_init\Z/) {
     warn "always call operation $1 on section (:0:), never as in '$target'\n";
@@ -1722,7 +1778,6 @@ $::warn_syntax = "";
 
 %::instances = ();
 %::wires = ();
-%::aliases = ();
 %::sub_conns = ();
 %::inst_types = ();
 
@@ -1910,9 +1965,11 @@ sub parse_subinstances {
 	$text = $POSTMATCH;
 	die "bad specified type '$sub_conn'" unless sp_type($sub_conn) == 2;
 	die "bad specified type '$loc_conn'" unless sp_type($loc_conn) == 2;
+	warn "do not start specifier $sub_conn with '##', probably means something different you dont want\n" if $sub_conn =~ m/\A\#\#/;
 	my $new_spec = sp_part($::current, 1) . "#$name";
 	my $sub_complete = sp_complete($sub_conn, $new_spec);
 	my $loc_complete = sp_complete($loc_conn);
+#print "new_spec: $new_spec sub_comnplete: $sub_conn -> $sub_complete loc_complete: $loc_conn -> $loc_complete\n";
 	my $sub_core = $sub_complete;
 	my $loc_core = $loc_complete;
 	$sub_core =~ s/\[\]//;
@@ -1929,21 +1986,17 @@ sub parse_subinstances {
 	  if($sub_complete =~ m/:</) {
 	    # alias a sub-input to a local output
 	    $::wires{$sub_complete} = $loc_complete if $remember;
-	    $::aliases{$sub_core} = $loc_core unless $sub_complete =~ m/\[[^\]]+\]/;
+	    make_wire($sub_core, $loc_core);
 	  } else {
 	    # alias a local input to a sub-output
 	    $::wires{$loc_complete} = $sub_complete if $remember;
-	    if($sub_complete =~ m/\[[^\]]+\]/) {
-	      $::aliases{$loc_core} = $sub_complete;
-	    } else {
-	      $::aliases{$loc_core} = $sub_core;
-	    }
+	    make_wire($loc_core, $sub_core);
 	  }
 	} else {
 	  warn "WARNING: in future releases keyword 'alias' will be required instead of '$cmd' for specifiers $sub_conn $loc_conn" unless $cmd eq "alias";
 	  # create an external alias
 	  die "target of external alias $loc_conn must not be a sub-instance" if defined(sp_part($loc_conn, 1, 1));
-	  $::aliases{$loc_core} = $sub_core;
+	  make_alias($loc_core, $sub_core);
 	  my $full_spec = $::sub_conns{$sub_core} or die "sub-specifier $sub_conn does not exist";
 	  if($full_spec =~ m/$brackmatch/) {
 	    die "sub-specifier $sub_conn must be written $sub_core\[]" unless $sub_conn =~ m/\[\]/;
@@ -2201,7 +2254,7 @@ sub parse_file {
 # consistency checks
 
 sub test_twice {
-  my %names = %::aliases;
+  my %names = %::in2out;
   foreach my $testspec (keys %::conn_spec) {
     my $test = sp_shorten($testspec, 2);
     my $found = $names{$test};

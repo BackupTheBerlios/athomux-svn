@@ -44,18 +44,18 @@ static_header {
 }
 
 instance #device_mem_ulinux as memory;
+wire :>out as ##sync:<in;
 instance #adapt_multi as sync;
-wire ##memory:>out as ##sync:<in;
+wire :>out as ##userA:<buf;
+wire :>out as ##userB:<buf;
 instance #device_console_ulinux as userA;
-wire ##sync:>out as ##userA:<buf;
 instance #device_console_ulinux as userB;
-wire ##sync:>out as ##userB:<buf;
 instance #thread_ulinux as splitterA;
-wire #:>oneWay as ##splitterA:<exec;
-wire ##splitterA:>cpu as #:<workA;
+wire :>cpu as #:<workA;
+wire :<exec as :>oneWay;
 instance #thread_ulinux as splitterB;
-wire #:>othWay as ##splitterB:<exec;
-wire ##splitterB:>cpu as #:<workB;
+wire :>cpu as #:<workB;
+wire :<exec as :>othWay;
 
 @.define copytext (PRODUCER, CONSUMER) {
 	char buf[BUF_SIZE];

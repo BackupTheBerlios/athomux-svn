@@ -27,7 +27,7 @@ endexample
 
 
 instance #lock_ulinux as l;
-wire ##l:>lock as :<ilock;
+wire :>lock as :<ilock;
 
 
 

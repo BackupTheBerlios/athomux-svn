@@ -31,7 +31,7 @@ data {
 }
 
 instance #device_mem_ulinux as mem;
-wire ##mem:>out as :<mem;
+wire :>out as :<mem;
 
 input :<mem
 use PC seg;

@@ -27,30 +27,29 @@ static_data {
 }
 
 instance #lock_ulinux as lock0;
+wire :>lock as ##queue:<lock[0];
 instance #lock_ulinux as lock1;
+wire :>lock as ##queue:<lock[1];
 instance #lock_ulinux as lock2;
+wire :>lock as ##queue:<lock[2];
 instance #lock_ulinux as lock3;
+wire :>lock as ##queue:<lock[3];
 instance #thread_ulinux as thread;
 instance #io_queue as queue;
+wire :>queue as ##arbiter:<queue;
+wire :>queue as ##sched:<queue;
 @.if("PCONF" eq "klinux") {
 instance #device_block_klinux as driver;
 } @.else {
 instance #device_dummy_linux as driver;
 }
+wire :>out as ##arbiter:<driver;
 instance #io_arbiter as arbiter;
+wire :>dummy as ##thread:<exec;
 instance #io_sched_elevator as sched;
+wire :>out as ##adlim:<in;
 instance #adapt_limit as adlim;
-
-wire ##lock0:>lock as ##queue:<lock[0];
-wire ##lock1:>lock as ##queue:<lock[1];
-wire ##lock2:>lock as ##queue:<lock[2];
-wire ##lock3:>lock as ##queue:<lock[3];
-wire ##driver:>out as ##arbiter:<driver;
-wire ##arbiter:>dummy as ##thread:<exec;
-wire ##queue:>queue as ##arbiter:<queue;
-wire ##queue:>queue as ##sched:<queue;
-wire ##sched:>out as ##adlim:<in;
-wire ##adlim:>out as :<in;
+wire :>out as :<in;
 
 local input :<in
 

@@ -41,15 +41,15 @@ static_header {
  *****************************************************************************/
 
 instance #userfs_mux_ulinux as mux;
-alias ##mux:<image[] as :<image[];
+alias :<image[] as :<image[];
+wire :>mux as ##fuse:<image;
 
 instance #thread_ulinux as thread;
 
 instance #fuse_ulinux as fuse;
-alias ##fuse:<lock as :<lock;
-alias ##fuse:<state as :<state;
-wire ##fuse:>main as ##thread:<exec;
-wire ##mux:>mux as ##fuse:<image;
+alias :<lock as :<lock;
+alias :<state as :<state;
+wire :>main as ##thread:<exec;
 
 input :<strat
 

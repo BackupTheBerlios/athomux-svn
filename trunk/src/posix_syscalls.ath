@@ -18,20 +18,19 @@ data {
 }
 
 instance #syscall_ulinux as sys;
-
-alias ##sys:<lock as :<lock;
-alias ##sys:<fs as :<fs;
-alias ##sys:<process as :<process;
+alias :<lock as :<lock;
+alias :<fs as :<fs;
+alias :<process as :<process;
+wire :>main as ##thread:<exec;
+wire :<state as :>stat;
 
 instance #thread_ulinux as thread;
-wire ##sys:>main as ##thread:<exec;
 
 instance #file_syscalls_ulinux as file;
-alias ##file:<fd[] as :<fd[];
-wire ##file:>syscall as ##sys:<fd;
+alias :<fd[] as :<fd[];
+wire :>syscall as ##sys:<fd;
+wire :<state as :>stat;
 
-wire ##sys:<state as :>stat;
-wire ##file:<state as :>stat;
 
 input :<state
 

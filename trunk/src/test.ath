@@ -264,7 +264,7 @@ operation $put
   @=call :<iarr2[0]$put @args;
   // test calls of array members
   //wire :<in_arr3[1] as :>sgl_out;
-  @=call ##subtest2:<in_arr3[1]$put @args; // this is not optimized! because instead [1] an expression could be used!
+  @=call ##subtest2:<in_arr3[1]$put @args;
   @=call :>sgl_out$put @args;
   // wire :>o_arr3[1] as :<sgl_in;
   @=call ##subtest2:>o_arr3[res1]$put @args;

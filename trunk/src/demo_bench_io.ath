@@ -11,7 +11,7 @@ enddesc
 
 instance #io_demo_file as device;
 instance #io_benchmark as bench;
-wire ##device:>out as ##bench:<device;
+wire :>out as ##bench:<device;
 
 
 input :<strat

@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.30, 5 Dec 2004
+Version 0.31, 1 Feb 2005
 \layout Standard
 
 
@@ -2507,33 +2507,22 @@ wire
  an input of a sub-instance to an output of another sub-instance.
 \layout Standard
 
-TODO/DISCUSS: allow non-local outputs to be additionally wired internally
- such that parallel wiring of both internal and external wires may occur.
+ATTENTION! Do not use the shortform notation 
+\family typewriter 
+##subinstance_name
+\family default 
+ for the first parameter of an alias or a wire, because at that place a
+ pure 
+\family typewriter 
+#
+\family default 
+ will already denote the sub-instance.
+ If you want to wire arbitrary connectors of arbitrary instances, use the
+ full unabbreviated specifier syntax.
 \layout Standard
 
-WARNING: 
-\family typewriter 
-$init
-\family default 
- of nested instances is 
-\emph on 
-not
-\emph default 
- automatically called at instantiation time.
- You have to do that 
-\begin_inset Quotes eld
-\end_inset 
-
-by hand
-\begin_inset Quotes erd
-\end_inset 
-
-.
- A good place is from some 
-\family typewriter 
-$init
-\family default 
- implementation at the outer level.
+TODO/DISCUSS: allow non-local outputs to be additionally wired internally
+ such that parallel wiring of both internal and external wires may occur.
 \layout Standard
 
 WARNING: be sure that you connect 

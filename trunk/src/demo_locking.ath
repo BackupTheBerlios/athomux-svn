@@ -11,11 +11,11 @@ static_data {
 
 
 instance #lock_ulinux as lock;
+wire :>lock as ##sub:<lock;
 instance #thread_ulinux as thread;
+wire :>cpu as :<sub;
 instance #demo_locking_sub as sub;
-wire ##lock:>lock as ##sub:<lock;
-wire ##sub:>out as ##thread:<exec;
-wire ##thread:>cpu as :<sub;
+wire :>out as ##thread:<exec;
 
 local input :<sub
 

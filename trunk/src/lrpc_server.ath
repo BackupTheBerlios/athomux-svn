@@ -26,7 +26,7 @@ init {
 instance #lrpc_linux_server as lrpc0;
 instance #lrpc_linux_server as lrpc1;
 instance #helper_idpool as pool;
-wire ##pool:>out as ##lrpc0:<in;
+wire :>out as ##lrpc0:<in;
 
 
 input :<strat

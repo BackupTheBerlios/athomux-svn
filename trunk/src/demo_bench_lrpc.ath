@@ -42,14 +42,14 @@ data {
 
 
 instance #lrpc_linux_client as controlpool;
+wire :>out as :<idpool[1];
+
 instance #lrpc_linux_client as control_klinux;
 
 
 instance #adapt_complete as acomp;
-wire ##acomp:>out as :<bdev;
+wire :>out as :<bdev;
 
-
-wire ##controlpool:>out as :<idpool[1];
 
 local input :<idpool[2]
 

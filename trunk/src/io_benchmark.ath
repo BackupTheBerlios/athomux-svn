@@ -28,7 +28,7 @@ data {
 
 instance #lock_ulinux as lock;
 instance #thread_ulinux as thread;
-wire ##thread:<exec as :>dummy;
+wire :<exec as :>dummy;
 
 local output :>dummy
 data {

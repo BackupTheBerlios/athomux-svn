@@ -31,7 +31,7 @@ init {
 }
 
 instance #device_mem_ulinux as mem;
-wire ##mem:>out as :<tmp;
+wire :>out as :<tmp;
 
 input :<tmp
 use PC mem;
