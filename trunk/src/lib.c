@@ -34,6 +34,19 @@ void close_debug()
 #include "../debug.exit"
 }
 
+#include <stdio.h>
+
+FILE * _debug_strategy;
+FILE * _debug_fuse;
+FILE * _debug_syscall;
+
+char * ATHOMUX_ULINUX_BASE;
+char ATHOMUX_ULINUX_ROOT[256];
+char ATHOMUX_ULINUX_USERFS[256];
+char ATHOMUX_ULINUX_SYSCALLS[256];
+char ATHOMUX_ULINUX_LOG[256];
+
+
 //////////////////////////////////////////////////////////////////////////
 
 // general brick init
