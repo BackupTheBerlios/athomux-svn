@@ -131,6 +131,23 @@
 }
 
 
+////////////////////////////////////////////////////////////////////////
+
+// Init macros
+
+@.macro __INIT_ALL(nr, _args, _param) {init_all_conns(&loader_@@BRICK, nr, _brick, _args, _param) }
+
+@.macro INIT_ALL_CONNS() { __INIT_ALL(-1, _args, _param) }
+@.macro INIT_ALL_INPUTS() { __INIT_ALL(0, _args, _param) }
+@.macro INIT_ALL_OUTPUTS() { __INIT_ALL(1, _args, _param) }
+
+@.macro INIT_ALL_INSTANCES() { init_all_instances(&loader_@@BRICK, _brick, _args, _param) }
+
+@.define _INIT_ALL_CONNS(struct args * _localargs, char * _localparam) { __INIT_ALL(-1, _localargs, _localparam); }
+@.define _INIT_ALL_INPUTS(struct args * _localargs, char * _localparam) { __INIT_ALL(0, _localargs, _localparam); }
+@.define _INIT_ALL_OUTPUTS(struct args * _localargs, char * _localparam) { __INIT_ALL(1, _localargs, _localparam); }
+
+@.define _INIT_ALL_INSTANCES(struct args * _localargs, char * _localparam) { init_all_instances(&loader_@@BRICK, _brick, _localargs, _localparam); }
 
 ////////////////////////////////////////////////////////////////////////
 

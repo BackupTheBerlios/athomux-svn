@@ -2139,8 +2139,9 @@ sub parse_all {
 
   unless($prefix) {
     # default $brick_init operation
-    my $init = "{\n  INIT_ALL_CONNS(BRICK);\n}";
-    $init = "{\n  INIT_ALL_INPUTS(BRICK);\n  INIT_ALL_INSTANCES(BRICK);\n  INIT_ALL_OUTPUTS(BRICK);\n}";
+    my $init = "{\n  INIT_ALL_CONNS();\n}";
+    $init = "{\n  INIT_ALL_INPUTS();\n  INIT_ALL_INSTANCES();\n  INIT_ALL_OUTPUTS();\n}";
+    eval_macros(\$init, 99999, 0, $macros);
     make_ops("${brick}:<BRICK(:0:)\$brick_init", $init);
   }
 
@@ -2188,6 +2189,9 @@ sub parse_all {
 sub parse_file {
   my ($name,$prefix,$suffix,$macros) = @_;
   my $text = readfile($name, $write_line_directives);
+  # this is a kludge! use #brickname instead and change the evaluation order!
+  $name =~ s/\.ath//;
+  create_subst("BRICK", $name, $macros);
   eval_macros(\$text, 99999, 0, $macros);
   return (parse_all($text, $prefix, $suffix, $macros), $text);
 }
@@ -2682,7 +2686,6 @@ close(OUT);
 
 open(OUT, "> $cfile") or die "cannot create output file";
 print OUT "// brick $brick, generated automatically\n$copyright";
-print OUT "\n#define BRICK $brick\n\n";
 print OUT "#define BASEFILE \"$infile\"\n";
 print OUT "\n#undef OPERATION\n#define OPERATION \"preamble $brick\"\n";
 print OUT "#include \"$brick.h\"\n";

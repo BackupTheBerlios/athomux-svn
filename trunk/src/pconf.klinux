@@ -1,4 +1,4 @@
-$(pconf)/%.c: %.ath common.ath pre.pl Makefile
+$(pconf)/%.c: %.ath
 	./pre.pl PCONF=$(pconf) lock_ulinux=lock_klinux thread_ulinux=thread_klinux $< $@
 
 $(pconf)/%.c: env/klinux/%.c

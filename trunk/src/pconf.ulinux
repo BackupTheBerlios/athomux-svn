@@ -1,2 +1,2 @@
-$(pconf)/%.c : %.ath common.ath pre.pl Makefile
+$(pconf)/%.c : %.ath
 	./pre.pl PCONF=$(pconf) $< $@

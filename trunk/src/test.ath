@@ -85,8 +85,15 @@ wire :>o_arr3[2] as :<iarr3[1];
 operation $brick_init
 {
   // Test it...
-  INIT_ALL_INPUTS(BRICK);
-  INIT_ALL_OUTPUTS(BRICK);
+#if 0
+  BRICK
+#endif
+  INIT_ALL_INPUTS();
+  INIT_ALL_INSTANCES();
+  INIT_ALL_OUTPUTS();
+  _INIT_ALL_INPUTS(@args, "test");
+  _INIT_ALL_INSTANCES(@args, "test");
+  _INIT_ALL_OUTPUTS(@args, "test");
   @success = TRUE;
 }
 

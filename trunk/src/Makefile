@@ -28,6 +28,8 @@ else
 	@$(MAKE) SUBMAKE=1 -s show_broken
 endif
 
+# some additional dependencies
+*/*.c */*.h : pre.pl common.ath pconf.*
 */*/lib.o : debug.init
 
 -include defs.make

@@ -507,11 +507,4 @@ struct loader {
 void init_all_conns(const struct loader * loader, int type, void * brick, struct args * args, const char * param);
 void init_all_instances(const struct loader * loader, void * brick, struct args * args, const char * param);
 
-#define __INIT_ALL(BRICK,NR) init_all_conns(&loader_##BRICK, NR, _brick, _args, _param)
-#define __INIT_INSTANCES(BRICK)  init_all_instances(&loader_##BRICK, _brick, _args, _param)
-#define INIT_ALL_CONNS(BRICK)   __INIT_ALL(BRICK, -1)
-#define INIT_ALL_INPUTS(BRICK)  __INIT_ALL(BRICK, 0)
-#define INIT_ALL_OUTPUTS(BRICK) __INIT_ALL(BRICK, 1)
-#define INIT_ALL_INSTANCES(BRICK)  __INIT_INSTANCES(BRICK)
-
 #endif

@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.33, 23 December 2004
+Version 0.34, 28 January 2005
 \layout Standard
 
 
@@ -3459,7 +3459,7 @@ $output_init
 
 
 \family typewriter 
-INIT_ALL_INPUTS(BRICK)
+INIT_ALL_INPUTS()
 \family default 
  Call 
 \family typewriter 
@@ -3476,7 +3476,7 @@ $input_init
 
 
 \family typewriter 
-INIT_ALL_OUTPUTS(BRICK)
+INIT_ALL_OUTPUTS()
 \family default 
  Call 
 \family typewriter 
@@ -3489,7 +3489,7 @@ $output_init
 
 
 \family typewriter 
-INIT_ALL_CONNS(BRICK)
+INIT_ALL_CONNS()
 \family default 
  Call 
 \family typewriter 
@@ -3512,7 +3512,7 @@ output
 
 
 \family typewriter 
-INIT_ALL_INSTANCES(BRICK)
+INIT_ALL_INSTANCES()
 \family default 
  Call 
 \family typewriter 
@@ -3528,17 +3528,45 @@ $brick_init
  explicitly by yourself, a default version is automatically created which
  does nothing but simply calling 
 \family typewriter 
-INIT_ALL_INPUTS(BRICK)
+INIT_ALL_INPUTS()
 \family default 
 , 
 \family typewriter 
-INIT_ALL_INSTANCES(BRICK)
+INIT_ALL_INSTANCES()
 \family default 
  and 
 \family typewriter 
-INIT_ALL_CONNS(BRICK)
+INIT_ALL_CONNS()
 \family default 
  in sequence.
+\layout Standard
+
+There are also some further versions 
+\family typewriter 
+_INIT_ALL_*(
+\family default 
+\emph on 
+args
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+param
+\family typewriter 
+\emph default 
+)
+\family default 
+ with a leading underscore, which allow to pass different 
+\family typewriter 
+@args
+\family default 
+ and different 
+\family typewriter 
+@param
+\family default 
+ values (e.g.
+ for sub-initializations depending on them).
 \layout Section
 
 How to Implement Statelessness
