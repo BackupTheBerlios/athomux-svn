@@ -9,6 +9,8 @@ desc
 enddesc
 
 
+input :<strat
+
 output :>program
 
 operation $output_init

@@ -19,6 +19,8 @@ wire ##thread:>cpu as :<sub;
 
 local input :<sub
 
+input :<strat
+
 output :>program
 
 operation $output_init

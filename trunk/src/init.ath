@@ -1,5 +1,5 @@
-  Author: Jens-Christian Korth
-  Copyright: Jens-Christian Korth
+  Author: Jens-Christian Korth / Hardy Kahl
+  Copyright: Jens-Christian Korth / Hardy Kahl
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
 brick #init
@@ -38,7 +38,9 @@ bool athomux_init(const struct output * on, const bool constr, char *initbrick_n
 }
 
 data {
+  addr_t pbrick;
   bool boot;
+  bool has_strat;
 }
 
 init {
@@ -46,6 +48,8 @@ init {
     @#.boot = TRUE;
     init_static_control_simple();
     ini->_conn_control._input_.connect = root_strategy;
+    // is the following line required?
+    //ini->_conn_control._input_.rev_next = root_strategy->rev_chain;
   }
 }
 
@@ -54,54 +58,57 @@ local input :<control
 
 local output :>init
 
-@.define cmd(addr_t addr, char * str) => (success_t success)
-{
-  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (success);
-}
-
-@.func boot(char * str) => (addr_t addr)
-{
-  success_t mysuccess;
-
-  @=call :<control$getaddr (DEFAULT_TRANSFER) => (mysuccess, addr);
-  @.fatal(!mysuccess, "getaddr failed");
-  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (mysuccess);
-  @.fatal(!mysuccess, "tranfer '%s' failed", str);
-}
-
-@.func unboot(addr_t addr, char * str) => (success_t success)
-{
-  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (success);
-  @.fatal(!success, "tranfer '%s' failed", str);
-  @=call :<control$delete (addr, DEFAULT_TRANSFER) => (success);
-  @.fatal(!success, "delete failed");
-}
-
 
 operation $output_init
 {
-  char str[256];
+  addr_t control_addr = DEFAULT_TRANSFER;
+  struct conn_info conn_contr = { .conn_addr = control_addr, .conn_index = 0, .conn_name = "control" };
+  
+  if (@destr) {
+    // deinstantiate brick
 
-  if(@destr) {
-    sprintf(str, "brick/=%s", (char *)MAKE_PTR(@args->phys_addr));
-    unboot(initbrick, str) => (@success);
+    struct conn_info conn_progr = { .conn_addr = @#.pbrick, .conn_index = 0, .conn_name = "program" };
+    struct conn_info conn_strat = { .conn_addr = @#.pbrick, .conn_index = 0, .conn_name = "strat" };
 
-    exit_static_control_simple();
-  } else if(@constr) {
-#ifdef TRACE
-    memset(blanks, ' ', 31);
-    blanks[31] = '\0';
-#endif
+    // terminate program
+    @=call :<control$deinstconn (&conn_progr):"" => (@success);
+    @.fatal(@success!=TRUE, "deinstconn failed");
 
-    {
-      addr_t control = DEFAULT_TRANSFER;
-      const char * @param = "";
-      cmd(control, "output:=control\n") => (@success);
-      // create root hook
-      cmd(0, "output:=_root") => (@success);
+    if(@#.has_strat) {
+      // disconnect from control
+      @=call :<control$disconnect (&conn_strat):"" => (@success);
+      @.fatal(@success!=TRUE, "disconnect failed");
     }
 
-    sprintf(str, "brick:=%s\n output:=program\n", (char *)MAKE_PTR(@args->phys_addr));
-    boot(str) => (initbrick);
+    // deinstantiate program brick
+    @=call :<control$deinstbrick (@#.pbrick):"" => (@success);
+    @.fatal(@success!=TRUE, "deinstbrick failed");
+
+    // free memory
+    @=call :<control$delete (@#.pbrick, DEFAULT_TRANSFER):"" => (@success);
+    @.fatal(@success!=TRUE, "delete failed");
+  }
+  if (@constr) {
+    // instantiate brick
+
+    // allocate new memory for program brick
+    @=call :<control$getaddr (DEFAULT_TRANSFER):"" => (@success, @#.pbrick);
+    @.fatal(@success!=TRUE, "getaddr failed");
+
+    // instantiate program brick
+    @=call :<control$instbrick (@#.pbrick, (char *)MAKE_PTR(@args->phys_addr)):@param => (@success);
+    @.fatal(@success!=TRUE, "instbrick failed");
+
+    struct conn_info conn_progr = { .conn_addr = @#.pbrick, .conn_index = 0, .conn_name = "program" };
+    struct conn_info conn_strat = { .conn_addr = @#.pbrick, .conn_index = 0, .conn_name = "strat" };
+
+    // connect to control
+    @=call :<control$connect (&conn_strat, &conn_contr):"" => (@success);
+    @#.has_strat = @success;
+    //@ .fatal(@success!=TRUE, "connect failed");
+    
+    // run the program
+    @=call :<control$instconn (&conn_progr):@param => (@success);
+    @.fatal(@success!=TRUE, "instconn failed");
   }
 }

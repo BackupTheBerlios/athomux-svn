@@ -6,6 +6,8 @@ brick #athload_help
 purpose print the athload help text
 
 
+input :<strat
+
 output :>program
 
 operation $output_init
