@@ -19,7 +19,7 @@
 
 #flo
 
-UCLIBC = $(ATHOMUX_ULINUX_ROOT)
+UCLIBC = $(ATHOMUX_ULINUX_BASE)/root
 
 LIBS = ./applets/busybox.o ./applets/applets.a ./archival/archival.a ./archival/libunarchive/libunarchive.a ./coreutils/coreutils.a ./console-tools/console-tools.a ./debianutils/debianutils.a ./editors/editors.a ./findutils/findutils.a ./init/init.a ./miscutils/miscutils.a ./modutils/modutils.a ./networking/networking.a ./networking/libiproute/libiproute.a ./networking/udhcp/udhcp.a ./procps/procps.a ./loginutils/loginutils.a ./shell/shell.a ./sysklogd/sysklogd.a ./util-linux/util-linux.a ./libpwdgrp/libpwdgrp.a ./coreutils/libcoreutils/libcoreutils.a ./libbb/libbb.a 
 

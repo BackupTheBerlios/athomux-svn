@@ -6,7 +6,7 @@
 
 /* Version Number */
 #define BB_VER "1.00-pre7"
-#define BB_BT "2004.12.01-13:51+0000"
+#define BB_BT "2004.12.09-10:48+0000"
 
 #define HAVE_DOT_CONFIG 1
 
@@ -31,13 +31,13 @@
 #define CONFIG_STATIC 1
 #undef CONFIG_LFS
 #undef USING_CROSS_COMPILER
-#define EXTRA_CFLAGS_OPTIONS "-nostdinc -I$(ATHOMUX_ULINUX_ROOT)/usr/include -I`gcc -print-libgcc-file-name | sed -e 's/libgcc.a/include/'`"
+#define EXTRA_CFLAGS_OPTIONS "-nostdinc -I$(ATHOMUX_ULINUX_BASE)/root/usr/include -I`gcc -print-libgcc-file-name | sed -e 's/libgcc.a/include/'`"
 
 /*
  * Installation Options
  */
 #define CONFIG_INSTALL_NO_USR 1
-#define PREFIX "$(ATHOMUX_ULINUX_ROOT)/usr"
+#define PREFIX "$(ATHOMUX_ULINUX_BASE)/root/usr"
 
 /*
  * Archival Utilities
