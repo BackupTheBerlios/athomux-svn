@@ -747,162 +747,196 @@ sub eval_macros {
 
 ##########################################################################
 
-# specifier handling
+# general specifier handling
 
-sub spec_correct { # provisionary, will vanish
-  my $spec = shift;
-  if($spec =~ m/#\w*(?:\.\w+)+/) {
-    my $pre = $PREMATCH;
-    my $middle = $MATCH;
-    my $post = $POSTMATCH;
-    my $newmiddle = $middle;
-    $newmiddle =~ s/\./#/g;
-    $spec = $pre . $newmiddle . $post;
-    warn "please use the new subbrick syntax '$newmiddle' instead of '$middle' -- I try to correct the specifier, but further errors may occur\n";
-  }
-  return $spec;
-}
-
-@::spec_type = ("undef", "brick", "connector", "section", "operation");
-
-sub spec_syntax {
+# check whether a specifier syntax is correct
+sub sp_check {
   my ($spec) = @_;
-  my $orig = $spec;
-  my $bad = 0;
-  $spec = spec_correct($spec);
-  if($spec =~ s/#\w*(?:#\w+)*//) {
-    $bad++ if $PREMATCH;
-  }
-  if($spec =~ s/:[<>]\w+//) {
-    $bad++ if $PREMATCH;
-    if($spec =~ s/\[[^\]]*\]//) {
-      $bad++ if $PREMATCH;
-    }
-  }
-  if($spec =~ s/\(:[^:]*:\)//) {
-    $bad++ if $PREMATCH;
-  }
-  if($spec =~ s/\$\w+//) {
-    $bad++ if $PREMATCH;
-  }
-  $bad++ if $spec;
-  warn "specfier $orig has bad syntax / wrong order of elements (rest '$spec')" if $bad;
-}
-
-sub spec_part {
-  my ($spec, $num, $subnum) = @_;
-  $spec = spec_correct($spec);
-  $spec =~ s/(#(\w+|(?=#))(?:#(\w+(?:#\w+)*))?)?//;
-  if($num == 1) { # brick specifier
-    if(defined($subnum)) {
-      return $2 if $subnum == 0;
-      return $3 if $subnum == 1;
-      die "bad subnum $subnum";
-    }
-    return $1;
-  }
-  if($num == 2) { # input/output connector specifier
-    return undef unless $spec =~ m/(:[<>](\w+)(\[$argmatch\])?)/;
-    if(defined($subnum)) {
-      return $2 if $subnum == 0;
-      return $3 if $subnum == 1;
-      die "bad subnum $subnum";
-    }
-    return $1;
-  }
-  if($num == 3) { # section specifier
-    if(not defined($subnum) or $subnum == 0) {
-      return undef unless $spec =~ m/($sectmatch)/;
-      my $res = $1;
-      if(defined($subnum)) {
-	$res =~ s/^\(://;
-	$res =~ s/:\)$//;
-      }
-      return $res;
-    }
-    die "bad subnum $subnum";
-  }
-  if($num == 4) { # operation specifier
-    return undef unless $spec =~ m/(\$(\w+))/;
-    if(defined($subnum)) {
-      return $2 if $subnum == 0;
-      die "bad subnum $subnum";
-    }
-    return $1;
-  }
-  die "bad parameter: spec_part('$spec', $num)";
-}
-
-sub spec_parts {
-  my $spec = shift;
-  return (spec_part($spec, 1, 0), spec_part($spec, 2, 0), spec_part($spec, 2, 1), spec_part($spec, 3), spec_part($spec, 4, 0));
-}
-
-sub spec_type {
-  my $spec = shift;
-  for(my $num = 4; $num > 0; $num--) {
-    return $num if spec_part($spec, $num);
-  }
+  # check starting #brick
+  return 0 unless $spec =~ s/\A#\w*//;
+  # strip further sub-instances
+  while($spec =~ s/\A#\w+//) {}
+  return 1 if $spec eq "";
+  # check for .varname
+  return 1 if $spec =~ m/\A\.\w+\Z/;
+  # check for input/output
+  return 0 unless $spec =~ s/:[<>]\w+//;
+  # skip array indices
+  while($spec =~ s/\A\[[^\]]*\]//) {}
+  return 1 if $spec eq "";
+  # check for .varname
+  return 1 if $spec =~ m/\A\.\w+\Z/;
+  # check local sub-instances
+  return sp_check($spec) if $spec =~ m/\A\#/;
+  # check section code
+  return 0 unless $spec =~ s/\A\(:[^:]+:\)//;
+  return 1 if $spec eq "";
+  return 1 if $spec =~ m/\A\$\w+\Z/;
   return 0;
 }
 
-sub spec_complete {
-  my ($spec, $old) = @_;
-  $old = $::current unless defined($old) and ($old);
-  my $start = 0;
-  my $res = "";
-  for(my $num = 4; $num > 0; $num--) {
-    my $part = spec_part($spec, $num);
-    $start = 1 if $part;
-    if($start) {
-      # when missing, take part from $old
-      $part = spec_part($old, $num) unless $part;
-      die "specifier '$spec' / '$old': missing $::spec_type[$num] part" unless defined($part);
-      # handle shortform specifier #.sub_isntance
-      $part = "#" . spec_part($old, 1, 0) . "#$part" if $num == 1 and $part =~ s/^\#\#//;
-      $res = $part . $res;
+sub sp_syntax {
+  my ($spec) = @_;
+  my $ok = sp_check($spec);
+  warn "specifier '$spec' has bad syntax / wrong order of elements\n" if not $ok;
+}
+
+# determine the type of a specifier
+# 0 = unknown, 1 = brick, 2 = input/output, 3 = section, 4 = operation
+sub sp_type {
+  my ($spec) = @_;
+  return 4 if $spec =~ m/\$\w+\Z/;
+  return 3 if $spec =~ m/\(:[^:]*:\)\Z/;
+  return 2 if $spec =~ m/:[<>]\w+(?:\[[^\]]*\])*\Z/;
+  return 1 if $spec =~ m/\#\w+\Z/;
+  return 0;
+}
+
+# shorten a specifier to the desired type
+sub sp_shorten {
+  my ($spec, $type) = @_;
+  $spec =~ s/\$\w+\Z// if $type < 4;
+  $spec =~ s/\(:[^:]*:\)\Z// if $type < 3;
+  $spec =~ s/(?:\[[^\]]*\])+\Z// if $type < 2;
+  $spec =~ s/:[<>]\w+\Z// if $type < 2;
+  $spec =~ s/\#\w+\Z// if $type < 1;
+  die "specifier '$spec' has not type $type" if sp_type($spec) != $type;
+  return $spec;
+}
+
+# return the desired part as specified by type
+sub sp_part {
+  my ($spec, $type, $subtype) = @_;
+  if($type == 1) { # brick specifier
+    $spec =~ m/\A(?:\#(\w+)(?:\#(\w+(?:\#\w+)*))?)?/;
+    if(defined($subtype)) {
+      return $1 if $subtype == 0; # only the base identifier
+      return $2 if $subtype == 1; # only the extension part without leading #
+      die "bad subtype $subtype";
     }
+    return $MATCH; # the full brick part
+  }
+  $spec =~ m/(?:\$(\w+))?\Z/;
+  if($type == 4) { # operation specifier
+    if(defined($subtype)) {
+      return $1 if $subtype == 0; # only the base identifier
+      die "bad subtype $subtype";
+    }
+    return $MATCH; # the full part
+  }
+  $spec = $PREMATCH;
+  $spec =~ m/(?:\(:([^:]+):\))?\Z/;
+  if($type == 3) { # section specifier
+    if(defined($subtype)) {
+      return $1 if $subtype == 0; # only the contents
+      die "bad subtype $subtype";
+    }
+    return $MATCH; # the full part
+  }
+  $spec = $PREMATCH;
+  $spec =~ m/(?::[<>](\w+)(\[([^\]]*)\])?)?\Z/;
+  if($type == 2) { # input specifier
+    if(defined($subtype)) {
+      return $1 if $subtype == 0; # only the base identifier
+      return $2 if $subtype == 1; # the bracket part
+      return $3 if $subtype == 2; # the part insinde the brackets
+      die "bad subtype $subtype";
+    }
+    return $MATCH; # the full part
+  }
+  $spec = $PREMATCH;
+}
+
+# return a tuple for standard specifiers
+sub sp_parts {
+  my $spec = shift;
+  return (sp_part($spec, 1, 0), sp_part($spec, 2, 0), sp_part($spec, 2, 1), sp_part($spec, 3), sp_part($spec, 4, 0));
+}
+
+# make a full specifier out of a short form, obeying the scope rules
+sub sp_complete {
+  my ($spec, $scopes) = @_;
+  $scopes = $::current unless $scopes;
+  # special treatment for empty #brick
+  if($spec =~ m/\A#[^\w]/) {
+    $scopes =~ m/\A\#\w+/;
+    my $brick = $MATCH;
+    $spec =~ s/\A\#/$brick/;
+  }
+  # special treatment for section part (complete it independently)
+  if($scopes =~ m/\(:[^:]+:\)/) {
+    my $sect = $MATCH;
+    $spec =~ s/(:[<>]\w+(?:\[[^\]]*\])*)([\$])/$1$sect$2/;
+  }
+  # try whether already complete
+  return $spec if ($spec =~ m/\A\#/ and sp_check($spec));
+  # try all shortings of $scopes
+  my $res = $scopes . $spec;
+  until(sp_check($res)) {
+    die "impossible to complete specifier '$spec' in scope '$scopes'"
+      unless $scopes =~ s/(?:(?:(?:[#\$.]|:[<>])\w+)|\[[^\]]*\]|\(:[^:]*:\))\Z//;
+    $res = $scopes . $spec;
   }
   return $res;
 }
 
-sub spec_prefix {
-  my ($spec, $maxpart) = @_;
-  my $res = "";
-  for(my $num = 1; $num <= $maxpart; $num++) {
-    my $part = spec_part($spec, $num);
-    die "specifier '$spec': missing $::spec_type[$num] part" unless defined($part);
-    $res .= $part;
-  }
-  return $res;
-}
-
-sub spec_name {
-  my ($spec, $maxpart) = @_;
-  $maxpart = 4 unless defined($maxpart);
-  my $res = "";
-  for(my $num = 1; $num <= $maxpart; $num++) {
-    my $part = spec_part($spec, $num, 0);
-    if($num == 1) {
-      $part =~ s/\#/\./g;
-    }
-    if($num == 3 and $part =~ m/\A(.*)\.\.(.*)\Z/) {
+# convert a specifier to a unique C identifier
+sub sp_name {
+  my ($spec, $type) = @_;
+  $spec = sp_shorten($spec, $type) if defined($type);
+  die "specifier '$spec' has wrong syntax" unless sp_check($spec);
+  $spec =~ s/\A\#//;
+  if($spec =~ m/\(:([^:]+):\)/) {
+    my $pre = $PREMATCH;
+    my $part = $1;
+    my $post = $POSTMATCH;
+    if($part =~ m/\A(.*)\.\.(.*)\Z/) {
       my $start = $1;
       my $end = $2;
       $start = eval_compute($start, "start-value");
       $end = eval_compute($end, "end-value");
       $part = "${start}_TO_$end";
     }
-    die "specifier '$spec': missing $::spec_type[$num] part" unless defined($part);
-    $res .= $part . "_";
+    $spec = "${pre}_${part}$post";
   }
-  $res =~ s/_$//;
-  return $res;
+  $spec =~ s/\[([^\]]*)\]//g;
+  $spec =~ s/[#\$.]|:[<>]/_/g;
+  return $spec;
 }
 
+# convert a specifier to a variable name, starting from prefix $start
+sub sp_var {
+  my ($spec, $start, $correction) = @_;
+  $correction = "" unless defined($correction);
+  die "specifier '$spec' has wrong syntax" unless sp_check($spec);
+  my $len = length($start);
+  return "" unless substr($spec, 0, $len) eq $start;
+  substr($spec, 0, $len) = "";
+  # starting #
+  $spec =~ s/\A\#//;
+  # handlue sub-instances
+  $spec =~ s/\#/\._sub_/g;
+  # handle operations
+  if($spec =~ m/:([<>])(\w+)\(:([^:]+):\)\$(\w+)\Z/) {
+    my $type = $1 eq "<" ? "_input_.connect->ops" : "_output_.ops";
+    if($correction) { # we have an input operation
+      # ...NYI...
+    }
+    $spec = "${PREMATCH}\._conn_${2}\.${type}[$3][opcode_$4$correction]";
+  }
+  # handle remaining inputs/outputs
+  $spec =~ s/:[<>]/\._conn_/g;
+  return $spec;
+}
+
+##########################################################################
+
+# some specifier helper routines (TODO: revise)
+
+# ? this should be replaced by sp_var()
 sub spec_conn_instance {
   my ($spec) = @_;
-  my $res = spec_part($spec, 1, 1);
+  my $res = sp_part($spec, 1, 1);
   if(defined $res) {
     $res =~ s/(^|[#.])/$1_sub_/g;
     $res =~ s/\#/\./g;
@@ -910,9 +944,9 @@ sub spec_conn_instance {
   } else {
     $res = "";
   }
-  my $array = spec_part($spec, 2, 1);
+  my $array = sp_part($spec, 2, 1);
   $array = "" unless defined($array);
-  $res .= "_conn_" . spec_part($spec, 2, 0);
+  $res .= "_conn_" . sp_part($spec, 2, 0);
   return ($res, $array);
 }
 
@@ -921,15 +955,15 @@ sub make_tmpname {
   $name =~ s/\@/at/g;
   $name =~ s/\\//g;
   $name =~ s/\./dot/g;
-  return "__" . spec_part($::current, 1, 0) ."_global_${name}__";
+  return "__" . sp_part($::current, 1, 0) ."_global_${name}__";
 }
 
 # determine the type of the (sub)brick
 sub spec_bricktype {
-  my ($spec, %types) = @_;;
-  my $br = spec_part($spec, 1);
+  my ($spec) = @_;;
+  my $br = sp_part($spec, 1);
   my $res = $br;
-  my $subst = $types{$br} or die "cannot determine brick type for $spec";
+  my $subst = $::inst_types{$br} or die "cannot determine brick type for $spec";
   $res = $subst if defined($subst);
   $spec =~ s/$br/$res/;
   return $spec;
@@ -937,11 +971,12 @@ sub spec_bricktype {
 
 # check whether a specifier is an alias and replace it
 sub spec_alias {
-  my ($spec, %aliases) = @_;
-  my $search = spec_prefix($$spec, 2);
+  my ($spec) = @_;
+  #my $search = spec_prefix($$spec, 2);
+  my $search = sp_shorten($$spec, 2);
   $search =~ s/$brackmatch//;
   #print "SEARCH: $search\n";
-  my $replace = $aliases{$search};
+  my $replace = $::aliases{$search};
   if(defined($replace)) {
     #print "REPLACE: $search -> $replace\n";
     $$spec =~ s/$search/$replace/;
@@ -1115,8 +1150,8 @@ sub get_type_index {
 sub spec_type_name {
   my ($name, $spec) = @_;
   unless($name =~ s/\./_/g) {
-    $spec = spec_bricktype($spec, %::inst_types);
-    my $brick = spec_part($spec, 1, 0);
+    $spec = spec_bricktype($spec);
+    my $brick = sp_part($spec, 1, 0);
     $name = "${brick}_$name" unless $name =~ s/\./_/g;
   }
   return $name;
@@ -1124,7 +1159,7 @@ sub spec_type_name {
 
 sub spec_type_instance {
   my ($name, $spec) = @_;
-  my $brick = spec_part($spec, 1, 1);
+  my $brick = sp_part($spec, 1, 1);
   if(defined($brick)) {
     $brick =~ s/[#.]/\._sub_/g;
     $brick = "_sub_${brick}.";
@@ -1155,7 +1190,7 @@ sub define_type {
   my $subname = spec_type_instance("_type_$name", $::current);
   my $tablename = ($export and $cmd eq "define") ? "typetable_$typename" : undef;
   my $varname = ($cmd eq "use") ? $subname : undef;
-  $::type_defs{$typename} = [ $tablename, $def, $varname, spec_prefix($::current, 2), $name, $hash ];
+  $::type_defs{$typename} = [ $tablename, $def, $varname, sp_shorten($::current, 2), $name, $hash ];
   return $typename;
 }
 
@@ -1164,7 +1199,7 @@ sub parse_types {
   if($$text =~ m/\A${ws}(use|define)\s+(export\s+)?TYPE\s+(\w+)$ws(?:from$ws(\w+(?:\s*,\s*\w+)*)$ws)?($stringmatch)$ws;/) {
     $$text = $POSTMATCH;
     my $typename = define_type($1, $2, $3, $4, $5);
-    my $extern_name = spec_name(spec_bricktype($::current, %::inst_types), 2);
+    my $extern_name = sp_name(spec_bricktype($::current), 2);
     #print "    $extern_name .= $typename\n";
     $::extern_type_defs{$extern_name} .= ",$typename";
     return 1;
@@ -1214,7 +1249,7 @@ sub gen_typename_header {
   my $typetable_defs = "// typetable definitions\n";
   while(my ($name, $tuple) = each %::type_defs) {
     my ($tablename, $def, $varname, $origspec, $origname, $hash) = @$tuple;
-    next unless spec_prefix($origspec, 1) eq spec_prefix($::current, 1);
+    next unless sp_shorten($origspec, 1) eq sp_shorten($::current, 1);
     print OUT "  const struct gen_tabentry * $varname;\n" if defined($varname);
     $typetable_defs .= gen_type_table($tablename, $typetable_max, 1, []) if defined($tablename);
   }
@@ -1227,7 +1262,7 @@ sub gen_typename_init {
   while(my ($name, $tuple) = each %::type_defs) {
     my ($tablename, $def, $varname, $origspec, $origname, $hash) = @$tuple;
     next unless defined($tablename);
-    next unless spec_prefix($origspec, 1) eq spec_prefix($::current, 1);
+    next unless sp_shorten($origspec, 1) eq sp_shorten($::current, 1);
     my $code = gen_type_table($tablename, $typetable_max, 0, $hash);
     print OUT "// TYPE table $name\n$code\n";
   }
@@ -1263,7 +1298,7 @@ sub gen_typeconnect_init {
     my ($othertable, $otherdef, $othervarname, $otherorigspec, $otherorigname, $otherhash) = @$othertuple;
     my $error = isnot_subtype($hash, $otherhash);
     die "type '$name' is not a subtype of '$othername': field $error is missing" if $error;
-    my $bricktype = spec_name(spec_bricktype($innerspec, %::inst_types), 1);
+    my $bricktype = sp_name(spec_bricktype($innerspec), 1);
     my $innertable = "typetable_${bricktype}_$origname";
     print OUT "  ini->$varname = $innertable;\n";
   }
@@ -1288,9 +1323,9 @@ sub add_brick {
 sub add_connector {
   my ($type, $namespec, $subbrick, $replace) = @_;
   $subbrick =~ s/#//;
-  my ($brick, $name) = spec_parts($namespec);
+  my ($brick, $name) = sp_parts($namespec);
   my $external_name = $name;
-  $external_name = spec_part($replace, 2, 0) if defined($replace);
+  $external_name = sp_part($replace, 2, 0) if defined($replace);
   die "input/output name '$external_name' too long" if length($external_name) > 7;
   my ($fullname, $count) = spec_conn_instance($namespec);
   $count = "" unless defined($count);
@@ -1306,8 +1341,8 @@ sub add_connector {
     $count = 1 if $count eq "";
     $offset = "(addr_t)STATIC_OFFSET(struct brick_${brick}, $fullname)";
   }
-  my $sect_count = spec_part($namespec, 3, 0);
-  my $cname = spec_name(spec_bricktype($namespec, %::inst_types), 2);
+  my $sect_count = sp_part($namespec, 3, 0);
+  my $cname = sp_name(spec_bricktype($namespec), 2);
   my $gen_type = "type_$cname";
   $::conn_init =~ s/\^//;
   $::conn_init .= "  {\n    \"$external_name\",\n    \"^\",\n    $gen_type,\n    init_conn_$cname,\n    exit_conn_$cname,\n    $typecode,\n    $::conn_totalcount,\n    $count,\n    $offset,\n    $sect_count,\n    sizeof(struct local_${subbrick}_$name)\n  },\n";
@@ -1317,7 +1352,7 @@ sub add_connector {
 
 sub add_attr {
   my ($name, $prio, $val) = @_;
-  my ($brick, $conn, $count) = spec_parts($::current);
+  my ($brick, $conn, $count) = sp_parts($::current);
   $count = "" unless defined($count);
   $prio = "" unless defined($prio);
   my $attr_name;
@@ -1392,14 +1427,14 @@ sub gen_call {
   my $opset = $::op_args{$optype} or die "bad optype '$optype'";
   my $call = "";
   $call .= "call_level++; " if $indent_trace;
-  my $brick = spec_part($caller_spec, 1, 0);
-  spec_alias(\$target, %::aliases) if $optype eq "output";
-  my ($targetbrick, $conn_name, $array, $section, $op) = spec_parts($target);
+  my $brick = sp_part($caller_spec, 1, 0);
+  spec_alias(\$target) if $optype eq "output";
+  my ($targetbrick, $conn_name, $array, $section, $op) = sp_parts($target);
   $section =~ s/^\(://;
   $section =~ s/:\)$//;
   $section = "\@sect_code" if ($section eq "ALL" or $section =~ m/\.\./);
-  my $caller_op = spec_part($caller_spec, 4, 0);
-  my $caller_section = spec_part($caller_spec, 3, 0);
+  my $caller_op = sp_part($caller_spec, 4, 0);
+  my $caller_section = sp_part($caller_spec, 3, 0);
   my $assign_op = ($op ne "op" and ((not $do_restore) or (not defined($caller_op)) or $op ne $caller_op));
   my $assign_sect = ($op ne "op" and ((not $do_restore) or (not defined($caller_section)) or $section ne $caller_section));
   if($assign_op) {
@@ -1428,7 +1463,7 @@ sub gen_call {
 	$call .= "_other_->input.ops[$section][$arg->op_code - opcode_output_max - 1](_other_, $arg, $param); ";
       } else {
 	die "bad input operation \$$op" unless exists $$opset{$op};
-	my $directname = spec_name(spec_bricktype($target, %::inst_types));
+	my $directname = sp_name(spec_bricktype($target));
 	$call .= "$directname(_other_, $arg, $param); ";
       }
     } else { # call on output
@@ -1449,7 +1484,7 @@ sub gen_call {
     $call .= "_other_->output.ops[$section][$opcode](_other_, $arg, $param); ";
   } else { # call on output
     my $other = "_other_";
-    if(spec_prefix($target, 3) eq spec_prefix($caller_spec, 3)) {
+    if(sp_shorten($target, 3) eq sp_shorten($caller_spec, 3)) {
       # shortcut: don't do any address arithmetic, just pass on
       $other = "on";
     } elsif($target =~ m/:>/) { # output
@@ -1462,7 +1497,7 @@ sub gen_call {
       $call .= "${other}->output.ops[$section][$arg->op_code]($other, $arg, $param); ";
     } else {
       die "bad output operation \$$op" unless exists $$opset{$op};
-      my $directname = spec_name(spec_bricktype($target, %::inst_types));
+      my $directname = sp_name(spec_bricktype($target));
       $call .= "$directname($other, $arg, $param); ";
     }
   }
@@ -1476,7 +1511,7 @@ sub gen_call {
 sub gen_paramcall {
   my ($target, $optype, $inargs, $param, $outargs, $caller_spec, $mandate) = @_;
   my $opset = $::op_args{$optype} or die "bad optype '$optype'";
-  my $op = spec_part($target, 4, 0);
+  my $op = sp_part($target, 4, 0);
   my $tuple = $$opset{$op} or die "bad operation name '$op' on '$optype'";
   my ($inparams, $outparams) = @$tuple;
   strip_braces(\$inargs);
@@ -1531,12 +1566,11 @@ sub eval_code {
     my $results = $6;
     $pre .= $PREMATCH;
     $$code = $POSTMATCH;
-    spec_syntax($op_spec);
     $optype = "output" unless defined($optype);
     $op_spec =~ s/\$init/\$${optype}_init/ and warn "@=${optype}call to \$init is deprecated, please replace by \$${optype}_init!";
     $mandate = "@#._mand" unless defined($mandate);
     $param = "_param" unless defined($param);
-    $op_spec = spec_complete($op_spec, $caller_spec);
+    $op_spec = sp_complete($op_spec, $caller_spec);
     $pre .= gen_paramcall($op_spec, $optype, $args, $param, $results, $caller_spec, $mandate);
   }
   $$code = $pre . $$code;
@@ -1550,16 +1584,15 @@ sub eval_code {
     my $param = $5;
     $pre .= $PREMATCH;
     $$code = $POSTMATCH;
-    spec_syntax($op_spec);
     $optype = "output" unless defined($optype);
     $op_spec =~ s/\$init/\$${optype}_init/ and warn "@=${optype}call to \$init is deprecated, please replace by \$${optype}_init!";
     $param = "_param" unless defined($param);
-    $op_spec = spec_complete($op_spec, $caller_spec);
+    $op_spec = sp_complete($op_spec, $caller_spec);
     $pre .= "({ " . gen_call($op_spec, $optype, $arg_name, $param, $caller_spec, 1, $mandate) . "})";
   }
   $$code = $pre . $$code;
   # check & substitute standard args
-  my $op_caller = spec_part($caller_spec, 4, 0);
+  my $op_caller = sp_part($caller_spec, 4, 0);
   if($op_caller and $op_caller ne "op") {
     my $tuple = $$opset{$op_caller};
     if(defined($tuple)) {
@@ -1578,13 +1611,13 @@ sub eval_code {
   # remaining standard args are substituted unchecked! own risk!
   $$code =~ s/@(\w+)/\(_args->$1\)/mg;
   # substitute output vars having a qualifying prefix
-  my $brick = spec_part($::current, 1, 0);
+  my $brick = sp_part($::current, 1, 0);
   if($$code =~ m/@[#<>][^.]/m) {
     die "please update the @#varname syntax to @#.varname, @< to @\:<. and @> to @\:>. (see new syntax in the preprocessor guide)\n";
   }
   $$code =~ s/@[:]?>\.?(\w+)($brackmatch|)\.(\w+)/\(_brick->_conn_$1$2.$3\)/mg;
   # substitute normal output vars
-  my $out = spec_name($caller_spec, 2);
+  my $out = sp_name($caller_spec, 2);
   $$code =~ s/@[:]?>\.?(\w+)/\(_on->$1\)/mg;
   # substitute generic type accesses
   eval_typename_code($code);
@@ -1630,7 +1663,7 @@ $::warn_syntax = "";
 
 sub make_ops {
   my $body = shift;
-  my ($brick, $conn, $unused, $section, $op) = spec_parts($::current);
+  my ($brick, $conn, $unused, $section, $op) = sp_parts($::current);
   $body =~ s/BRICK_NAME/$brick/gm;
   $body =~ s/CONN_NAME/$conn/gm;
   $body =~ s/SECT_NAME/$section/gm;
@@ -1673,11 +1706,11 @@ sub parse_attr {
 
 sub gen_ops_aliases {
   my ($target, $source, $noforce, $opset) = @_;
-  my $sect = spec_part($target, 3, 0);
-  my $opname = spec_part($target, 4, 0);
+  my $sect = sp_part($target, 3, 0);
+  my $opname = sp_part($target, 4, 0);
   die "unknown operation \$$opname" unless exists $$opset{$opname};
   if($sect eq "ALL") {
-    my $count = spec_part($::current_conn_spec, 3, 0);
+    my $count = sp_part($::current_conn_spec, 3, 0);
     for(my $i = 0; $i < $count; $i++) {
       my $newtarget = $target;
       $newtarget =~ s/ALL/$i/;
@@ -1702,22 +1735,21 @@ sub gen_ops_aliases {
 
 sub parse_2 {
   my ($text,$macros) = @_;
-  my $remember = not defined(spec_part($::current,1,1));
+  my $remember = not defined(sp_part($::current,1,1));
   my $optype = ($::current =~ m/:</) ? "input" : "output";
   my $opset = $::op_args{$optype} or die "bad optype '$optype'";
   for(;;) {
     if($text =~ s/\A${ws}section$ws($specmatch)//) {
       my $sect = $1;
-      spec_syntax($sect);
-      die "incorrect section specifier '$sect'" unless spec_type($sect) == 3;
-      $::current = spec_complete($sect);
+      die "incorrect section specifier '$sect'" unless sp_type($sect) == 3;
+      $::current = sp_complete($sect);
       next;
     }
     if($text =~ m/\A(${ws}(static[^(]+$parenmatch)$ws$bracematch)/m) {
       $text = $POSTMATCH;
       if($remember) {
 	push @::funcs, $1;
-	push @::funcs_outputs, spec_prefix($::current, 3);
+	push @::funcs_outputs, sp_shorten($::current, 3);
       }
       next;
     }
@@ -1728,16 +1760,16 @@ sub parse_2 {
       $names =~ s/\$init/\$output_init/ and warn "operation \$init is deprecated, please replace by \$output_init!";
       if($remember) {
 	if($names eq "\$op") {
-	  $::current = spec_complete($names);
+	  $::current = sp_complete($names);
 	  make_ops($body);
 	  foreach my $opname (keys %$opset) {
-	    my $target_spec = spec_complete("\$$opname");
+	    my $target_spec = sp_complete("\$$opname");
 	    gen_ops_aliases($target_spec, $::current, 1, $opset);
 	  }
 	} elsif($body =~ m/OP_NAME/m) {
 	  foreach my $level2 (split ',', $names) {
-	    die "bad operation type '$level2'" if spec_type($level2) != 4;
-	    $::current = spec_complete($level2);
+	    die "bad operation type '$level2'" if sp_type($level2) != 4;
+	    $::current = sp_complete($level2);
 	    make_ops($body);
 	    gen_ops_aliases($::current, $::current, 0, $opset);
 	  }
@@ -1747,10 +1779,10 @@ sub parse_2 {
 	  $level2 =~ s/\$//g;
 	  $level2 =~ s/,/X/g;
 	  $level2 =~ s/^/\$/;
-	  $::current = spec_complete($level2);
+	  $::current = sp_complete($level2);
 	  make_ops($body);
 	  foreach my $name (split ',', $names) {
-	    my $single = spec_complete($name);
+	    my $single = sp_complete($name);
 	    gen_ops_aliases($single, $::current, 0, $opset);
 	  }
 	}
@@ -1768,12 +1800,12 @@ sub parse_subinstances {
       my $type = $1;
       my $name = $2;
       $text = $POSTMATCH;
-      spec_syntax($type);
-      die "bad instance brick type '$type'" unless spec_type($type) == 1;
+      sp_syntax($type);
+      die "bad instance brick type '$type'" unless sp_type($type) == 1;
       my $oldcurrent = $::current;
-      my $filename = spec_part($type, 1, 0) . ".ath";
+      my $filename = sp_part($type, 1, 0) . ".ath";
       my %dummy_macros = %::base_macros;
-      my ($rest,) = parse_file($filename, spec_part($::current, 1), $name, \%dummy_macros);
+      my ($rest,) = parse_file($filename, sp_part($::current, 1), $name, \%dummy_macros);
       $rest =~ s/${ws}//mg;
       die "incomplete instance sub-parse in $filename\n$rest" if $rest;
       $::instances{$name} = $type if $remember;
@@ -1783,13 +1815,11 @@ sub parse_subinstances {
 	my $sub_conn = $2;
 	my $loc_conn = $3;
 	$text = $POSTMATCH;
-	spec_syntax($sub_conn);
-	spec_syntax($loc_conn);
-	die "bad specified type '$sub_conn'" unless spec_type($sub_conn) == 2;
-	die "bad specified type '$loc_conn'" unless spec_type($loc_conn) == 2;
-	my $new_spec = spec_part($::current, 1) . "#$name";
-	my $sub_complete = spec_complete($sub_conn, $new_spec);
-	my $loc_complete = spec_complete($loc_conn);
+	die "bad specified type '$sub_conn'" unless sp_type($sub_conn) == 2;
+	die "bad specified type '$loc_conn'" unless sp_type($loc_conn) == 2;
+	my $new_spec = sp_part($::current, 1) . "#$name";
+	my $sub_complete = sp_complete($sub_conn, $new_spec);
+	my $loc_complete = sp_complete($loc_conn);
 	my $sub_core = $sub_complete;
 	my $loc_core = $loc_complete;
 	$sub_core =~ s/\[\]//;
@@ -1819,7 +1849,7 @@ sub parse_subinstances {
 	} else {
 	  warn "WARNING: in future releases keyword 'alias' will be required instead of '$cmd' for specifiers $sub_conn $loc_conn" unless $cmd eq "alias";
 	  # create an external alias
-	  die "target of external alias $loc_conn must not be a sub-instance" if defined(spec_part($loc_conn, 1, 1));
+	  die "target of external alias $loc_conn must not be a sub-instance" if defined(sp_part($loc_conn, 1, 1));
 	  $::aliases{$loc_core} = $sub_core;
 	  my $full_spec = $::sub_conns{$sub_core} or die "sub-specifier $sub_conn does not exist";
 	  if($full_spec =~ m/$brackmatch/) {
@@ -1828,8 +1858,8 @@ sub parse_subinstances {
 	  }
 	  my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
 	  add_connector($conn_type, $full_spec, $type, $loc_complete) if $remember;
-	  my $xname = spec_name(spec_bricktype($sub_complete, %::inst_types), 2);
-	  my $yname = spec_name(spec_bricktype($loc_complete, %::inst_types), 2);
+	  my $xname = sp_name(spec_bricktype($sub_complete), 2);
+	  my $yname = sp_name(spec_bricktype($loc_complete), 2);
 	  #print "xname=$xname yname=$yname ($::extern_type_defs{$xname})\n";
 	  die "undefined type info for $xname (internal inconsistency)" unless exists $::extern_type_defs{$xname};
 	  $::extern_type_defs{$yname} = $::extern_type_defs{$xname};
@@ -1843,7 +1873,7 @@ sub parse_subinstances {
 
 sub parse_1 {
   my ($text,$subbrick,$macros) = @_;
-  my $remember = not defined(spec_part($::current,1,1));
+  my $remember = not defined(sp_part($::current,1,1));
   $text = parse_subinstances($text, $remember);
   # brick operations
   for(;;) {
@@ -1852,7 +1882,7 @@ sub parse_1 {
       my $body = $2;
       $text = $POSTMATCH;
       if($remember) {
-	$::current = spec_complete($name, spec_part($::current,1) . ":<BRICK(:0:)");
+	$::current = sp_complete($name, sp_part($::current,1) . ":<BRICK(:0:)");
 	make_ops($body);
 	gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
       }
@@ -1866,19 +1896,18 @@ sub parse_1 {
       my $local = $1;
       my $type = $2;
       my $level1 = $3;
-      spec_syntax($level1);
-      $::current = spec_prefix(spec_complete($level1), 2);
-      my $array = spec_part($::current, 2, 1);
-      my $nr_sections = spec_part($level1, 3, 0);
+      $::current = sp_shorten(sp_complete($level1), 2);
+      my $array = sp_part($::current, 2, 1);
+      my $nr_sections = sp_part($level1, 3, 0);
       $nr_sections = "1" unless defined($nr_sections);
       $nr_sections = eval_compute($nr_sections);
-      my $enhanced_spec = spec_complete("(:$nr_sections:)");
+      my $enhanced_spec = sp_complete("(:$nr_sections:)");
       $::current_conn_spec = $enhanced_spec;
       $::current .= "(:0:)";
       $text = $POSTMATCH;
       my $do_export = ($remember and not defined($local));
       add_connector($type, $enhanced_spec, $subbrick) if $do_export;
-      my $xname = spec_name(spec_bricktype($enhanced_spec, %::inst_types), 2);
+      my $xname = sp_name(spec_bricktype($enhanced_spec), 2);
       $::extern_type_defs{$xname} = "";
       $text = parse_lit($text, $macros);
       $text = parse_attr($text, $macros, $do_export);
@@ -1915,8 +1944,8 @@ sub parse_1 {
 	    my $whole_size = defined($6) ? $align_size : "1";
 	    $text = $POSTMATCH;
 	    if($remember) {
-	      $sect = spec_part($sect, 3, 0) if defined($sect);
-	      my $input = spec_part($enhanced_spec, 2, 0);
+	      $sect = sp_part($sect, 3, 0) if defined($sect);
+	      my $input = sp_part($enhanced_spec, 2, 0);
 	      $::pc_defs{$name} = [$input, $sect, $max, $align_size, $whole_size];
 	    }
 	    next;
@@ -1946,7 +1975,7 @@ sub parse_1 {
 	die "$enhanced_spec already defined" if exists $::conn_spec{$enhanced_spec};
 	$::conn_spec{$enhanced_spec} = [$def, $initbody, $exitbody];
       } else {
-	my $short_spec = spec_prefix($enhanced_spec, 2);
+	my $short_spec = sp_shorten($enhanced_spec, 2);
 	$short_spec =~ s/$brackmatch//;
 	#print "ENH: $enhanced_spec | $short_spec\n";
 	$::sub_conns{$short_spec} = $enhanced_spec;
@@ -1993,8 +2022,8 @@ sub parse_all {
   $text =~ m/\A${ws}brick$ws($specmatch)/m or die "brick statement missing";
   my $brick = $1;
   $text = $POSTMATCH;
-  spec_syntax($brick);
-  die "bad brick type '$brick'" unless spec_type($brick) == 1;
+  sp_syntax($brick);
+  die "bad brick type '$brick'" unless sp_type($brick) == 1;
   if($prefix) {
     $::current = "$prefix#$suffix";
   } else {
@@ -2076,7 +2105,7 @@ sub parse_file {
 sub test_twice {
   my %names = %::aliases;
   foreach my $testspec (keys %::conn_spec) {
-    my $test = spec_prefix($testspec, 2);
+    my $test = sp_shorten($testspec, 2);
     my $found = $names{$test};
     if($found) {
       $test =~ m/:(<|>)/;
@@ -2103,11 +2132,11 @@ sub gen_magic {
 
 sub gen_header {
   local *OUT = shift;
-  my $brick = spec_name($::current, 1);
+  my $brick = sp_name($::current, 1);
   print OUT "#include \"../common.h\"\n"; 
   print OUT "#include \"../strat.h\"\n" if defined($::strat);
   while(my ($name, $spec) = each %::instances) {
-    my $br = spec_part($spec, 1, 0);
+    my $br = sp_part($spec, 1, 0);
     print OUT "#include \"$br.h\"\n";
   }
   print OUT "\n\n";
@@ -2126,7 +2155,7 @@ sub gen_header {
     $brick_ptr = "struct brick_$brick * _brick_ptr_; " if $spec =~ m/\[/;
     $def =~ s/^($ws\{)/$1 struct $type _${type}_; $brick_ptr/;
     purge(\$def);
-    my $name = spec_name($spec, 2);
+    my $name = sp_name($spec, 2);
     print OUT "struct local_$name $def;\n\n";
   }
   print OUT "\n";
@@ -2146,7 +2175,7 @@ sub gen_header {
   foreach my $spec (keys %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
     my ($conn,$array) = spec_conn_instance($spec);
-    my $name = spec_name($spec, 2);
+    my $name = sp_name($spec, 2);
     print OUT "  struct local_$name $conn$array;\n";
   }
   # gen PC fields
@@ -2164,7 +2193,7 @@ sub gen_header {
   # gen sub-instances
   print OUT "  // sub-instances\n";
   while(my ($name, $spec) = each %::instances) {
-    my $br = spec_part($spec, 1, 0);
+    my $br = sp_part($spec, 1, 0);
     print OUT "  struct brick_$br _sub_$name;\n";
   }
   # user-defined fields
@@ -2180,7 +2209,7 @@ sub gen_header {
   # TODO: avoid code bloat: not all of these are needed when inline expansion is preferred for non-dynamic array connectors
   print OUT "// connector init routines\n";
   foreach my $spec (keys %::conn_spec) {
-    my $cname = spec_name($spec, 2);
+    my $cname = sp_name($spec, 2);
     print OUT "void init_conn_$cname(void * _ini, void * _brick);\n";
     print OUT "void exit_conn_$cname(void * _ini, void * _brick);\n";
   }
@@ -2189,23 +2218,23 @@ sub gen_header {
   foreach my $spec (keys %::conn_spec) {
     my $optype = ($spec =~ m/:</) ? "input" : "output";
     my $opset = $::op_args{$optype} or die "bad optype '$optype'";
-    my $count = spec_part($spec, 3, 0);
+    my $count = sp_part($spec, 3, 0);
     my $max = eval_compute($count);
     for(my $sect = 0; $sect < $max; $sect++) {
-      my $secspec = spec_complete("(:" . $sect . ":)", $spec);
+      my $secspec = sp_complete("(:" . $sect . ":)", $spec);
       print OUT "// ops for $secspec\n";
       my %copy_ops = %$opset;
       foreach my $ops_spec (keys %::ops_aliases) {
-	next unless spec_prefix($ops_spec, 3) eq spec_prefix($secspec, 3);
-	my $dst_name = spec_name($ops_spec);
+	next unless sp_shorten($ops_spec, 3) eq sp_shorten($secspec, 3);
+	my $dst_name = sp_name($ops_spec);
 	print OUT "static_operation $dst_name;\n";
-	$dst_name = spec_part($ops_spec, 4, 0);
+	$dst_name = sp_part($ops_spec, 4, 0);
 	delete $copy_ops{$dst_name};
       }
       # print unimplemented names
       print OUT "// unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
-	my $dst_name = spec_name($secspec . "\$" . $bare);
+	my $dst_name = sp_name($secspec . "\$" . $bare);
 	my $src_name = "missing_$bare";
 	print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
       }
@@ -2217,8 +2246,8 @@ sub gen_header {
 
 sub make_pointers {
   my ($code, $spec, $direct) = @_;
-  my $brick = spec_name($spec, 1);
-  my $conn = spec_name($spec, 2);
+  my $brick = sp_name($spec, 1);
+  my $conn = sp_name($spec, 2);
   if($direct) {
     insert_pseudoparam($code, "struct brick_${brick} * const _brick = brick; (void)_brick; ");
   } elsif($spec =~ m/\[/) {
@@ -2248,7 +2277,7 @@ sub gen_ops {
   # print body of all operations
   while(my ($spec, $code) = each %::ops_spec) {
     eval_code(\$code, $spec);
-    my $name = spec_name($spec);
+    my $name = sp_name($spec);
     print OUT "#undef OPERATION\n#define OPERATION \"$name\"\n\n";
     print OUT "void $name(const union connector * on, struct args * _args, const char * _param)\n";
     make_pointers(\$code, $spec, 0);
@@ -2258,19 +2287,19 @@ sub gen_ops {
   # generate alias names
   while(my ($ops_spec,$op) = each %::ops_aliases) {
     next if $op eq $ops_spec;
-    my $src_name = spec_name($op);
-    my $dst_name = spec_name($ops_spec);
+    my $src_name = sp_name($op);
+    my $dst_name = sp_name($ops_spec);
     print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n\n";
   }
 }
 
 sub gen_conn_init {
   my ($spec, $tuple, $exit_mode) = @_;
-  my $cname = spec_name($spec, 2);
+  my $cname = sp_name($spec, 2);
   my $res ="{\n  struct local_$cname * conn = _conn; (void)conn;\n";
   my ($def, $initcode, $exitcode) = @$tuple;
   my $code = $exit_mode ? $exitcode : $initcode;
-  my $name = spec_name($spec, 2);
+  my $name = sp_name($spec, 2);
   if($spec =~ m/:</) {
     $res .= "  conn->_input_.ops = ops_$name;\n" unless $exit_mode;
     if($code =~ m/@<(\w+)/mg) {
@@ -2313,7 +2342,7 @@ sub subst_brickvars { # this is provisionary and should vanish
 
 sub gen_init {
   local *OUT = shift;
-  my $brick = spec_part($::current, 1, 0);
+  my $brick = sp_part($::current, 1, 0);
   # create TYPE tables
   gen_typename_init(*OUT, $brick);
   # initialize static ops structure for each connector
@@ -2328,18 +2357,18 @@ sub gen_init {
       $optype = "input";
     }
     my $opset = $::op_args{$optype} or die "bad optype '$optype'";
-    my $count = spec_part($spec, 3, 0);
-    my $name = spec_name($spec, 2);
+    my $count = sp_part($spec, 3, 0);
+    my $name = sp_name($spec, 2);
     print OUT "${optype}_operation_set ops_$name\[] = {\n";
     my $max = eval_compute($count);
     for(my $sect = 0; $sect < $max; $sect++) {
       print OUT "  {\n";
       my $op_defined = undef;
-      my $secspec = spec_complete("(:" . $sect . ":)", $spec);
+      my $secspec = sp_complete("(:" . $sect . ":)", $spec);
       my %copy_ops = %$opset;
       while(my ($ops_spec,$op) = each %::ops_aliases) {
-	next unless spec_prefix($ops_spec, 2) eq spec_prefix($secspec, 2);
-	my $op_sect = spec_part($op, 3, 0);
+	next unless sp_shorten($ops_spec, 2) eq sp_shorten($secspec, 2);
+	my $op_sect = sp_part($op, 3, 0);
 	if($op_sect =~ m/\A(.*)\.\.(.*)\Z/) {
 	  my $start = $1;
 	  my $end = $2;
@@ -2349,8 +2378,8 @@ sub gen_init {
 	} else {
 	  next unless ($op_sect eq $sect or $op_sect eq "ALL");
 	}
-	my $dst_name = spec_part($ops_spec, 4, 0);
-	my $src_name = spec_name($op);
+	my $dst_name = sp_part($ops_spec, 4, 0);
+	my $src_name = sp_name($op);
 	$op_defined = $src_name if $dst_name eq "op";
 	print OUT "    [opcode_$dst_name$index_shift] = &${src_name},\n";
 	delete $copy_ops{$dst_name};
@@ -2358,7 +2387,7 @@ sub gen_init {
       # print unimplemented names
       print OUT "    // unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
-	my $dst_name = spec_name($secspec . "\$" . $bare);
+	my $dst_name = sp_name($secspec . "\$" . $bare);
 	my $src_name = defined($op_defined) ? $op_defined : "missing_${sect}_$bare";
 	print OUT "    [opcode_$bare$index_shift] = &$src_name,\n";
       }
@@ -2368,7 +2397,7 @@ sub gen_init {
   }
   # create init routine for each connector
   while(my ($spec, $tuple) = each %::conn_spec) {
-    my $cname = spec_name($spec, 2);
+    my $cname = sp_name($spec, 2);
     my $initcode = gen_conn_init($spec, $tuple, 0);
     my $exitcode = gen_conn_init($spec, $tuple, 1);
     print OUT "void init_conn_$cname(void * _conn, void * _brick)\n$initcode\n";
@@ -2381,7 +2410,7 @@ sub gen_init {
   while(my ($spec, $tuple) = each %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
     print OUT "// init $spec\n";
-    my $funcname = "init_conn_" . spec_name($spec, 2);
+    my $funcname = "init_conn_" . sp_name($spec, 2);
     my ($shortname, $array) = spec_conn_instance($spec);
     $array =~ s/\[(.*)\]/$1/;
     my $index = "";
@@ -2404,7 +2433,7 @@ sub gen_init {
   # create and connect sub-instances
   print OUT "  // init sub-instances\n";
   while(my ($name, $spec) = each %::instances) {
-    my $br = spec_part($spec, 1, 0);
+    my $br = sp_part($spec, 1, 0);
     print OUT "  _mand = init_$br (&ini->_sub_$name, _param, _mand);\n";
   }
   print OUT "  // wire sub-instances\n";
@@ -2420,7 +2449,7 @@ sub gen_init {
 	$full_spec = $::sub_conns{$sub_core} unless defined($full_spec);
       }
       die "cannot find connector $input / $output" unless defined($full_spec);
-      my $bound = spec_part($full_spec, 2, 1);
+      my $bound = sp_part($full_spec, 2, 1);
       $bound =~ s/^\[//;
       $bound =~ s/\]$//;
       print OUT "for(_i_ = 0; _i_ < $bound; _i_++) {\n";
@@ -2466,7 +2495,7 @@ sub gen_init {
       print OUT "  // not called\n";
       next;
     }
-    my $funcname = "exit_conn_" . spec_name($spec, 2);
+    my $funcname = "exit_conn_" . sp_name($spec, 2);
     my ($shortname, $array) = spec_conn_instance($spec);
     $array =~ s/\[(.*)\]/$1/;
     my $index = "";
@@ -2528,7 +2557,7 @@ if($rest) {
 test_twice();
 
 open(OUT, "> $hfile") or die "cannot create output file";
-my $brick = spec_part($::current, 1, 0);
+my $brick = sp_part($::current, 1, 0);
 print OUT "// brick $brick, generated automatically\n$copyright";
 print OUT "#ifndef __H_$brick\n";
 print OUT "#define __H_$brick\n\n";
