@@ -85,6 +85,8 @@ wire :>o_arr3[2] as :<iarr3[1];
 operation $brick_init
 {
   // Test it...
+  INIT_ALL_INPUTS(BRICK);
+  INIT_ALL_OUTPUTS(BRICK);
   @success = TRUE;
 }
 
@@ -336,6 +338,8 @@ operation $input_init
   if(!@.is_connected(:<)) {
   }	
   if(!@.is_connected(:<in2)) {
+  }	
+  if(!@.is_initialized(:<in2)) {
   }	
   @.trace(test, "mist\n");
   @.trace(test, "mist2\n");

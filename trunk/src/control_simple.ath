@@ -603,6 +603,8 @@ boot->connector[1].c_param = boot->b_param;
 boot->addr = REPRES_MAX;
 root_instance = GET_BRICK(boot);
 root_instance->last_addr = boot->addr + REPRES_MAX;
+struct args args = { .constr = TRUE, };
+loader_control_simple.init_brick((void*)root_instance, &args, "");
 root_strategy = &root_instance->_conn_control._output_;
 insert_brick_hash(root_instance->brick_hash, boot);
 struct conn_info root_conn1 = {0, 0, "control" };

@@ -2109,7 +2109,7 @@ sub parse_all {
 
   unless($prefix) {
     # default $brick_init operation
-    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n  \@success = TRUE;\n}");
+    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n}");
   }
 
   # this is old syntax, will VANISH in the future!!!
@@ -2369,7 +2369,7 @@ sub gen_ops {
     if($spec =~ m/(input|output)_init\Z/) {
       my $type = $1;
       my $ops_name = sp_name($spec, 2);
-      $suffix = "\nif(\@success) _on->_${type}_.ops = ops_$ops_name;\n";
+      $suffix = "\nif(\@success) { if(\@destr) _on->_${type}_.ops = uninitialized_$type;  if(\@constr) _on->_${type}_.ops = ops_$ops_name; }\n";
     }
     make_pointers(\$code, $spec, 0, $suffix);
     eval_code(\$code, $spec);
@@ -2392,12 +2392,10 @@ sub gen_conn_init {
   my $res ="{\n  struct local_$cname * _on = _conn; (void)_on;\n";
   my ($def, $initcode, $exitcode) = @$tuple;
   my $code = $exit_mode ? $exitcode : $initcode;
-  my $name = sp_name($spec, 2);
-  if($spec =~ m/:</) {
-    $res .= "  _on->_input_.ops = ops_$name;\n" unless $exit_mode;
-  } else {
-    $res .= "  _on->_output_.ops = ops_$name;\n" unless $exit_mode;
-  }
+  my $type = $spec =~ m/:</ ? "input" : "output";
+  #my $name = sp_name($spec, 2);
+  #$res .= "  _on->_${type}_.ops = ops_$name;\n" unless $exit_mode;
+  $res .= "  _on->_${type}_.ops = uninitialized_$type;\n" unless $exit_mode;
   $res .= "  _on->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
   $code =~ s/\@param/_param/mg;
   eval_vars(\$code, $spec);

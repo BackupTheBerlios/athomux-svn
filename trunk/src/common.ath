@@ -8,6 +8,9 @@
 
 @.define @.is_connected (input_spec) (@input_spec._input_.connect != NULL)
 
+@.define @.is_initialized (conn_spec)
+(@conn_spec.@.if(@.string{conn_spec} =~ m/:</){_input_}@.else{_output_}.ops != uninitialized_@.if(@.string{conn_spec} =~ m/:</){input}@.else{output})
+
 ///////////////////////////////////////////////////////////////////////////
 
 // debugging

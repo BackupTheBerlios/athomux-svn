@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.27, 2 December 2004
+Version 0.28, 8 December 2004
 \layout Standard
 
 
@@ -3097,8 +3097,12 @@ $disconnect
 Operating Phase
 \layout Standard
 
-Before any operation can be called at any output, the corresponding output
- must have been initialized by 
+Before any operation can be called at any input or output, the corresponding
+ input / output must have been initialized by 
+\family typewriter 
+$input_init
+\family default 
+ or 
 \family typewriter 
 $output_init
 \family default 
@@ -3107,36 +3111,35 @@ $output_init
 @constr=TRUE
 \family default 
 .
- Then the output is called 
+ Then the input / output is called 
 \emph on 
 operating
 \emph default 
 .
- In general, it is an error to call any operation on a non-operating output;
- however it is possible to implement outputs in such a way that non-operating
- mode can be tolerated.
 \layout Standard
 
-IMPORTANT: as a writer of strategy bricks, you should always assume that
- outputs need a 
+IMPORTANT: It is an error to call any operation on a non-operating input
+ or output; it is no longer possible to implement outputs in such a way
+ that non-operating mode can be tolerated.
+ When you forget to initialize an input or output before calling any operation
+ on it, a predefined stub implementation will be called instead, always
+ returning 
 \family typewriter 
-$output_init
+@success=FALSE
 \family default 
- before any other operation can be called.
- It is unwise to assume other behaviour even in special cases, because somebody
- may change the implementation of a brick at a later time such that a missing
- 
-\family typewriter 
-$output_init
-\family default 
- is no longer tolerated.
+; additionally, in debug mode it may terminate your executable (depending
+ on the Athomux environment where you run it).
 \layout Standard
 
-NYI: instead of calling 
+Instead of calling 
+\family typewriter 
+$input_init
+\family default 
+ and 
 \family typewriter 
 $output_init
 \family default 
- for all outputs individually, you may call 
+ for all inputs and outputs individually, you may call 
 \family typewriter 
 $brick_init
 \family default 
@@ -3144,7 +3147,11 @@ $brick_init
 \family typewriter 
 $output_init
 \family default 
- for all outputs.
+ for all inputs and outputs except 
+\emph on 
+dynamic
+\emph default 
+ arrays.
 \layout Standard
 
 Turning back to connected phase is possible by calling 
@@ -3153,11 +3160,11 @@ $*_init
 \family default 
  with parameter 
 \family typewriter 
-destr=TRUE
+@destr=TRUE
 \family default 
 .
  IMPORTANT: before returning from such a destruction, be sure that any logical
- state has been returned; this may be achieved by 
+ state (if any) has been returned; this may be achieved by 
 \family typewriter 
 $retract
 \family default 
@@ -3171,7 +3178,8 @@ The following macros (from
 \family typewriter 
 common.ath
 \family default 
-) may be used to determine the current phase of a brick, input or output:
+) may be used to determine the current phase of a brick, input or output
+ instance:
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -3186,11 +3194,142 @@ input_spec
 )
 \family default 
  Determine whether the input is currently connected.
- The input belonging to the current oepration can be abbreviated as 
+ The input belonging to the current operation can be abbreviated as 
 \family typewriter 
 :<
 \family default 
  without a name.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+@.is_initialized(
+\family default 
+\emph on 
+connector_spec
+\family typewriter 
+\emph default 
+)
+\family default 
+ Determine whether the input or output is in the operating phase, i.e.
+ has been 
+\emph on 
+successfully
+\emph default 
+ (i.e.
+ 
+\family typewriter 
+@success==TRUE
+\family default 
+) initialized by 
+\family typewriter 
+$input_init
+\family default 
+ oder 
+\family typewriter 
+$output_init
+\family default 
+ (e.g.
+ indirectly via 
+\family typewriter 
+$instconn
+\family default 
+).
+ If used inside 
+\family typewriter 
+$*_init
+\family default 
+, you can prevent double initialisation (or senseless de-initialisation).
+\layout Subsection
+
+Macros inside 
+\family typewriter 
+$brick_init
+\layout Standard
+
+When you implement your own 
+\family typewriter 
+$brick_init
+\family default 
+, you can (and in fact, should!) call 
+\family typewriter 
+$input_init
+\family default 
+ and 
+\family typewriter 
+$output_init
+\family default 
+ for all of your inputs and outputs by hand.
+ This could be cumbersome for large bricks with a huge number of inputs
+ and outputs.
+ Therefore you may call some of the following predefined macros at any place
+ where you need it:
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+INIT_ALL_INPUTS(BRICK)
+\family default 
+ Call 
+\family typewriter 
+$input_init
+\family default 
+ for all existing inputs.
+ The return status is relivered in 
+\family typewriter 
+@success
+\family default 
+.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+INIT_ALL_OUTPUTS(BRICK)
+\family default 
+ Call 
+\family typewriter 
+$output_init
+\family default 
+ for all existing outputs.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+INIT_ALL_CONNS(BRICK)
+\family default 
+ Call 
+\family typewriter 
+$*_init
+\family default 
+ for all existing inputs and outputs in one single sweep (slightly more
+ efficient).
+ NOTE: when @constr==TRUE, the order of initialization is exactly as specified
+ by 
+\family typewriter 
+input
+\family default 
+ and 
+\family typewriter 
+output
+\family default 
+ statements in your sourcecode; otherwise the order is reversed.
+\layout Standard
+
+When you don't implement 
+\family typewriter 
+$brick_init
+\family default 
+ explicitly by yourself, a default version is automatically created which
+ does nothing but simply calling 
+\family typewriter 
+INIT_ALL_CONNS(BRICK)
+\family default 
+.
 \layout Section
 
 How to Implement Statelessness
