@@ -1,4 +1,5 @@
 #context pconf klinux
+#context uname -p i386
 
 $(cconf)_LINSRC=$(LINSRC)
 $(cconf)_MODPOST=$($(cconf)_LINSRC)/scripts/mod/modpost

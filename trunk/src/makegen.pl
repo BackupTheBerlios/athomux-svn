@@ -24,11 +24,8 @@ sub build_contexts {
 }
 
 sub check_context {
-  my ($src, $type, $forwhat) = @_;
-  my $context = $contexts{$src};
-  die "internal error: source '$src' not indexed" unless defined($context);
-  if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
-    my $found = $1;
+  sub process_list {
+    my ($found, $forwhat) = @_;
     my @list = split /\s*,\s*/, $found;
     my $nr_negative = 0;
     foreach my $elem (@list) {
@@ -42,6 +39,21 @@ sub check_context {
     }
     return $nr_negative;
   }
+  my ($src, $type, $forwhat) = @_;
+  my $context = $contexts{$src};
+  die "internal error: source '$src' not indexed" unless defined($context);
+  my $try = $context;
+  while($try =~ m/^#?\s*context\s+uname\s+(-\w+)\s+(.+)\n/m) {
+    $try = $POSTMATCH;
+    my $list = $2;
+    my $name = `uname $1`;
+    chomp $name;
+print"uname $1 = $name ($list)\n";
+    return 0 unless process_list($list, $name);
+  }
+  if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
+    return process_list($1, $forwhat);
+  }
   return 1;
 }
 
@@ -50,13 +62,10 @@ sub check_context {
 sub filter_all {
   my ($prefix, $type, $forwhat, $list) = @_;
   my @res = ();
-print"prefix '$prefix' type '$type' forwhat '$forwhat' : ";
   foreach my $src (@$list) {
     next unless check_context("$prefix$src", $type, $forwhat);
     push @res, $src;
-print"$src ";
   }
-print"\n";
   return \@res;
 }
 
@@ -198,6 +207,7 @@ foreach my $pconf (@pconfs) {
     }
   }
   $text .= "\n$all_cconf_objs\n\n";
+  $text .= "\n# end pconf $pconf\n\n";
 }
 print DEFS "\n$all_bricks\n";
 print DEFS "\n$all_headers\n";

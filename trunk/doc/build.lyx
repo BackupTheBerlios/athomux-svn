@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.01, 17 Nov 2004
+Version 0.02, 23 Nov 2004
 \layout Standard
 
 
@@ -93,7 +93,11 @@ on (called
 \family typewriter 
 pconf
 \family default 
- for short), and the C-compiler phase configuration.
+ for short), and the C-compiler phase configuration (called 
+\family typewriter 
+cconf
+\family default 
+).
  For each of these phases, any number of variants may be specified.
  The 
 \emph on 
@@ -157,6 +161,18 @@ pconf_name
 cconf_name
 \emph default 
 ).
+\layout Standard
+
+Hint: you may use shell wildcards for specifying multiple targets, e.g.
+ 
+\family typewriter 
+default/*/*
+\family default 
+ or 
+\family typewriter 
+*/debug/*
+\family default 
+ or similar.
 \layout Section
 
 Configuration
@@ -432,6 +448,17 @@ $(pconf)
 $(cconf)
 \family default 
  can be used.
+ Additionally, the pseudo-macro 
+\family typewriter 
+$(target)
+\family default 
+ is available for parameterization of 
+\family typewriter 
+\emph on 
+mytargetname
+\family default 
+\emph default 
+.
 \layout Subsection
 
 Filtering
@@ -541,6 +568,62 @@ target.*
  files, you can analogously specify both pconf and cconf filters for restricting
  the cartesian product of pconfs, cconfs and targets which will be considered
  for creation of makefile rules.
+\layout Standard
+
+Filtering at config-file level yields a kind of global restriction, valid
+ for all bricks.
+\layout Subsubsection
+
+Build Platform Filters
+\layout Standard
+
+Usually foreign architectures cannot be built on many architectures (exept
+ you have cross-compilers etc).
+ In order to limit the build configuration to the current capabilities of
+ your system, the following context rules can also be used at any 
+\family typewriter 
+pconf.*
+\family default 
+, 
+\family typewriter 
+cconf.*
+\family default 
+, 
+\family typewriter 
+target.*
+\family default 
+ and 
+\family typewriter 
+*.ath
+\family default 
+:
+\layout Standard
+\noindent 
+
+\family typewriter 
+# context uname -
+\family default 
+\emph on 
+optionname
+\emph default 
+ 
+\emph on 
+list
+\layout Standard
+
+As you will expect, it calls the command 
+\family typewriter 
+uname
+\family default 
+ with option -
+\emph on 
+optionname
+\emph default 
+ and checks whether the actual result matches the 
+\emph on 
+list
+\emph default 
+ (positively or negatively as explained above).
 \layout Subsubsection
 
 Regular Expressions for Filtering
