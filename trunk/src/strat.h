@@ -37,52 +37,24 @@ However note that a brick is created with ":=", but afterwards the
 brick type is immutable and thus denoted using "=".
 */
 
+////////////////////////////////////////////////////////////////////
 
-struct rex_buffer; // opaque
-
-// compile a regular expression into internal representaition
-struct rex_buffer * rex_compile(const char * rex_str);
-
-// release internal represenation
-void rex_free(struct rex_buffer * pat);
-
-// search for any occurrence of pat in str
-// return position (starting from 0)
-// upon failure, return negative value
-int rex_search(struct rex_buffer * pat, const char * str, int len, int count, int start[], int end[]);
+/* WARNING! These are DEPRECATED routines which should DISAPPEAR!
+ * Don't use for new bricks!
+ */
 
 // make a null-terminated dst string out of a substring of
 // src, identified by start and end
 void copy_str(char * dst, int maxlen, const char * src, int start, int end);
 
 
-////////////////////////////////////////////////////////////////////
-
-/* Here are some common regexes.
- * TODO: add further frequently used ones
- */
-
-extern const char * rexstr_brick;
-extern struct rex_buffer * rexbuf_brick;
 int parse_brick(char * buf, int len, char * res_op, char * res_name, int len_name);
 
-extern const char * rexstr_connector;
-extern struct rex_buffer * rexbuf_connector;
 int parse_connector(char * buf, int len, char * res_name, int len_name, index_t * res_index, char * res_op, char * res_other, int len_other, int * reslen_other);
 
-extern const char * rexstr_elem;
-extern struct rex_buffer * rexbuf_elem;
 int parse_elem(char * buf, int len, struct conn_info * conn);
 
-extern const char * rexstr_inout;
-extern struct rex_buffer * rexbuf_inout;
 int parse_inout(char * buf, int len, int * res_type, char * res_op, struct conn_info * conn);
 
-
-///////////////////////////////////////////////////////////////////
-
-// this must be called once upon initilaization (usually by control_*)
-
-void rex_init(void);
 
 #endif

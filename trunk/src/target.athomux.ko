@@ -1,6 +1,6 @@
 #context pconf: klinux
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/printf.o $(pconf)/$(cconf)/regex.o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/printf.o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o
 
 $(pconf)/$(cconf)/athomux.linked.o: $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras)
 

@@ -1,0 +1,5 @@
+#context pconf: !klinux
+
+$(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG -DTRACE
+
+include cconf-include.default

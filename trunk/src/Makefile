@@ -28,11 +28,11 @@ else
 	@$(MAKE) SUBMAKE=1 -s show_broken
 endif
 
-allobjs=$(objs) strat.o
-
 -include defs.make
 
-common.c : common.ath
+%/*/strat.o : strat.h %/strat.c
+
+*/common.c : common.ath
 	# no real dependency
 
 %/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h %/*/defs.h %/*/loaders.h

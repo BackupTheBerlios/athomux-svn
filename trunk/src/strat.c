@@ -8,75 +8,8 @@
 #include "strat.h"
 
 #include <sys/types.h>
-#include <regex.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* PROBLEM:
- * The Gnu regex library uses malloc() and realloc(), even if we pre-allocate
- * our own space for the buffer.
- * Thus we need a modified version of regex with no dynamic memory
- * allocation at all (for a true standalone Athomux version).
- * For the prototype, we encapsulate dynamic memory for now to
- * enable easy replacement by another version later.
- *
- * The interface of rex_compile() and rex_free() may be extended later,
- * in order to allocate pages from a tmp input.
- */
-
-const char * rexstr_brick;
-struct rex_buffer * rexbuf_brick;
-const char * rexstr_connector;
-struct rex_buffer * rexbuf_connector;
-const char * rexstr_elem;
-struct rex_buffer * rexbuf_elem;
-const char * rexstr_inout;
-struct rex_buffer * rexbuf_inout;
-
-struct rex_buffer {
-  struct re_pattern_buffer re;
-};
-
-struct rex_buffer * rex_compile(const char * rex_str)
-{
-  struct rex_buffer * pat = malloc(sizeof(struct rex_buffer));
-  const char * res;
-  if(!pat)
-    return NULL;
-  memset(pat, 0, sizeof(struct rex_buffer));
-  re_syntax_options = pat->re.syntax = RE_CHAR_CLASSES | RE_CONTEXT_INDEP_ANCHORS | RE_CONTEXT_INDEP_OPS | RE_INTERVALS | RE_CONTEXT_INVALID_OPS | RE_NO_BK_PARENS| RE_NO_BK_VBAR;
-  res = re_compile_pattern(rex_str, strlen(rex_str), &pat->re);
-  if(res) {
-#ifdef DEBUG
-    printf("regex compile error: %s\n", res);
-    exit(-1);
-#endif
-    rex_free(pat);
-    return NULL;
-  }
-  pat->re.regs_allocated = REGS_FIXED;
-  pat->re.newline_anchor = 1;
-  return pat;
-}
-
-void rex_free(struct rex_buffer * pat)
-{
-  regfree(&pat->re);
-  free(pat);
-}
-
-int rex_search(struct rex_buffer * pat, const char * str, int len, int count, int start[], int end[])
-{
-  int res;
-  struct re_registers regs = {count, start, end};
-#if 1
-  memset(start, 0, sizeof(int) * count);
-  memset(end, 0, sizeof(int) * count);
-#endif
-  res = re_search(&pat->re, str, len, 0, len-1, &regs);
-  return res;
-}
-
 
 void copy_str(char * dst, int maxlen, const char * src, int start, int end)
 {
@@ -91,28 +24,85 @@ void copy_str(char * dst, int maxlen, const char * src, int start, int end)
   dst[len] = '\0';
 }
 
+#define skip_line(ptr) \
+  ({ while(*ptr && *ptr++ != '\n') /*empty*/; })
+
+#define skip_blanks(ptr) \
+  ({ while(*ptr && *ptr == ' ') ptr++; })
+
+int scan_multi(const char ** str, const char ** search, const int * lens, int nr)
+{
+  const char * tmp = *str;
+  int i;
+  for(;;) {
+    skip_blanks(tmp);
+    if(!*tmp) {
+      *str = tmp;
+      return -1;
+    }
+    for(i = 0; i < nr; i++) {
+      if(!strncmp(tmp, search[i], lens[i])) {
+	tmp += lens[i];
+	skip_blanks(tmp);
+	*str = tmp;
+	return i;
+      }
+    }
+    skip_line(tmp);
+  }
+}
+
+const char * scan_one(const char * str, const char * search, int searchlen)
+{
+  for(;;) {
+    skip_blanks(str);
+    if(!*str) {
+      return NULL;
+    }
+    if(!strncmp(str, search, searchlen)) {
+      str += searchlen;
+      skip_blanks(str);
+      return str;
+    }
+    skip_line(str);
+  }
+}
+
 /////////////////////////////////////////////////////////////////
 
-
-#define REX_INIT(name) \
-  if(!rexbuf_##name) \
-     rexbuf_##name = rex_compile(rexstr_##name);
-
-void rex_init(void)
-{
-  REX_INIT(brick);
-  REX_INIT(connector);
-  REX_INIT(elem);
-  REX_INIT(inout);
-}
 
 const char * rexstr_brick = "^brick *([:/])?= *(\\w*)";
 
 int parse_brick(char * buf, int len, char * res_op, char * res_name, int len_name)
 {
+#if 1
+  const char * found = scan_one(buf, "brick", 5);
+  if(!found) {
+    return -1;
+  }
+  const char op_char = *found++;
+  if(op_char == ':' || op_char == '/') {
+    *res_op = op_char;
+  } else {
+    *res_op = 0;
+  }
+  if(*found == '=') {
+    found++;
+  }
+  skip_blanks(found);
+  if(!*found) {
+    return -1;
+  }
+  int res_len;
+  for(res_len = 0; found[res_len] && found[res_len] != '\n'; res_len++) {
+    // empty
+  }
+  copy_str(res_name, len_name, found, 0, res_len);
+  return (long)found + res_len - (long)buf;
+#else
   int start[3];
   int end[3];
-  int pos = rex_search(rexbuf_brick, buf, len, 3, start, end);
+  int pos = rex_search(rexbuf_brick, buf, len, 3, (long)start-(long)buf, end);
   if(pos < 0) {
      return pos;
   }
@@ -125,12 +115,54 @@ int parse_brick(char * buf, int len, char * res_op, char * res_name, int len_nam
   printf("++++ brick '%s'\n", res_name);
 #endif
   return pos;
+#endif
 }
 
 const char * rexstr_connector = "^ *connect *(\\w+)(\\[([0-9]+)\\])? *([:/=])?= *(.*)";
 
 int parse_connector(char * buf, int len, char * res_name, int len_name, index_t * res_index, char * res_op, char * res_other, int len_other, int * reslen_other)
 {
+#if 1
+  const char * found = scan_one(buf, "connect", 7);
+  if(!found) {
+    return -1;
+  }
+  int pos;
+  for(pos = 0; found[pos] && ((found[pos] >= 'a' && found[pos] <= 'z') || found[pos] == '_'); pos++) {
+    // empty
+  }
+  copy_str(res_name, len_name, found, 0, pos);
+  found += pos;
+  *res_index = 0;
+  if(found[pos] == '[') {
+    found++;
+    *res_index = atoi(found);
+    while(*found && *found++ != ']') {
+      // empty
+    }
+  }
+  skip_blanks(found);
+  const char op_char = *found++;
+  if(op_char == ':' || op_char == '/') {
+    *res_op = op_char;
+  } else {
+    *res_op = 0;
+  }
+  if(*found == '=') {
+    found++;
+  }
+  skip_blanks(found);
+  if(!*found) {
+    return -1;
+  }
+  int res_len;
+  for(res_len = 0; found[res_len] && found[res_len] != '\n'; res_len++) {
+    // empty
+  }
+  *reslen_other = res_len;
+  copy_str(res_other, len_other, found, 0, res_len);
+  return (long)found + res_len - (long)buf;;
+#else
   int start[6];
   int end[6];
   int pos = rex_search(rexbuf_connector, buf, len, 6, start, end);
@@ -155,12 +187,51 @@ int parse_connector(char * buf, int len, char * res_name, int len_name, index_t 
   printf("++++ conn '%s' '%s'\n", res_name, res_other);
 #endif
   return pos;
+#endif
 }
 
 const char * rexstr_elem = "^([0-9a-f]+):(\\w+)(\\[[0-9]+\\])?,? *";
 
+const char * parse_connstr(const char * ptr, struct conn_info * conn)
+{
+  int i;
+  for(i = 0; ((ptr[i] >= 'a' && ptr[i] <= 'z') || ptr[i] == '_'); i++) {
+    // empty
+  }
+  copy_str(conn->conn_name, sizeof(conn->conn_name), ptr, 0, i);
+  ptr += i;
+  if(*ptr == '[') {
+    ptr++;
+    sscanf(ptr, "%d", &conn->conn_index);    
+    while(*ptr && *ptr++ != ']') {
+      // empty
+    }
+  }
+  return ptr;
+}
+
 int parse_elem(char * buf, int len, struct conn_info * conn)
 {
+#if 1
+  const char * ptr = buf;
+  skip_blanks(ptr);
+  if(!*ptr) {
+    return -1;
+  }
+  sscanf(ptr, "%Lx", &conn->conn_addr);
+  while(*ptr && *ptr++ != ':') {
+    // empty
+  }
+  if(!*ptr) {
+    return -1;
+  }
+  ptr = parse_connstr(ptr, conn);
+  if(*ptr == ',') {
+    ptr++;
+  }
+  skip_blanks(ptr);
+  return (long)ptr - (long)buf;
+#else
   int start[4];
   int end[4];
   int pos = rex_search(rexbuf_elem, buf, len, 4, start, end);
@@ -181,12 +252,38 @@ int parse_elem(char * buf, int len, struct conn_info * conn)
   printf("++++ elem '%s' index %d\n", conn->conn_name, conn->conn_index);
 #endif
   return pos;
+#endif
 }
 
 const char * rexstr_inout = "^ *(in|out)put *([:/=])?= *(\\w+)(\\[[0-9]+\\])?";
 
 int parse_inout(char * buf, int len, int * res_type, char * res_op, struct conn_info * conn)
 {
+#if 1
+  static const char * search[] = { "input", "output"};
+  static const int slen[] = { 5, 6 };
+  const char * found = buf;
+  int code = scan_multi(&found, search, slen, 2);
+  if(code < 0) {
+    return -1;
+  }
+  *res_type = code;
+  const char op_char = *found++;
+  if(op_char == ':' || op_char == '/') {
+    *res_op = op_char;
+  } else {
+    *res_op = 0;
+  }
+  if(*found == '=') {
+    found++;
+  }
+  skip_blanks(found);
+  if(!*found) {
+    return -1;
+  }
+  found = parse_connstr(found, conn);
+  return (long)found - (long)buf;
+#else
   int start[5];
   int end[5];
   int pos = rex_search(rexbuf_inout, buf, len, 5, start, end);
@@ -210,5 +307,6 @@ int parse_inout(char * buf, int len, int * res_type, char * res_op, struct conn_
   printf("++++ inout '%s'\n", conn->conn_name);
 #endif
   return pos;
+#endif
 }
 

@@ -586,7 +586,6 @@ static_init {
 if(boot) {
   return; // never boot myself twice
 }
-rex_init();
 // create initial instance
 boot = new_brick("control_simple", "self-booted-by-default-init", (mand_t *)&base_mand);
 if(!boot) {
