@@ -1707,7 +1707,7 @@ sub eval_code {
     $$code = $POSTMATCH;
     $optype = "output" unless defined($optype);
     $op_spec =~ s/\$init/\$${optype}_init/ and warn "@=${optype}call to \$init is deprecated, please replace by \$${optype}_init!";
-    $mandate = "@#._mand" unless defined($mandate);
+    $mandate = "\@mandate" unless defined($mandate);
     $param = "_param" unless defined($param);
     $op_spec = sp_complete($op_spec, $caller_spec);
     $pre .= gen_paramcall($op_spec, $optype, $args, $param, $results, $caller_spec, $mandate);

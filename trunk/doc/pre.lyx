@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.31, 1 Feb 2005
+Version 0.32, 17 Feb 2005
 \layout Standard
 
 
@@ -2104,27 +2104,32 @@ mandate
 \family default 
  may be added.
  It tells the callee under which mandate the operation should be executed.
- When omitted at the long call syntax, the default mandate 
-\family typewriter 
-@#._mand
-\family default 
- of the caller instance is automatically used by default.
- However, when omitted at the short call syntax, the 
+ When omitted at the long call syntax, the old mandate 
 \family typewriter 
 @mandate
+\family default 
+ of the caller is automatically copied over by default.
+ However, when omitted at the short call syntax, the resulting 
+\family typewriter 
+mandate
 \family default 
  parameter may be uninitialized when you forget to initialize it explicitly.
  When you just forward 
 \family typewriter 
 @args
 \family default 
-, the old mandate value supplied by your caller will be forwarded, which
- may be just your intended behaviour.
+, the old mandate value supplied by your caller will be left untouched,
+ which may be just your intended behaviour.
  
 \layout Standard
 
 Be sure to check whether you want an operation to act under the mandate
- of your own brick instance or under a foreign mandate.
+ of the caller or under a foreign mandate (e.g.
+ the special brick mandate 
+\family typewriter 
+@_mand
+\family default 
+).
 \layout Standard
 
 DISCUSS: these special-case syntaxes are irregular and should be replaced
