@@ -6,6 +6,13 @@
 #include <linux/version.h>
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
+#define MYTTY_WRITE(string, length) (*my_tty->driver->write)(my_tty, string, length)
+#else
+#define MYTTY_WRITE(string, length) (*my_tty->driver->write)(my_tty, 0, string, length)
+#endif
+
+
 int athomux_printf(const char *fmt, ...)
 {
   va_list args;
@@ -33,17 +40,13 @@ int athomux_printf(const char *fmt, ...)
     printk("%s", printf_buf);
   } else {
 #if 0
-    (*my_tty->driver->write)(
-      my_tty,                 // The tty itself
-      0,                      // We don't take the string from user space
-      printf_buf,             // String
-      strlen(printf_buf));    // Length
+    MYTTY_WRITE(printf_buf, strlen(printf_buf));
 #else
     for (p = printf_buf; *p; p++) {
       if (unlikely(*p == '\n'))
-	(*my_tty->driver->write)(my_tty, 0, "\015\012", 2);
+	MYTTY_WRITE("\015\012", 2);
       else
-	(*my_tty->driver->write)(my_tty, 0, p, 1);
+	MYTTY_WRITE(p, 1);
     }
 #endif
   }

@@ -78,10 +78,10 @@ int main(int argc, char * argv[])
 
   cmd(meta, "brick/=adapt_meta", "");
   printf("------------------------------------\n");
-  printf("size_input=%u\n", sizeof(struct input));
-  printf("size_output=%u\n", sizeof(struct output));
-  printf("size_conn=%u\n", sizeof(struct connector_header));
-  printf("size_brick=%u\n", sizeof(struct brick_header));
+  printf("size_input=%u\n", (unsigned) sizeof(struct input));
+  printf("size_output=%u\n", (unsigned) sizeof(struct output));
+  printf("size_conn=%u\n", (unsigned) sizeof(struct connector_header));
+  printf("size_brick=%u\n", (unsigned) sizeof(struct brick_header));
 
   struct timespec t0, t1;
   printf("------------------------------------\n");

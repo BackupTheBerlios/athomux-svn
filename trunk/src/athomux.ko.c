@@ -1,6 +1,7 @@
 #define DRIVER_DESC "ATHOMUX subsystem for Linux"
 #define ATHOMUX_BOOTSTRAP
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include "init.h"
@@ -35,7 +36,7 @@ void __exit cleanup_module(void)
 MODULE_AUTHOR("Jens-Christian Korth");
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
-MODULE_PARM(init, "s");
-MODULE_PARM(param, "s");
+module_param(init, charp, 0);
+module_param(param, charp, 0);
 MODULE_PARM_DESC(init, "name of the brick which is being loaded after bootstrapping");
 MODULE_PARM_DESC(param, "parameter string for the brick referenced by init");
