@@ -50,10 +50,13 @@ sub check_context {
 sub filter_all {
   my ($prefix, $type, $forwhat, $list) = @_;
   my @res = ();
+print"prefix '$prefix' type '$type' forwhat '$forwhat' : ";
   foreach my $src (@$list) {
     next unless check_context("$prefix$src", $type, $forwhat);
     push @res, $src;
+print"$src ";
   }
+print"\n";
   return \@res;
 }
 
@@ -80,9 +83,12 @@ map chomp, @target_files;
 build_contexts(@target_files);
 my @targets = @target_files;
 map { s/target\.// } @targets;
-my %target_cconf = ();
-foreach my $cconf (@cconfs) {
-  $target_cconf{$cconf} = filter_all("target.", "cconf", $cconf, \@targets);
+my %target_pcconf = ();
+foreach my $pconf (@pconfs) {
+  foreach my $cconf (@{$cconf_pconf{$pconf}}) {
+    my $tmplist = filter_all("target.", "pconf", $pconf, \@targets);
+    $target_pcconf{"$pconf.$cconf"} = filter_all("target.", "cconf", $cconf, $tmplist);
+  }
 }
 
 my @sources = `ls *.ath | grep -v common`;
@@ -187,7 +193,7 @@ foreach my $pconf (@pconfs) {
     $text .= "$text3\n\n";
     close H;
     close LOADERS;
-    foreach my $target (@{$target_cconf{$cconf}}) {
+    foreach my $target (@{$target_pcconf{"$pconf.$cconf"}}) {
       $all_targets .= "${pconf}/${cconf}/$target ";
     }
   }
@@ -206,7 +212,7 @@ foreach my $pconf (@pconfs) {
   $text .= add_file("pconf.$pconf", qr"\$[({]pconf[)}]", "$pconf");
   foreach my $cconf (@{$cconf_pconf{$pconf}}) {
     $text .= add_file("cconf.$cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
-    foreach my $target (@{$target_cconf{$cconf}}) {
+    foreach my $target (@{$target_pcconf{"$pconf.$cconf"}}) {
       $text .= add_file("target.$target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }
