@@ -82,6 +82,12 @@ wire :>o_arr3[1] as :<single_in;
 wire :<in_arr3[2] as :>arr3[3];
 wire :>o_arr3[2] as :<iarr3[1];
 
+operation $brick_init
+{
+  // Test it...
+  @success = TRUE;
+}
+
 input :<in1(:2:)
 attr5 attrname4 = 17
 attr5 attrname5 = 17:19

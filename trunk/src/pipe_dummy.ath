@@ -64,7 +64,7 @@ operation $transfer
   @success = TRUE;
 }
 
-operation $wait,$put
+operation $wait,$put,$create,$delete
 {
   @success = TRUE;
 }
@@ -110,13 +110,12 @@ operation $getaddr
   @success = TRUE;
 }
 
-operation $create
+operation $putaddr
 {
-  @=call #.lock_read:>lock$unlock (@log_addr, @log_len) => (@success);
+  default_checks();
+  if(!@where) { // writer
+    @=call #.lock_read:>lock$unlock (@log_addr, @log_len) => (@success);
+  } else { // reader
+    @=call #.lock_write:>lock$unlock (@log_addr, @log_len) => (@success);
+  }
 }
-
-operation $delete
-{
-  @=call #.lock_write:>lock$unlock (@log_addr, @log_len) => (@success);
-}
-

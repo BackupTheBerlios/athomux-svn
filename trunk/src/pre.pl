@@ -1398,7 +1398,9 @@ sub gen_call {
   }
   my $opcode = "opcode_$op";
   $opcode = "$arg->op_code" if $op eq "op";
-  if($optype eq "input") {
+  if($optype eq "brick") {
+    die "NYI";
+  } elsif($optype eq "input") {
     if($target =~ m/:</) { # call on input
       my ($inst, $array) = spec_conn_instance($target);
       $call .= "const union connector * _other_ = (void*)&_brick->$inst$array._input_; ";
@@ -1820,6 +1822,22 @@ sub parse_1 {
   my ($text,$subbrick,$macros) = @_;
   my $remember = not defined(spec_part($::current,1,1));
   $text = parse_subinstances($text, $remember);
+  # brick operations
+  for(;;) {
+    if($text =~ m/\A${ws}operation$ws($specmatch)($ws$bracematch)/m) {
+      my $name = $1;
+      my $body = $2;
+      $text = $POSTMATCH;
+      if($remember) {
+	$::current = spec_complete($name, spec_part($::current,1) . ":<BRICK(:0:)");
+	make_ops($body);
+	gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
+      }
+      next;
+    }
+    last;
+  }
+  # inputs and outputs
   for(;;) {
     if($text =~ m/\A${ws}(local$ws)?(input|output)$ws($specmatch)/m) {
       my $local = $1;
@@ -2090,11 +2108,16 @@ sub gen_header {
   }
   print OUT "\n";
 
-  print OUT "\n// brick $brick static init\n";
+  print OUT "\n// brick $brick static init / exit\n";
   print OUT "\nvoid init_static_$brick (void);\n";
+  print OUT "\nvoid exit_static_$brick (void);\n";
   print OUT "\n// brick $brick data\n";
   # gen brick definition
   print OUT "\nstruct brick_$brick {\n";
+  # automatic fields
+  print OUT "  // automatically added fields\n";
+  print OUT "  mand_t _mand;\n";
+  print OUT "  brick_operation_set * ops;\n";
   # gen input and output instances
   print OUT "  // connector instances\n";
   foreach my $spec (keys %::conn_spec) {
@@ -2121,9 +2144,6 @@ sub gen_header {
     my $br = spec_part($spec, 1, 0);
     print OUT "  struct brick_$br _sub_$name;\n";
   }
-  # automatic fields
-  print OUT "  // automatically added fields\n";
-  print OUT "  mand_t _mand;\n";
   # user-defined fields
   print OUT "  // user-defined fields\n";
   my $def = $::def_brick;
@@ -2180,6 +2200,9 @@ sub make_pointers {
     insert_pseudoparam($code, "struct brick_${brick} * const _brick = brick; (void)_brick; ");
   } elsif($spec =~ m/\[/) {
     insert_pseudoparam($code, "struct brick_${brick} * const _brick = _on->_brick_ptr_; (void)_brick; ");
+  } elsif($spec =~ m/:<BRICK/) {
+    insert_pseudoparam($code, "struct brick_${brick} * const _brick = (void*)on; (void)_brick; ");
+    return;
   } else {
     # compute static offset (this is more efficient)
     my ($field) = spec_conn_instance($spec);
@@ -2256,10 +2279,13 @@ sub gen_init {
   # create TYPE tables
   gen_typename_init(*OUT, $brick);
   # initialize static ops structure for each connector
-  foreach my $spec (keys %::conn_spec) {
+  foreach my $spec ("#$brick:<BRICK(:1:)", keys %::conn_spec) {
     my $index_shift = "";
     my $optype = "output";
-    if($spec =~ m/:</) {
+    if($spec =~ m/:<BRICK/) {
+      $index_shift = " - opcode_input_max - 1";
+      $optype = "brick";
+    } elsif($spec =~ m/:</) {
       $index_shift = " - opcode_output_max - 1";
       $optype = "input";
     }
@@ -2312,7 +2338,7 @@ sub gen_init {
   }
   # create init routine for the brick instance
   print OUT "#undef OPERATION\n#define OPERATION \"init_$brick\"\n\n";
-  print OUT "mand_t init_$brick (void * _ini_, const char * _param, mand_t _mand)\n{\n  struct brick_$brick * ini = _ini_; ini->_mand = _mand;\n  int _i_; (void)_i_;\n";
+  print OUT "mand_t init_$brick (void * _ini_, const char * _param, mand_t _mand)\n{\n  struct brick_$brick * ini = _ini_;\n  ini->_mand = _mand;\n  ini->ops = ops_${brick}_BRICK;\n  int _i_; (void)_i_;\n";
   print OUT "  // init connectors\n";
   while(my ($spec, $tuple) = each %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays

@@ -728,7 +728,20 @@ operation $instconn
       @.err("$output_init failed");
     }
   } else {
-    @.abort("input instantiation '%s' NYI", conn1->conn_name);
+    struct input * input = GET_INPUT(conn);
+    struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_input_init };
+    input->ops[0][opcode_input_init - opcode_output_max - 1]((void*)input, &init_args, @param);
+    if(!init_args.success) {
+      if(!load_conn->count) { // dynamic array
+	free(conn->instance);
+      }
+      if(conn->c_param) {
+	free(conn->c_param);
+	trace("free 4\n");
+      }
+      // TODO: fix further memory leak
+      @.err("$input_init failed");
+    }
   }
   if(!old) {
     insert_conn(brick, conn);
@@ -749,22 +762,20 @@ operation $deinstconn
   struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
   @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
   conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
-  @.check(!conn, "non-existing output name '%s'", conn1->conn_name);
-  @.check(!conn->load_conn, "non-instantiated output '%s'", conn1->conn_name);
-  @.check(conn->load_conn->type!=1, "bad connector type '%s'", conn1->conn_name);
-  @.check(!conn->c_param, "output %s not instantiated", conn1->conn_name);
-  @.check(conn->c_param==brick->b_param, "output %s is fixed, cannot de-instantiate", conn1->conn_name);
+  @.check(!conn, "non-existing input/output name '%s'", conn1->conn_name);
+  @.check(!conn->load_conn, "non-instantiated input/output '%s'", conn1->conn_name);
+  @.check(!conn->c_param, "input/output %s not instantiated", conn1->conn_name);
+  @.check(conn->c_param==brick->b_param, "input/output %s is fixed, cannot de-instantiate", conn1->conn_name);
   if(conn->load_conn->type) {
-#if 0
-    disconnect_all(conn);
-#else
     @.check(conn->link.first, "brick '%s' address %llx output '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
-#endif
     struct output * output = GET_OUTPUT(conn);
     struct args init_args = { .destr = TRUE, .op_code = opcode_output_init };
     output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
   } else {
-    @.err("input deinstantiation NYI");
+    @.check(conn->link.first, "brick '%s' address %llx input '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
+    struct input * input = GET_INPUT(conn);
+    struct args init_args = { .destr = TRUE, .op_code = opcode_input_init };
+    input->ops[0][opcode_input_init - opcode_output_max - 1]((void*)input, &init_args, @param);
   }
   free(conn->c_param);
   trace("free 4\n");
