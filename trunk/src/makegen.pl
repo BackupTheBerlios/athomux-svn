@@ -40,6 +40,7 @@ foreach my $source (@sources, @targetfiles) {
 }
 
 sub check_context {
+return 1;
   my ($src, $type, $forwhat) = @_;
   my $context = $contexts{$src} or return 1;
   if($context =~ m/^#?context\s+$type\s*(.+)\n/m) {
@@ -47,7 +48,7 @@ sub check_context {
     my @list = split /\s+/, $found;
     my $nr_negative = 0;
     foreach my $elem (@list) {
-      my $res = not ($elem =~ s/^!//);
+      my $res = not ($elem =~ s/^\s*!\s*//);
       $nr_negative++ unless $res;
       if($forwhat =~ m/^$elem$/) {
 	return $res;
@@ -141,13 +142,13 @@ foreach my $pconf (@pconfs) {
   foreach my $cconf (@cconfs) {
     $all_cconf_objs .= "\$(${pconf}_${cconf}_objs) ";
     my $text3 = "${pconf}_${cconf}_objs=";
+    open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
+    open LOADERS, ">$pconf/$cconf/loaders.h" or die "cannot create loaders.h";
     foreach my $name (@pconf_sources) {
       next unless check_context($name, "cconf", $cconf);
       my $name3 = $name;
       $name3 =~ s/\.ath/.o/;
       $text3 .= "$pconf/$cconf/$name3 ";
-      open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
-      open LOADERS, ">$pconf/$cconf/loaders.h" or die "cannot create loaders.h";
       my $body = $name;
       $body =~ s/\.ath//;
       print H "#include \"../$body.h\"\n";
@@ -157,10 +158,10 @@ foreach my $pconf (@pconfs) {
 	map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
 	$text .= "$pconf/$body.c $pconf/$body.h : @dep \n";
       }
-      close H;
-      close LOADERS;
     }
     $text .= "$text3\n\n";
+    close H;
+    close LOADERS;
     foreach my $target (@targets) {
       next unless check_context("target.$target", "pconf", $pconf);
       next unless check_context("target.$target", "cconf", $cconf);

@@ -1,5 +1,5 @@
-#LyX 1.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 220
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
 \textclass article
 \language english
 \inputencoding auto
@@ -32,7 +32,7 @@ The ATHOMUX Preprocessor User's Guide
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.26, 27 Sept 2004
+Version 0.27, 16 Nov 2004
 \layout Standard
 
 
@@ -81,6 +81,15 @@ filename
 \family typewriter 
 \emph default 
 .ath
+\family default 
+ [
+\emph on 
+filename2
+\family typewriter 
+\emph default 
+.c
+\family default 
+]
 \layout Standard
 
 Generates files 
@@ -112,7 +121,34 @@ filename
 \emph default 
 .pre
 \family default 
- is also created, which contains the result of the macro processor expansion.
+ is also created, which contains the result of the macro processor expansion
+ phase.
+ When 
+\emph on 
+filename2
+\family typewriter 
+\emph default 
+.c
+\family default 
+ is present, the 
+\family typewriter 
+.c
+\family default 
+, 
+\family typewriter 
+.h
+\family default 
+ and 
+\family typewriter 
+.pre
+\family default 
+ files will be derived from 
+\emph on 
+filename2
+\emph default 
+ instead.
+ Input and output files may reside in different directories by specification
+ of absolute or relative paths.
 \layout Standard
 
 Currently there are no options.
@@ -307,6 +343,96 @@ PATENT-LICENSE
  (e.g.
  in the field of software patents), but you also may complicate legal issues
  a lot when a larger Athomux system is composed out of incompatible licenses.
+\layout Subsection
+
+Build versions
+\layout Standard
+
+The following optional statement is ignored by the preprocessor, but used
+ by the 
+\family typewriter 
+make
+\family default 
+ system to include or exclude the current brick source code from a particular
+ build version:
+\layout Standard
+\noindent 
+
+\family typewriter 
+context
+\family default 
+ ...
+ 
+\family typewriter 
+
+\backslash 
+n
+\layout Standard
+
+Currently, one of two further keywords have to specified immediately after
+ 
+\family typewriter 
+context
+\family default 
+: either 
+\family typewriter 
+pconf
+\family default 
+ (denoting a preprocessor configuration specified by a file 
+\family typewriter 
+pconf.*)
+\family default 
+, or 
+\family typewriter 
+cconf
+\family default 
+ (denoting a C compiler configuration specified by a file 
+\family typewriter 
+cconf.*)
+\family default 
+.
+ After this second keyword, a whitespace-separated list of names denotes
+ the configurations where the current input file is to be included.
+ For example, the name 
+\family typewriter 
+default
+\family default 
+ after 
+\family typewriter 
+context cconf
+\family default 
+ indicates that the current brick should be included in the configuration
+ 
+\family typewriter 
+cconf.default
+\family default 
+.
+ By specifying an 
+\family typewriter 
+!
+\family default 
+ before a name, the 
+\emph on 
+exclusion
+\emph default 
+ from the specific configuration is specified.
+ When at least one 
+\family typewriter 
+!
+\family default 
+ appears in the list, any configuration not mentioned in the list will be
+ 
+\emph on 
+included
+\emph default 
+ by default.
+ Otherwise, any configuration not mentioned in the list will be 
+\emph on 
+excluded
+\emph default 
+.
+ As a consequence, it is recommended that you should uniformly specify either
+ exeptions for inclusion or exeptions for exclusion, but not mix them up.
 \layout Subsection
 
 
