@@ -196,8 +196,20 @@ operation $output_init
   struct dbk_request *current_req;
 
   if(@destr) {
+    // allow no more new requests
+    @#.harderror_detected = TRUE;
+
+    // close device
     if(!IS_ERR(@#.bdev)) {
       close_bdev_excl(@#.bdev);
+    }
+
+    // unlock locks
+    wait_queue_head_t *q = &@#.reqalloc_q;
+    wake_up_all(q);
+    for(i = 0; i < DBK_RINGBUFFER_SIZE; i++) {
+      q = &@#.req[i].q;
+      wake_up_all(q);
     }
   }
   if(@constr) {
@@ -208,11 +220,12 @@ operation $output_init
     if(IS_ERR(@#.bdev = open_bdev_excl(@param, 0, (void *)on))) {
       @#.bdev = open_bdev_excl(@param, MS_RDONLY, (void *)on);
       @#.readonly = TRUE;
+      // check for open error is done after request block initialisation to avoid kernel panics at shutdown
     } else {
       @#.readonly = FALSE;
     }
-    @.check(IS_ERR(@#.bdev), "open_bdev_excl failed");
 
+    // do inititalisation of request blocks
     for(i = 0; i < DBK_RINGBUFFER_SIZE; i++) {
       current_req = &@#.req[i];
 
@@ -229,6 +242,8 @@ operation $output_init
       init_waitqueue_head(q);
       current_req->on = (struct output *)on;
     }
+    // check bdev open error now
+    @.check(IS_ERR(@#.bdev), "open_bdev_excl failed");
   }
   @success = TRUE;
 }

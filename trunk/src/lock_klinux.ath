@@ -195,6 +195,7 @@ exit {
   while(@#.anchor) {
     lock = @#.anchor;
     @#.anchor = lock->next;
+    wakeup(lock);
     freelock(lock);
   }
 }
