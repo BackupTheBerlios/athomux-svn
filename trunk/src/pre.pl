@@ -1786,7 +1786,7 @@ sub parse_2 {
 	  my @trylist = ();
 	  foreach my $ops_spec (keys %::ops_aliases) {
 	    next unless sp_shorten($ops_spec, 3) eq $secspec;
-	    my $tryname = sp_part($ops_spec, 4);
+	    my $tryname = sp_part($ops_spec, 4, 0);
 	    push @trylist, $tryname;
 	  }
 	  foreach my $opname (keys %$opset) {
