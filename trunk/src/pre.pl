@@ -23,10 +23,14 @@ my $infile = shift;
 die "input file missing" unless defined($infile);
 my $cfile = $infile;
 die "wrong filename format" unless ($cfile  =~ s/\.ath/\.c/);
-my $hfile = $infile;
-die "wrong filename format" unless ($hfile  =~ s/\.ath/\.h/);
-my $prefile = $infile;
-die "wrong filename format" unless ($prefile  =~ s/\.ath/\.pre/);
+$cfile = shift if $ARGV[0];
+$cfile =~ m/\/[^\/]+$/;
+my $basedir = $PREMATCH;
+$basedir = "." unless $basedir;
+my $hfile = $cfile;
+die "wrong filename format" unless ($hfile  =~ s/\.c/\.h/);
+my $prefile = $cfile;
+die "wrong filename format" unless ($prefile  =~ s/\.c/\.pre/);
 
 my $copyright = "/* generated from $infile\n*/\n";
 my $typetable_max = 64;
@@ -2026,8 +2030,8 @@ sub gen_magic {
 sub gen_header {
   local *OUT = shift;
   my $brick = spec_name($::current, 1);
-  print OUT "#include \"common.h\"\n"; 
-  print OUT "#include \"strat.h\"\n" if defined($::strat);
+  print OUT "#include \"../common.h\"\n"; 
+  print OUT "#include \"../strat.h\"\n" if defined($::strat);
   while(my ($name, $spec) = each %::instances) {
     my $br = spec_part($spec, 1, 0);
     print OUT "#include \"$br.h\"\n";
@@ -2448,7 +2452,7 @@ open(OUT, "> $cfile") or die "cannot create output file";
 print OUT "// brick $brick, generated automatically\n$copyright";
 print OUT "#define BASEFILE \"$infile\"\n";
 print OUT "\n#undef OPERATION\n#define OPERATION \"preamble $brick\"\n";
-print OUT "#include \"$hfile\"\n";
+print OUT "#include \"$brick.h\"\n";
 $::static =~ s/\^//g;
 $::static =~ s/(.*)\n/\"$1\\n\"\n/mg;
 print OUT "\nchar attr_${brick}\[] =\n$::static;\n\n";

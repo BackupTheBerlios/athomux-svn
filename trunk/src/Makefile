@@ -22,24 +22,18 @@ all : all_targets
 defs.make defs.h loaders.h: Makefile makegen.pl
 	./makegen.pl
 
+allobjs=$(objs) strat.o
+
+strat.o: strat.c strat.h
+
 -include defs.make
-
-%.c : %.ath common.ath pre.pl Makefile
-	$(TIME) ./pre.pl $< 
-
-%.o : %.c common.h strat.h Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
 
 common.c : common.ath
 	# no real dependency
 
-allobjs=$(objs) strat.o
-
-strat.o: strat.c strat.h
-control_dummy_linux.o: control_dummy_linux.c control_dummy_linux.h defs.h loaders.h
+%/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h defs.h loaders.h
 
 clean:
-	rm -f defs.make defs.h loaders.h my_cp testfile* *~ core* gmon.out *.pre
-	rm -f $(targets)
-	rm -f $(bricks) $(allobjs) $(headers)
+	rm -f defs.make defs.h loaders.h testfile* *~ core* gmon.out *.pre
+	rm -rf $(pconf_list)
 

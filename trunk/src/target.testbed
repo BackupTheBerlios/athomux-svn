@@ -1,2 +1,2 @@
-testbed: $(bricks) $(allobjs) common.c testbed.c 
-	$(CC) $(CFLAGS) $(LDFLAGS) $(allobjs) common.c -o testbed testbed.c
+$(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $(bricks) $(allobjs) common.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $(allobjs) common.c -o $@ $<
