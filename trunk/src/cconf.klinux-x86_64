@@ -6,11 +6,12 @@ $(cconf)_LDEMULATION=elf_x86_64
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m64 -mcmodel=kernel -mno-red-zone -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -D__KERNEL__ -DMODULE
 
 $(pconf)/$(cconf)/asm:
-	ln -sf $($(cconf)_LINSRC)/include/asm-x86_64 $@
+	ln -s $($(cconf)_LINSRC)/include/asm-x86_64 $@
 
 $(pconf)/$(cconf)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
 	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
 
+.PRECIOUS: $(pconf)/%-$(cconf).mod.c
 $(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)
 	$($(cconf)_MODPOST) -i $($(cconf)_LINSRC)/Module.symver $<
 	@mv -f $(patsubst %.o,%.mod.c,$<) $@
@@ -18,5 +19,5 @@ $(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)
 $(pconf)/$(cconf)/%.linked.o:
 	$(LD) -m $($(cconf)_LDEMULATION) -r -o $@ $(filter %.o,$^)
 
-$(pconf)/$(cconf)/%.ko: $(pconf)/$(cconf)/%.linked.o $(pconf)/$(cconf)/%-$(cconf).mod.o
+$(pconf)/$(cconf)/%.ko: $(pconf)/$(cconf)/%.linked.o $(if $(USE_MODPOST),$(pconf)/$(cconf)/%-$(cconf).mod.o,$(pconf)/$(cconf)/generic.mod.o)
 	$(LD) -m $($(cconf)_LDEMULATION) -r -o $@ $^
