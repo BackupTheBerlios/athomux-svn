@@ -648,13 +648,19 @@ operation $instbrick
 {
   @.check(!@log_addr, "trying to instantiate at address 0 (reserved for MAINDIR)");
   struct brick_header * brick = find_brick_hash(@#.brick_hash, @log_addr);
-  @.check(brick, "trying to create '%s' on an existing '%s' instance (%llx)", @name, brick->loader->name, @log_addr);
-  brick = new_brick(@name, @param, &@#.mand);
-  @.check(!brick, "brick '%s' creation failed", @name);
-  trace("created %s %llx -> %p\n", @name, @log_addr, brick);
-  brick->addr = @log_addr;
-  insert_brick_hash(@#.brick_hash, brick);
-  @success = TRUE;
+  if(!brick) {
+    brick = new_brick(@name, @param, &@#.mand);
+    @.check(!brick, "brick '%s' creation failed", @name);
+    trace("created %s %llx -> %p\n", @name, @log_addr, brick);
+    brick->addr = @log_addr;
+    insert_brick_hash(@#.brick_hash, brick);
+    @success = TRUE;
+  }
+  if(@constr | @destr) {
+    @success = FALSE;
+    @op_code = opcode_brick_init;
+    brick->loader->init_brick(brick->instance, @args, @param);
+  }
 }
 
 operation $deinstbrick
@@ -662,6 +668,15 @@ operation $deinstbrick
   @.check(!@log_addr, "trying to deinstantiate at address 0 (reserved for MAINDIR)");
   struct brick_header * brick = find_brick_hash(@#.brick_hash, @log_addr);
   @.check(!brick, "brick %llx does not exist", @log_addr);
+#if 0
+  if(@destr) {
+    @constr = FALSE;
+    brick->loader->init_brick(brick->instance, @args, @param);
+    if(!@success) {
+      return;
+    }
+  }
+#endif
   @success = delete_brick(@#.brick_hash, brick, @param);
   @.check(!@success, "deinst %llx failed\n", @log_addr);
 }
@@ -693,7 +708,7 @@ operation $instconn
     @.check(!conn, "non-existing output '%s'", conn1->conn_name);
     @.check(brick->loader->conn[conn_ix].type!=1, "bad connector type '%s'", conn1->conn_name);
     if(conn->c_param != brick->b_param) {
-#if 1 // allow multiple inits during test phase
+#if 0 // allow multiple inits during test phase
       if(conn->c_param) {
 	free(conn->c_param);
 	trace("free 4\n");
@@ -707,8 +722,8 @@ operation $instconn
     conn->c_param = malloc(strlen(@param)+1);
     trace("malloc 4\n");
     @.check(!conn->c_param, "no space for parameter string");
+    strcpy(conn->c_param, @param);
   }
-  strcpy(conn->c_param, @param);
   const struct load_conn * load_conn = &brick->loader->conn[conn_ix];
   struct brick_header * old = conn->belonging;
   if(!old) {
@@ -716,9 +731,10 @@ operation $instconn
   }
   if(load_conn->type) {
     struct output * output = GET_OUTPUT(conn);
-    struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_output_init };
-    load_conn->init_conn((void*)output, &init_args, @param);
-    if(!init_args.success) {
+    //struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_output_init };
+    @op_code = opcode_output_init;
+    load_conn->init_conn((void*)output, @args, @param);
+    if(!@success) {
       if(!load_conn->count) { // dynamic array
 	free(conn->instance);
       }
@@ -727,13 +743,14 @@ operation $instconn
 	trace("free 4\n");
       }
       // TODO: fix further memory leak
-      @.err("$output_init failed");
+      @.err("$output_init on '%s' '%s' failed", brick->loader->name, load_conn->name);
     }
   } else {
     struct input * input = GET_INPUT(conn);
-    struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_input_init };
-    load_conn->init_conn((void*)input, &init_args, @param);
-    if(!init_args.success) {
+    //struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_input_init };
+    @op_code = opcode_output_init;
+    load_conn->init_conn((void*)input, @args, @param);
+    if(!@success) {
       if(!load_conn->count) { // dynamic array
 	free(conn->instance);
       }
@@ -909,72 +926,7 @@ operation $trans
     }
   } else if(@direction == direct_write) {
     trace("interpreting '%s'\n", (char*)MAKE_PTR(@phys_addr));
-#if 1
     @=call ##adapt:>control$trans @args;
-#else
-    // this should disappear!
-    char * buf = MAKE_PTR(@phys_addr);
-    int len = (int)@log_len;
-    int pos;
-    char op;
-    pos = parse_brick(buf, len, &op, @name, sizeof(@name));
-    if(pos >= 0 && op > 0) { // brick command
-      if(op == ':') { // instantiate brick
-	@=call $instbrick @args;
-	if(!@success)
-	  return;
-      } else if(op == '/') { // delete it
-	@=call $deinstbrick @args;
-	return;
-      }
-    }
-    // connect/disconnect inputs
-    pos = 0;
-    struct conn_info conn1 = { .conn_addr = @log_addr, };
-    @conn1 = &conn1;
-    for(;;) {
-      char tmp[512];
-      int tmp_len = 0;
-      int found = parse_connector(buf+pos, len-pos, conn1.conn_name, sizeof(conn1.conn_name), &conn1.conn_index, &op, tmp, sizeof(tmp), &tmp_len);
-      if(found < 0)
-	break;
-      pos += found; 
-      @success = FALSE;
-      if(op == '/') { // delete
-	@=call $disconnect @args;
-      } else if(op == ':') { // construct
-        struct conn_info conn2 = {};
-        found = parse_elem(tmp, tmp_len, &conn2);
-	if(found > 0) {
-	  @conn2 = &conn2;
-  	  @=call $connect @args;
-	}
-        if(!@success)
-	  return;
-      }
-    }
-    // (de)instantiate outputs
-    pos = 0;
-    for(;;) {
-      int type;
-      int found = parse_inout(buf+pos, len-pos, &type, &op, &conn1);
-      if(found < 0)
-	break;
-      pos += found;
-      if(!type || !op) {
-	continue;
-      }
-      conn1.conn_addr = @log_addr;
-      @success = FALSE;
-      if(op == ':') {
-	@=call $instconn @args;
-      } else if(op == '/') {
-	@=call $deinstconn @args;
-      }
-      if(!@success)
-        return;
-    }
-#endif
   }
   @success = TRUE;
 }

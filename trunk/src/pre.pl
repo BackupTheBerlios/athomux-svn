@@ -1344,14 +1344,27 @@ sub gen_typeconnect_init {
 
 $::static = "";
 $::full = "^";
+
 $::conn_count = 0;
 $::conn_totalcount = "0";
 $::conn_init = "";
+
+$::inst_count = 0;
+$::inst_init = "";
 
 sub add_brick {
   my ($name) = @_;
   $name =~ s/#//;
   $::static = "brick $name={\n^^}\n";
+}
+
+sub add_instance {
+  my ($name, $type) = @_;
+  my $brick = sp_part($::current, 1, 0);
+  my $fullname = sp_var(sp_shorten(sp_complete($name), 1), "#$brick");
+  my $typename = sp_name($type, 1);
+  $::inst_init .= "  {\n    &loader_$typename,\n    (addr_t)STATIC_OFFSET(struct brick_${brick}, $fullname)\n  },\n";
+  $::inst_count++;
 }
 
 sub add_connector {
@@ -1409,7 +1422,7 @@ sub add_attr {
 "output" => {
   "output_init" => ["destr,constr,clear:=FALSE", "success"],
 # static ops
-  "trans"    => ["log_addr,log_len,phys_addr,direction,prio:=prio_normal", "success,phys_len", "name,conn1,conn2"],
+  "trans"    => ["log_addr,log_len,phys_addr,direction,prio:=prio_normal", "success,phys_len", "name,conn1,conn2,clear,constr,destr"],
   "wait"     => ["log_addr,log_len,prio:=prio_normal,action:=action_wait", "success", "phys_addr"],
   "get"      => ["log_addr,log_len,forwrite:=FALSE", "success,phys_addr,phys_len,version"],
   "put"      => ["log_addr,log_len,prio:=prio_none", "success"],
@@ -1435,10 +1448,10 @@ sub add_attr {
   "gadrtranswaitdeletepadr" => ["phys_addr,phys_len,action:=action_wait", "success", "log_addr,log_len,direction"],
   "gadrcreatetranswaitpadr" => ["phys_addr,phys_len,action:=action_wait,melt:=TRUE", "success", "log_addr,log_len,clear,direction"],
 # strategy ops
-  "instbrick"    => ["log_addr,name", "success"],
-  "deinstbrick"  => ["log_addr", "success"],
-  "instconn"     => ["conn1,clear:=FALSE", "success"],
-  "deinstconn"   => ["conn1", "success"],
+  "instbrick"    => ["log_addr,name,constr:=FALSE,destr:=FALSE", "success"],
+  "deinstbrick"  => ["log_addr,destr:=TRUE", "success", "constr"],
+  "instconn"     => ["conn1,clear:=FALSE,constr:=TRUE,destr:=FALSE", "success"],
+  "deinstconn"   => ["conn1,destr:=TRUE", "success"],
   "connect"      => ["conn1,conn2", "success"],
   "disconnect"   => ["conn1", "success"],
   "getconn"      => ["conn1,res_conn,conn_len", "success,conn_len"],
@@ -1881,7 +1894,10 @@ sub parse_subinstances {
       my ($rest,) = parse_file($filename, sp_part($::current, 1), $name, \%dummy_macros);
       $rest =~ s/${ws}//mg;
       die "incomplete instance sub-parse in $filename\n$rest" if $rest;
-      $::instances{$name} = $type if $remember;
+      if($remember) {
+	add_instance($name, $type);
+	$::instances{$name} = $type;
+      }
       $::current = $oldcurrent;
       while($text =~ m/\A${ws}(wire|alias)${ws}($specmatch)${ws}as${ws}($specmatch)$ws;/) {
 	my $cmd = $1;
@@ -2109,61 +2125,48 @@ sub parse_all {
 
   unless($prefix) {
     # default $brick_init operation
-    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n}");
+    my $init = "{\n  INIT_ALL_CONNS(BRICK);\n}";
+    $init = "{\n  INIT_ALL_INPUTS(BRICK);\n  INIT_ALL_INSTANCES(BRICK);\n  INIT_ALL_OUTPUTS(BRICK);\n}";
+    make_ops("${brick}:<BRICK(:0:)\$brick_init", $init);
   }
 
-  # this is old syntax, will VANISH in the future!!!
-  if($text =~ m/\A$ws($brackmatch)?$ws($brackmatch)?$ws($brackmatch)?$ws($brackmatch)?$ws($bracematch)$ws($bracematch)?$ws($bracematch)?/m) {
-    $text = $POSTMATCH;
-    unless($prefix) {
-      $::pre_header = $1;
-      $::pre_brick = $2;
-      $::pre_init = $3;
-      $::pre_exit = $4;
-      $::def_brick = $5;
-      $::init_brick = $6;
-      $::exit_brick = $7;
-      warn "please update your code syntax to the new brick init conventions (see newest version of preprocessor guide)";
+  for(;;) {
+    if($text =~ m/\A${ws}static_header$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::pre_header = $1 unless $prefix;
+      next;
     }
-  } else { # only this will survive!
-    for(;;) {
-      if($text =~ m/\A${ws}static_header$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::pre_header = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}static_data$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::pre_brick = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}static_init$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::pre_init = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}static_exit$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::pre_exit = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}data$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::def_brick = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}init$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::init_brick = $1 unless $prefix;
-	next;
-      }
-      if($text =~ m/\A${ws}exit$ws($bracematch)/) {
-	$text = $POSTMATCH;
-	$::exit_brick = $1 unless $prefix;
-	next;
-      }
-      last;
+    if($text =~ m/\A${ws}static_data$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::pre_brick = $1 unless $prefix;
+      next;
     }
+    if($text =~ m/\A${ws}static_init$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::pre_init = $1 unless $prefix;
+      next;
+    }
+    if($text =~ m/\A${ws}static_exit$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::pre_exit = $1 unless $prefix;
+      next;
+    }
+    if($text =~ m/\A${ws}data$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::def_brick = $1 unless $prefix;
+      next;
+    }
+    if($text =~ m/\A${ws}init$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::init_brick = $1 unless $prefix;
+      next;
+    }
+    if($text =~ m/\A${ws}exit$ws($bracematch)/) {
+      $text = $POSTMATCH;
+      $::exit_brick = $1 unless $prefix;
+      next;
+    }
+    last;
   }
   return parse_1($text, $brick, $macros);
 }
@@ -2684,7 +2687,8 @@ print OUT "\n// Loader info for provisionary static linking with control_dummy_l
 $::conn_init =~ s/\^//;
 $::full =~ s/\^//;
 print OUT "\nconst struct load_conn conns_$brick\[] = {\n$::conn_init};\n";
-print OUT "\nconst struct loader loader_$brick = {\n  \"${brick}\",\n  MAGIC_$brick,\n  \"$::full\",\n  attr_$brick,\n  sizeof(struct brick_$brick),\n  $::conn_count,\n  $::conn_totalcount,\n  conns_$brick,\n  &init_static_$brick,\n  &exit_static_$brick,\n  &init_$brick,\n  &exit_$brick,\n  ${brick}_BRICK_0_brick_init,\n};\n\n";
+print OUT "\nconst struct load_instance instances_$brick\[$::inst_count] = {\n$::inst_init\n};\n";
+print OUT "\nconst struct loader loader_$brick = {\n  \"${brick}\",\n  MAGIC_$brick,\n  \"$::full\",\n  attr_$brick,\n  sizeof(struct brick_$brick),\n  $::conn_count,\n  $::conn_totalcount,\n  conns_$brick,\n  $::inst_count,\n  instances_$brick,\n  &init_static_$brick,\n  &exit_static_$brick,\n  &init_$brick,\n  &exit_$brick,\n  ${brick}_BRICK_0_brick_init,\n};\n\n";
 close(OUT);
 
 warn "please update the connector syntax for the following connectors: $::warn_syntax" if $::warn_syntax;

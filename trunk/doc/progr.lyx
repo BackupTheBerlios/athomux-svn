@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.28, 8 December 2004
+Version 0.29, 9 December 2004
 \layout Standard
 
 
@@ -2477,45 +2477,6 @@ transformations
 nce.
 \layout Subsection
 
-The Main Directory
-\layout Standard
-
-In each strategy nest, a special virtual brick instance exists at address
- 0.
- It has the name 
-\family typewriter 
-ATHOMUX_MAINDIR
-\family default 
- and contains only outputs.
- New outputs with new output names may be instantiated at any time, and
- connections to other bricks may be added at any time.
- It is intended to hold the 
-\begin_inset Quotes eld
-\end_inset 
-
-anchors
-\begin_inset Quotes erd
-\end_inset 
-
- of the strategy nest, e.g.
- the root of the filesystem, the main 
-\family typewriter 
-control
-\family default 
- instance, and others.
- 
-\family typewriter 
-ATHOMUX_MAINDIR
-\family default 
- is a true dummy brick which cannot execute any operations.
- By convention, its outputs should be only connected to inputs of other
- bricks named 
-\family typewriter 
-hook
-\family default 
-, in order to indicate that its topological use.
-\layout Subsection
-
 Additional Strategy Operations
 \layout Standard
 
@@ -2530,7 +2491,21 @@ The manipulation of small ASCII strings representing simple bricks with
 adaptor_*
 \family default 
  will fit in this category.
- However, for very large bricks with many inputs and outputs, such as 
+ In addition, a 
+\family typewriter 
+$trans
+\family default 
+fer of a single string embodying many 
+\family typewriter 
+:=
+\family default 
+ actions can save network latencies when compared to issuing each 
+\family typewriter 
+:=
+\family default 
+ action separately.
+ However, for very large local bricks with many inputs and outputs, such
+ as 
 \family typewriter 
 fs_*
 \family default 
@@ -2558,9 +2533,9 @@ automatically translating
 Thus you may decide to implement only one of both interfaces.
  For example, for rapid prototyping the ASCII string interface is usually
  more convenient.
- However, when performance is crucial, implement your functionality by strategy
- operations and let them automatically be called when somebody submits his
- requests as ASCII strings.
+ However, when performance at a local site is crucial, implement your functional
+ity by strategy operations and let them automatically be called when somebody
+ submits his requests as ASCII strings.
 \layout Standard
 
 The following is experimental and may be changed in later revisions.
@@ -2568,30 +2543,102 @@ The following is experimental and may be changed in later revisions.
 \noindent 
 
 \family typewriter 
-$instbrick (addr_t log_addr, name_t name) => (success_t success)
+$instbrick (addr_t log_addr, name_t name, bool constr := FALSE, bool destr
+ := FALSE) => (success_t success)
 \layout Standard
 
-Instantiate a new brick with type 
-\family typewriter 
-name
-\family default 
- at address 
+When no brick instance already exists at address 
 \family typewriter 
 log_addr
 \family default 
- of the strategy nest.
+ of the strategy nest, instantiate a new one with type 
+\family typewriter 
+name
+\family default 
+.
+ Otherwise and/or when either 
+\family typewriter 
+@constr
+\family default 
+ or 
+\family typewriter 
+@destr
+\family default 
+ is 
+\family typewriter 
+TRUE
+\family default 
+, call 
+\family typewriter 
+$brick_init
+\family default 
+ with those parameters.
+\layout Standard
+
+NOTE: at the first creation of a new brick instance, you will leave 
+\family typewriter 
+@constr
+\family default 
+ and 
+\family typewriter 
+@destr
+\family default 
+ as 
+\family typewriter 
+FALSE
+\family default 
+ in most cases, because the inputs have not yet been wired (and thus 
+\family typewriter 
+$brick_init
+\family default 
+ cannot yet be called).
+ However, in many cases you will call 
+\family typewriter 
+$instbrick
+\family default 
+ again at the same address as soon as you have connected all relevant inputs.
 \layout Standard
 \noindent 
 
 \family typewriter 
-$deinstbrick (addr_t log_addr) => (success_t success)
+$deinstbrick (addr_t log_addr, bool destr := TRUE) => (success_t success)
 \layout Standard
 
-De-instantiate at address 
+When 
+\family typewriter 
+destr==TRUE
+\family default 
+, first call 
+\family typewriter 
+$instbrick
+\family default 
+.
+ Afterwards, de-instantiate the brick at address 
 \family typewriter 
 log_addr
 \family default 
 .
+\layout Standard
+
+NOTE: by setting 
+\family typewriter 
+destr
+\family default 
+ to 
+\family typewriter 
+FALSE
+\family default 
+, you can avoid calling 
+\family typewriter 
+$instbrick
+\family default 
+, e.g.
+ if you already know that it has been called previously, or if you have
+ already called 
+\family typewriter 
+$deinstconn
+\family default 
+ for all inputs and outputs by hand.
 \layout Standard
 \noindent 
 
@@ -2630,32 +2677,61 @@ This structure is used for describing a connector: the start address of
 \noindent 
 
 \family typewriter 
-$instconn (struct conn_info * conn1, bool clear := FALSE) => (success_t
- success)
+$instconn (struct conn_info * conn1, bool clear := FALSE, bool constr :=
+ TRUE, bool destr := FALSE) => (success_t success)
 \layout Standard
 
-Instantiate a new connector (currently only possible with outputs) and call
- its 
+When 
+\family typewriter 
+conn1
+\family default 
+ denotes as 
+\emph on 
+dynamic
+\emph default 
+ array member which does not already exist, instantiate it first.
+ Afterwards, its 
+\family typewriter 
+$input_init
+\family default 
+ or 
 \family typewriter 
 $output_init
 \family default 
- operation with parameter 
+ operation is called with parameters 
 \family typewriter 
 clear
 \family default 
+, 
+\family typewriter 
+constr
+\family default 
+ and 
+\family typewriter 
+destr
+\family default 
 .
- Currently this must be done for 
+ 
+\layout Standard
+
+NOTE: when you call 
+\family typewriter 
+$instbrick
+\family default 
+ which finally results in a call to 
+\family typewriter 
+$brick_init
+\family default 
+ with appropriate parameter, you don't need to call this fopr any static
+ input or output (even for static arrays).
+ Otherwise, don't forget to call this for 
 \emph on 
 any
 \emph default 
- output, otherwise the output will not exist, BUT THIS WILL CHANGE! In future,
- this will be only necessary for dynamic arrays.
- Members of fixed arrays of outputs are indexed by 
-\family typewriter 
-conn1->conn_index
-\family default 
-.
- When 
+ connector, otherwise it will not be in operating phase.
+\layout Standard
+
+ATTENTION for dynamic arrays: when 
 \family typewriter 
 conn1->conn_index
 \family default 
@@ -2663,8 +2739,8 @@ conn1->conn_index
 \family typewriter 
 -1
 \family default 
-, select and create a new output at an unused array index of a fixed array,
- or instantiate a new dynamic array member, and return its index in 
+, instantiate a new dynamic input or output at an unused array index, and
+ return that index in 
 \family typewriter 
 conn1->conn_index
 \family default 
@@ -2673,17 +2749,45 @@ conn1->conn_index
 \family typewriter 
 conn_index
 \family default 
- to 0.
+ always to 0.
  
 \layout Standard
 \noindent 
 
 \family typewriter 
-$deinstconn (struct conn_info * conn1) => (success_t success)
+$deinstconn (struct conn_info * conn1, bool destr := TRUE) => (success_t
+ success)
 \layout Standard
 
-De-instantiate a formerly instantiated connector.
- Current only works with outputs.
+When 
+\family typewriter 
+destr
+\family default 
+ == 
+\family typewriter 
+TRUE
+\family default 
+, call 
+\family typewriter 
+$input_init
+\family default 
+ or 
+\family typewriter 
+$output_init
+\family default 
+ for destruction.
+ Afterwards, de-instantiate the connector.
+\layout Standard
+
+NOTE: normally, this is only needed for 
+\emph on 
+dynamic
+\emph default 
+ array members; static ones are usually automatically handled by 
+\family typewriter 
+$deinstbrick
+\family default 
+.
 \layout Standard
 \noindent 
 
@@ -2780,6 +2884,45 @@ res_conn
  is set, the currently connected partners will be delivered in the same
  way as above.
  Currently used for efficient lookup of filenames and pathnames.
+\layout Subsection
+
+The Main Directory
+\layout Standard
+
+In each strategy nest, a special virtual brick instance exists at address
+ 0.
+ It has the name 
+\family typewriter 
+ATHOMUX_MAINDIR
+\family default 
+ and contains only outputs.
+ New outputs with new output names may be instantiated at any time, and
+ connections to other bricks may be added at any time.
+ It is intended to hold the 
+\begin_inset Quotes eld
+\end_inset 
+
+anchors
+\begin_inset Quotes erd
+\end_inset 
+
+ of the strategy nest, e.g.
+ the root of the filesystem, the main 
+\family typewriter 
+control
+\family default 
+ instance, and others.
+ 
+\family typewriter 
+ATHOMUX_MAINDIR
+\family default 
+ is a true dummy brick which cannot execute any operations.
+ By convention, its outputs should be only connected to inputs of other
+ bricks named 
+\family typewriter 
+hook
+\family default 
+, in order to indicate that its topological use.
 \layout Subsection
 
 Regex Library Functions
@@ -3318,6 +3461,18 @@ input
 output
 \family default 
  statements in your sourcecode; otherwise the order is reversed.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+INIT_ALL_INSTANCES(BRICK)
+\family default 
+ Call 
+\family typewriter 
+$brick_init
+\family default 
+ for all sub-instances.
 \layout Standard
 
 When you don't implement 
@@ -3327,9 +3482,17 @@ $brick_init
  explicitly by yourself, a default version is automatically created which
  does nothing but simply calling 
 \family typewriter 
+INIT_ALL_INPUTS(BRICK)
+\family default 
+, 
+\family typewriter 
+INIT_ALL_INSTANCES(BRICK)
+\family default 
+ and 
+\family typewriter 
 INIT_ALL_CONNS(BRICK)
 \family default 
-.
+ in sequence.
 \layout Section
 
 How to Implement Statelessness

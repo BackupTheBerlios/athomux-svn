@@ -59,7 +59,7 @@ void init_all_conns(const struct loader * loader, int type, void * brick, struct
   void do_it() {
     void * conn = (char*)brick + load_conn->offset;
     int j;
-    for(j = load_conn->count; j > 0; conn++, j--) {
+    for(j = load_conn->count; j > 0; conn += load_conn->size, j--) {
       args->success = FALSE;
       load_conn->init_conn(conn, args, param);
       if(!args->success) {
@@ -86,6 +86,21 @@ void init_all_conns(const struct loader * loader, int type, void * brick, struct
       if(!args->success) {
 	return;
       }
+    }
+  }
+}
+
+void init_all_instances(const struct loader * loader, void * brick, struct args * args, const char * param)
+{
+  const struct load_instance * load_inst;
+  int i = loader->inst_count;
+  for(load_inst = loader->instances; i > 0; load_inst++, i--) {
+    void * subbrick = brick + load_inst->offset;
+    const struct loader * subloader = load_inst->loader;
+    args->success = TRUE;
+    subloader->init_brick(subbrick, args, param);
+    if(!args->success) {
+      return;
     }
   }
 }

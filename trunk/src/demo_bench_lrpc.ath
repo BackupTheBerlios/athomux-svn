@@ -91,6 +91,8 @@ output :>program
   }
   @.check(!myargs.success, "gadr failed");
   myargs.success = FALSE;
+  myargs.constr = FALSE;
+  myargs.destr = FALSE;
   strncpy((char *)&myargs.name, brickname, sizeof(myargs.name));
   if(addr_space) {
     @=call ##control_klinux:>out$instbrick &myargs : myparam;
@@ -113,6 +115,7 @@ output :>program
   struct args myargs = {
     .log_addr = brickref & STRAT_ADDRSPACE_MASK,
     .log_len = MY_STRAT_LEN,
+    .destr = TRUE,
     .success = FALSE,
   };
 
@@ -179,6 +182,8 @@ output :>program
     // instconn LRPC client
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
+    myargs.constr = TRUE;
+    myargs.destr = FALSE;
     @=call :<strat$instconn &myargs;
     @.check(!myargs.success, "LRPC instconn local failed");
 #endif
@@ -222,6 +227,8 @@ output :>program
     //0 instconn LRPC client
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
+    myargs.constr = TRUE;
+    myargs.destr = FALSE;
     @=call :<strat$instconn &myargs;
     @.check(!myargs.success, "LRPC instconn local failed");
 #endif
@@ -230,6 +237,8 @@ output :>program
     /*
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
+    myargs.constr = TRUE;
+    myargs.destr = FALSE;
     @=call :<strat$instconn &myargs;
     mysuccess = myargs.success;
     */

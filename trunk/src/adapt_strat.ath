@@ -37,11 +37,14 @@ operation $trans
         op = scan_op(&buf);
         scan_table_copy(&buf, id_table, @name, sizeof(@name));
         if(op == ':') {
+          @constr = FALSE;
+          @destr = FALSE;
           @=call :<strat$instbrick @args;
           if(!@success) {
             return;
           }
         } else if(op == '/') { // delete it
+          @destr = TRUE;
           @=call :<strat$deinstbrick @args;
           return;
         }
@@ -55,9 +58,13 @@ operation $trans
           return;
         }
         if(op == ':') {
-          @=call $instconn @args;
+	  @constr = TRUE;
+	  @destr = FALSE;
+          @=call :<strat$instconn @args;
         } else if(op == '/') {
-          @=call $deinstconn @args;
+	  @constr = FALSE;
+	  @destr = TRUE;
+          @=call :<strat$deinstconn @args;
         } else {
           goto skip;
         }

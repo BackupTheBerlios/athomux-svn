@@ -457,6 +457,11 @@ struct gen_type {
 
 extern const struct gen_type type_empty[1];
 
+struct load_instance {
+  const struct loader * loader;
+  len_t offset;
+};
+
 struct load_conn {
   sname_t name;
   const char * static_info;
@@ -481,6 +486,8 @@ struct loader {
   index_t conn_count;
   index_t conn_totalcount;
   const struct load_conn * conn;
+  index_t inst_count;
+  const struct load_instance * instances;
   void (*static_init)(void); // called upon code loading
   void (*static_exit)(void); // called upon code unloading, NYI!!
   mand_t (*dynamic_init)(void*, const char*, mand_t); // called upon instantiation
@@ -489,10 +496,13 @@ struct loader {
 };
 
 void init_all_conns(const struct loader * loader, int type, void * brick, struct args * args, const char * param);
+void init_all_instances(const struct loader * loader, void * brick, struct args * args, const char * param);
 
 #define __INIT_ALL(BRICK,NR) init_all_conns(&loader_##BRICK, NR, _brick, _args, _param)
+#define __INIT_INSTANCES(BRICK)  init_all_instances(&loader_##BRICK, _brick, _args, _param)
 #define INIT_ALL_CONNS(BRICK)   __INIT_ALL(BRICK, -1)
 #define INIT_ALL_INPUTS(BRICK)  __INIT_ALL(BRICK, 0)
 #define INIT_ALL_OUTPUTS(BRICK) __INIT_ALL(BRICK, 1)
+#define INIT_ALL_INSTANCES(BRICK)  __INIT_INSTANCES(BRICK)
 
 #endif
