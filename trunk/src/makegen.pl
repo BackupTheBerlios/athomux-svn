@@ -271,6 +271,8 @@ foreach my $pconf (@pconfs) {
       if(@dep) {
 	map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
 	$text .= "$pconf/$body.c $pconf/$body.h : @dep \n";
+	map {s/(\w+)\.ath/$pconf\/$1.c/g} @dep;
+	$text .= "$pconf/$cconf/$body.o $pconf/$body.c : @dep \n";
       }
     }
     $text .= "$text3\n\n";

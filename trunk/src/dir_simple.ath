@@ -171,8 +171,6 @@ data {
   index_t entry_index;
 }
 
-section(:0..DATA_SECTIONS-1:)
-
 operation $output_init
 {
   if(@destr) {
@@ -224,6 +222,8 @@ operation $output_init
   }
   @success = TRUE;
 }
+
+section(:0..DATA_SECTIONS-1:)
 
 @.define get_offset(src_addr, src_len)
 ({

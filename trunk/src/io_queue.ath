@@ -489,7 +489,7 @@ operation $unlock
 //  dumpqueue();
 //}
 
-operation $output_init,$trans,$wait,$transwait,$put,$transwaitput
+operation $trans,$wait,$transwait,$put,$transwaitput
 {
   @success = TRUE;
 }
@@ -551,9 +551,4 @@ operation $wait
   if(@#.meta.error_state) {
     @success = FALSE;
   }
-}
-
-operation $output_init
-{
-  @success = TRUE;
 }

@@ -256,62 +256,69 @@ union connector {
  * Rule of thumb: better implement your own default operation
  * returning your own error instead of indirectly using this.
  */
+#define DEF_SINGLE_OP(name)                                                   \
+  static_operation missing_##name;                                            \
+  static_operation uninitialized_##name;
 
-#define DEF_OPERATION(sect)                                                   \
-static_operation missing_##sect##_output_init;                                \
-static_operation missing_##sect##_trans;                                   \
-static_operation missing_##sect##_wait;                                       \
-static_operation missing_##sect##_get;                                        \
-static_operation missing_##sect##_put;                                        \
-static_operation missing_##sect##_lock;                                       \
-static_operation missing_##sect##_unlock;                                     \
-static_operation missing_##sect##_gadr;                                    \
-static_operation missing_##sect##_padr;                                    \
+#define DEF_OPERATIONS(sect)                                                  \
+DEF_SINGLE_OP(sect##_output_init)                                             \
+DEF_SINGLE_OP(sect##_trans)                                                   \
+DEF_SINGLE_OP(sect##_wait)                                                    \
+DEF_SINGLE_OP(sect##_get)                                                     \
+DEF_SINGLE_OP(sect##_put)                                                     \
+DEF_SINGLE_OP(sect##_lock)                                                    \
+DEF_SINGLE_OP(sect##_unlock)                                                  \
+DEF_SINGLE_OP(sect##_gadr)                                                    \
+DEF_SINGLE_OP(sect##_padr)                                                    \
                                                                               \
-static_operation missing_##sect##_create;                                     \
-static_operation missing_##sect##_delete;                                     \
-static_operation missing_##sect##_move;                                       \
+DEF_SINGLE_OP(sect##_create)                                                  \
+DEF_SINGLE_OP(sect##_delete)                                                  \
+DEF_SINGLE_OP(sect##_move)                                                    \
                                                                               \
-static_operation missing_##sect##_instbrick;                                  \
-static_operation missing_##sect##_deinstbrick;                                \
-static_operation missing_##sect##_instconn;                                   \
-static_operation missing_##sect##_deinstconn;                                 \
-static_operation missing_##sect##_connect;                                    \
-static_operation missing_##sect##_disconnect;                                 \
-static_operation missing_##sect##_getconn;                                    \
-static_operation missing_##sect##_findconn;                                   \
+DEF_SINGLE_OP(sect##_instbrick)                                               \
+DEF_SINGLE_OP(sect##_deinstbrick)                                             \
+DEF_SINGLE_OP(sect##_instconn)                                                \
+DEF_SINGLE_OP(sect##_deinstconn)                                              \
+DEF_SINGLE_OP(sect##_connect)                                                 \
+DEF_SINGLE_OP(sect##_disconnect)                                              \
+DEF_SINGLE_OP(sect##_getconn)                                                 \
+DEF_SINGLE_OP(sect##_findconn)                                                \
                                                                               \
-static_operation missing_##sect##_transwait;                                         \
-static_operation missing_##sect##_gettranswait;                                      \
-static_operation missing_##sect##_transwaitput;                                      \
-static_operation missing_##sect##_putwait;                                    \
-static_operation missing_##sect##_createget;                                  \
-static_operation missing_##sect##_gadrcreateget;                           \
-static_operation missing_##sect##_gadrgettranswait;                               \
-static_operation missing_##sect##_putpadr;                                 \
-static_operation missing_##sect##_putdelete;                                  \
-static_operation missing_##sect##_putdeletepadr;                           \
-static_operation missing_##sect##_gadrtranswaitdeletepadr;                     \
-static_operation missing_##sect##_gadrcreatetranswaitpadr;                     \
+DEF_SINGLE_OP(sect##_transwait)                                               \
+DEF_SINGLE_OP(sect##_gettranswait)                                            \
+DEF_SINGLE_OP(sect##_transwaitput)                                            \
+DEF_SINGLE_OP(sect##_putwait)                                                 \
+DEF_SINGLE_OP(sect##_createget)                                               \
+DEF_SINGLE_OP(sect##_gadrcreateget)                                           \
+DEF_SINGLE_OP(sect##_gadrgettranswait)                                        \
+DEF_SINGLE_OP(sect##_putpadr)                                                 \
+DEF_SINGLE_OP(sect##_putdelete)                                               \
+DEF_SINGLE_OP(sect##_putdeletepadr)                                           \
+DEF_SINGLE_OP(sect##_gadrtranswaitdeletepadr)                                 \
+DEF_SINGLE_OP(sect##_gadrcreatetranswaitpadr)                                 \
                                                                               \
-static_operation missing_##sect##_input_init;                                 \
-static_operation missing_##sect##_retract;                                    \
+DEF_SINGLE_OP(sect##_input_init)                                              \
+DEF_SINGLE_OP(sect##_retract)                                                 \
                                                                               \
-static_operation missing_##sect##_brick_init;                                 \
+DEF_SINGLE_OP(sect##_brick_init)                                              \
 
-DEF_OPERATION(0)
-DEF_OPERATION(1)
-DEF_OPERATION(2)
-DEF_OPERATION(3)
+DEF_OPERATIONS(0)
+DEF_OPERATIONS(1)
+DEF_OPERATIONS(2)
+DEF_OPERATIONS(3)
 
 #define MAKE_ALIAS(prefix,name,sect)                                          \
   static_operation prefix##_##sect##_##name __attribute__((alias(#prefix"_"#name)));
 
+#define MAKE_ALIASES(name,sect)                                               \
+  MAKE_ALIAS(missing,name,sect)                                               \
+  MAKE_ALIAS(unitialized,name,sect)
+
 #define MAKE_ALL_ALIAS(name)                                                  \
-  MAKE_ALIAS(missing,name,0)                                                  \
-  MAKE_ALIAS(missing,name,1)                                                  \
-  MAKE_ALIAS(missing,name,2)                                                  \
-  MAKE_ALIAS(missing,name,3)                                                  \
+  MAKE_ALIASES(name,0)                                                        \
+  MAKE_ALIASES(name,1)                                                        \
+  MAKE_ALIASES(name,2)                                                        \
+  MAKE_ALIASES(name,3)                                                        \
 
 MAKE_ALL_ALIAS(output_init)
 // static ops
@@ -358,6 +365,10 @@ MAKE_ALL_ALIAS(brick_init)
 /////////////////////////////////////////////////////////////////////////
 
 extern name_t op_names[opcode_brick_max+1];
+
+output_operation_set uninitialized_output[4];
+input_operation_set uninitialized_input[4];
+brick_operation_set uninitialized_brick[4];
 
 /////////////////////////////////////////////////////////////////////////
 

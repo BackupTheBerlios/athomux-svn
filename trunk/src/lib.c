@@ -18,10 +18,10 @@ char blanks[32] = "                               ";
 
 #include "../debug.names"
 
-#define DEBUG_OPEN(name) \
+#define DEBUG_OPEN(name)                                                      \
   _debug_##name = fopen("debug."#name, "w");
 
-#define DEBUG_CLOSE(name) \
+#define DEBUG_CLOSE(name)                                                     \
   fclose(_debug_##name);
 
 void open_debug()
@@ -60,18 +60,28 @@ void init_all_conns(const struct loader * loader, int type, void * brick, struct
 
 //////////////////////////////////////////////////////////////////////////
 
+#define UNINITIALIZED(name)                                                   \
+void uninitialized_##name(const union connector * on, struct args * args, const char * param)\
+{                                                                             \
+  printf("operation " #name " called at stateless phase\n");                  \
+  DEBUG_EXIT;                                                                 \
+}
+
 #define MISSING(name)                                                         \
 void missing_##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \
   printf("operation " #name " not implemented\n");                            \
   DEBUG_EXIT;                                                                 \
-}
+}                                                                             \
+UNINITIALIZED(name)
+
 
 #define OPTIONAL(name)                                                        \
 void missing_##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \
   args->success = FALSE;                                                      \
-}
+}                                                                             \
+UNINITIALIZED(name)
 
 /* This is only used for unimplemented init operations, which are
  * allowed since they only produce side effects and return nothing
@@ -81,7 +91,8 @@ void missing_##name(const union connector * on, struct args * args, const char *
 void missing_##name(const union connector * on, struct args * args, const char * param)\
 { /* Do nothing */                                                            \
   args->success = TRUE;                                                       \
-}
+}                                                                             \
+UNINITIALIZED(name)
 
 /* Define all the default elementary operations
  */
@@ -95,6 +106,19 @@ MISSING(lock)
 MISSING(unlock)
 MISSING(gadr)
 MISSING(padr)
+// combined ops
+UNINITIALIZED(transwait)
+UNINITIALIZED(gettranswait)
+UNINITIALIZED(transwaitput)
+UNINITIALIZED(putwait)
+UNINITIALIZED(createget)
+UNINITIALIZED(gadrcreateget)
+UNINITIALIZED(gadrgettranswait)
+UNINITIALIZED(putpadr)
+UNINITIALIZED(putdelete)
+UNINITIALIZED(putdeletepadr)
+UNINITIALIZED(gadrtranswaitdeletepadr)
+UNINITIALIZED(gadrcreatetranswaitpadr)
 // strategy ops
 MISSING(instbrick)
 MISSING(deinstbrick)
@@ -333,52 +357,79 @@ void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * a
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-#define ADD_MISSING(name,sect) [opcode_##name] = &missing_##sect##_##name
+#define ADD_UNINITIALIZED(name,sect,sub) [opcode_##name sub] = &uninitialized_##name
 
-#define ADD_ALL_MISSING(sect)                                                 \
+#define ADD_ALL_UNINITIALIZED_OUTPUT(sect)                                    \
 {                                                                             \
-  ADD_MISSING(output_init,sect),                                              \
-  ADD_MISSING(trans,sect),                                                 \
-  ADD_MISSING(wait,sect),                                                     \
-  ADD_MISSING(get,sect),                                                      \
-  ADD_MISSING(put,sect),                                                      \
-  ADD_MISSING(lock,sect),                                                     \
-  ADD_MISSING(unlock,sect),                                                   \
-  ADD_MISSING(gadr,sect),                                                  \
-  ADD_MISSING(padr,sect),                                                  \
+  ADD_UNINITIALIZED(output_init,sect,),                                       \
+  ADD_UNINITIALIZED(trans,sect,),                                             \
+  ADD_UNINITIALIZED(wait,sect,),                                              \
+  ADD_UNINITIALIZED(get,sect,),                                               \
+  ADD_UNINITIALIZED(put,sect,),                                               \
+  ADD_UNINITIALIZED(lock,sect,),                                              \
+  ADD_UNINITIALIZED(unlock,sect,),                                            \
+  ADD_UNINITIALIZED(gadr,sect,),                                              \
+  ADD_UNINITIALIZED(padr,sect,),                                              \
                                                                               \
-  ADD_MISSING(create,sect),                                                   \
-  ADD_MISSING(delete,sect),                                                   \
-  ADD_MISSING(move,sect),                                                     \
+  ADD_UNINITIALIZED(create,sect,),                                            \
+  ADD_UNINITIALIZED(delete,sect,),                                            \
+  ADD_UNINITIALIZED(move,sect,),                                              \
                                                                               \
-  ADD_MISSING(instbrick,sect),                                                \
-  ADD_MISSING(deinstbrick,sect),                                              \
-  ADD_MISSING(instconn,sect),                                                 \
-  ADD_MISSING(deinstconn,sect),                                               \
-  ADD_MISSING(connect,sect),                                                  \
-  ADD_MISSING(disconnect,sect),                                               \
-  ADD_MISSING(getconn,sect),                                                  \
-  ADD_MISSING(findconn,sect),                                                 \
+  ADD_UNINITIALIZED(instbrick,sect,),                                         \
+  ADD_UNINITIALIZED(deinstbrick,sect,),                                       \
+  ADD_UNINITIALIZED(instconn,sect,),                                          \
+  ADD_UNINITIALIZED(deinstconn,sect,),                                        \
+  ADD_UNINITIALIZED(connect,sect,),                                           \
+  ADD_UNINITIALIZED(disconnect,sect,),                                        \
+  ADD_UNINITIALIZED(getconn,sect,),                                           \
+  ADD_UNINITIALIZED(findconn,sect,),                                          \
                                                                               \
-  ADD_MISSING(transwait,sect),                                                       \
-  ADD_MISSING(gettranswait,sect),                                                    \
-  ADD_MISSING(transwaitput,sect),                                                    \
-  ADD_MISSING(putwait,sect),                                                  \
-  ADD_MISSING(createget,sect),                                                \
-  ADD_MISSING(gadrcreateget,sect),                                         \
-  ADD_MISSING(gadrgettranswait,sect),                                             \
-  ADD_MISSING(putpadr,sect),                                               \
-  ADD_MISSING(putdelete,sect),                                                \
-  ADD_MISSING(putdeletepadr,sect),                                         \
-  ADD_MISSING(gadrtranswaitdeletepadr,sect),                                   \
-  ADD_MISSING(gadrcreatetranswaitpadr,sect),                                   \
+  ADD_UNINITIALIZED(transwait,sect,),                                         \
+  ADD_UNINITIALIZED(gettranswait,sect,),                                      \
+  ADD_UNINITIALIZED(transwaitput,sect,),                                      \
+  ADD_UNINITIALIZED(putwait,sect,),                                           \
+  ADD_UNINITIALIZED(createget,sect,),                                         \
+  ADD_UNINITIALIZED(gadrcreateget,sect,),                                     \
+  ADD_UNINITIALIZED(gadrgettranswait,sect,),                                  \
+  ADD_UNINITIALIZED(putpadr,sect,),                                           \
+  ADD_UNINITIALIZED(putdelete,sect,),                                         \
+  ADD_UNINITIALIZED(putdeletepadr,sect,),                                     \
+  ADD_UNINITIALIZED(gadrtranswaitdeletepadr,sect,),                           \
+  ADD_UNINITIALIZED(gadrcreatetranswaitpadr,sect,),                           \
+},
+
                                                                               \
-  ADD_MISSING(input_init,sect),                                               \
-  ADD_MISSING(retract,sect),                                                  \
+#define ADD_ALL_UNINITIALIZED_INPUT(sect)                                     \
+{                                                                             \
+  ADD_UNINITIALIZED(input_init,sect,-opcode_output_max-1),                    \
+  ADD_UNINITIALIZED(retract,sect,-opcode_output_max-1),                       \
+}
                                                                               \
-  ADD_MISSING(brick_init,sect),                                               \
+#define ADD_ALL_UNINITIALIZED_BRICK(sect)                                     \
+  ADD_UNINITIALIZED(brick_init,sect,-opcode_input_max-1),                     \
 }
 
+output_operation_set uninitialized_output[4] = {
+  ADD_ALL_UNINITIALIZED_OUTPUT(0)
+  ADD_ALL_UNINITIALIZED_OUTPUT(1)
+  ADD_ALL_UNINITIALIZED_OUTPUT(2)
+  ADD_ALL_UNINITIALIZED_OUTPUT(3)
+};
+#if 0
+input_operation_set uninitialized_input[4] = {
+  ADD_ALL_UNINITIALIZED_INPUT(0)
+  ADD_ALL_UNINITIALIZED_INPUT(1)
+  ADD_ALL_UNINITIALIZED_INPUT(2)
+  ADD_ALL_UNINITIALIZED_INPUT(3)
+};
+
+brick_operation_set uninitialized_brick[4] = {
+  ADD_ALL_UNINITIALIZED_BRICK(0)
+  ADD_ALL_UNINITIALIZED_BRICK(1)
+  ADD_ALL_UNINITIALIZED_BRICK(2)
+  ADD_ALL_UNINITIALIZED_BRICK(3)
+};
+#endif
 name_t op_names[opcode_brick_max+1] = {
   // OUTPUT OPCODES
   "output_init",

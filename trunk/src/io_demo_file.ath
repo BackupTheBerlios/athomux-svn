@@ -63,8 +63,6 @@ operation $output_init
     @=call ##arbiter:>dummy$output_init @args;
     @=call ##driver:>out$output_init @args;
     @=call ##queue:>queue(:0:)$output_init @args;
-    @=call ##queue:>queue(:1:)$output_init @args;
-    @=call ##queue:>queue(:2:)$output_init @args;
     @sect_code = 0;
     @=call ##lock0:>lock$output_init @args;
     @=call ##lock1:>lock$output_init @args;
@@ -77,8 +75,6 @@ operation $output_init
     @=call ##lock2:>lock$output_init @args;
     @=call ##lock3:>lock$output_init @args;
     @=call ##queue:>queue(:0:)$output_init @args;
-    @=call ##queue:>queue(:1:)$output_init @args;
-    @=call ##queue:>queue(:2:)$output_init @args;
     @sect_code = 0;
     @.if("PCONF" eq "klinux") {
       @param = "/dev/athomux-partition";

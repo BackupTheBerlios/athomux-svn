@@ -1463,6 +1463,11 @@ sub gen_call {
   my $brick = sp_part($caller_spec, 1, 0);
   spec_alias(\$target) if $optype eq "output";
   my ($targetbrick, $conn_name, $array, $section, $op) = sp_parts($target);
+  if($section ne "(:0:)" and $target =~ m/\$\w+_init\Z/) {
+    warn "always call operation $1 on section (:0:), never as in '$target'\n";
+    $target =~ s/$sectmatch/\(:0:\)/;
+    $section = "(:0:)";
+  }
   $section =~ s/^\(://;
   $section =~ s/:\)$//;
   $section = "\@sect_code" if ($section eq "ALL" or $section =~ m/\.\./);
@@ -1715,6 +1720,16 @@ sub make_ops {
   $body =~ s/CONN_NAME/$conn/gm;
   $body =~ s/SECT_NAME/$section/gm;
   $body =~ s/OP_NAME/$op/gm;
+  if($spec =~ m/\$(\w+_init)\Z/) {
+    my $opname = $1;
+    if($spec =~ m/($sectmatch)/) {
+      my $sect = $1;
+      if($sect ne "(:0:)") {
+	warn "operation $opname can be only defined at section (:0:), never at another section like $sect\nprobably this will not compile\n";
+	$spec =~ s/$sectmatch/\(:0:\)/;
+      }
+    }
+  }
   $::ops_spec{$spec} = $body;
 }
 
@@ -1965,6 +1980,7 @@ sub parse_1 {
       $text = $POSTMATCH;
       my $do_export = ($remember and not defined($local));
       add_connector($type, $enhanced_spec, $subbrick) if $do_export;
+      make_ops("$::current\$${type}_init", "{\@success = TRUE;}") if $remember;
       my $xname = sp_name(spec_bricktype($enhanced_spec), 2);
       $::extern_type_defs{$xname} = "";
       $text = parse_lit($text, $macros);
@@ -2093,7 +2109,7 @@ sub parse_all {
 
   unless($prefix) {
     # default $brick_init operation
-    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n}");
+    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n  \@success = TRUE;\n}");
   }
 
   # this is old syntax, will VANISH in the future!!!
@@ -2218,6 +2234,8 @@ sub gen_header {
     purge(\$def);
     my $name = sp_name($spec, 2);
     print OUT "struct local_$name $def;\n\n";
+    my $sectcount = sp_part($spec, 3, 0);
+    print OUT "${type}_operation_set ops_$name\[$sectcount];\n\n";
   }
   print OUT "\n";
 
@@ -2285,8 +2303,9 @@ sub gen_header {
       my $secspec = sp_complete("(:" . $sect . ":)", $spec);
       print OUT "// ops for $secspec\n";
       my %copy_ops = %$opset;
+      my $shortspec = sp_shorten($secspec, 3);
       foreach my $ops_spec (keys %::ops_aliases) {
-	next unless sp_shorten($ops_spec, 3) eq sp_shorten($secspec, 3);
+	next unless sp_shorten($ops_spec, 3) eq $shortspec;
 	my $dst_name = sp_name($ops_spec);
 	print OUT "static_operation $dst_name;\n";
 	$dst_name = sp_part($ops_spec, 4, 0);
@@ -2296,6 +2315,10 @@ sub gen_header {
       print OUT "// unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
 	my $dst_name = sp_name($secspec . "\$" . $bare);
+	if($bare =~ m/_init\Z/) {
+	  print OUT "static_operation $dst_name;\n";
+	  next;
+	}
 	my $src_name = "missing_$bare";
 	print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
       }
@@ -2306,7 +2329,8 @@ sub gen_header {
 }
 
 sub make_pointers {
-  my ($code, $spec, $direct) = @_;
+  my ($code, $spec, $direct, $suffix) = @_;
+  $suffix = "" unless defined($suffix);
   my $brick = sp_name($spec, 1);
   my $conn = sp_name($spec, 2);
   my $prefix = "struct local_${conn} * const _on = (void*)on; (void)_on; ";
@@ -2322,7 +2346,7 @@ sub make_pointers {
     $prefix .= "struct brick_${brick} * const _brick = BASE(_on, struct brick_${brick}, $field); (void)_brick; ";
   }
   $prefix .= $entry_debug if $debug_level >= 1;
-  $$code = embrace_code($prefix, $$code, "");
+  $$code = embrace_code($prefix, $$code, $suffix);
 }
 
 sub gen_ops {
@@ -2341,7 +2365,13 @@ sub gen_ops {
     my $name = sp_name($spec);
     print OUT "#undef OPERATION\n#define OPERATION \"$name\"\n\n";
     print OUT "void $name(const union connector * on, struct args * _args, const char * _param)\n";
-    make_pointers(\$code, $spec, 0);
+    my $suffix = "";
+    if($spec =~ m/(input|output)_init\Z/) {
+      my $type = $1;
+      my $ops_name = sp_name($spec, 2);
+      $suffix = "\nif(\@success) _on->_${type}_.ops = ops_$ops_name;\n";
+    }
+    make_pointers(\$code, $spec, 0, $suffix);
     eval_code(\$code, $spec);
     purge(\$code);
     print OUT "$code\n\n";
@@ -2349,6 +2379,7 @@ sub gen_ops {
   # generate alias names
   while(my ($ops_spec,$op) = each %::ops_aliases) {
     next if $op eq $ops_spec;
+    next if $ops_spec =~ m/_init\Z/;
     my $src_name = sp_name($op);
     my $dst_name = sp_name($ops_spec);
     print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n\n";
