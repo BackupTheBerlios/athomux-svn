@@ -18,9 +18,9 @@ desc
 enddesc
 
 static_header {
-mand_t base_mand;
+extern volatile mand_t base_mand;
 
-struct output * root_strategy;
+extern struct output * root_strategy;
 
 // Restrictions: a brick representation must fit in DEFAULT_TRANSFER
 #define REPRES_MAX DEFAULT_TRANSFER
@@ -64,11 +64,12 @@ static_data {
 
 ////////////////////////////////////////////////////////////////////
 
+struct output * root_strategy;
 struct brick_control_simple * root_instance = NULL;
 
 struct brick_header * boot = NULL;
 
-mand_t base_mand = 1;
+volatile mand_t base_mand = 1;
 
 #include "defs.h"
 
@@ -552,7 +553,7 @@ bool delete_brick(struct brick_header ** hash, struct brick_header * brick, cons
 	disconnect_all(tmp);
 #endif
 	if(tmp->c_param && tmp->c_param != brick->b_param) {
-	  struct args init_args = { .destr = TRUE };
+	  struct args init_args = { .destr = TRUE, .op_code = opcode_output_init };
 	  struct output * output = GET_OUTPUT(tmp);
 	  output->ops[0][opcode_output_init]((void*)output, &init_args, b_param);
 	  free(tmp->c_param);
@@ -587,7 +588,7 @@ if(boot) {
 }
 rex_init();
 // create initial instance
-boot = new_brick("control_simple", "self-booted-by-default-init", &base_mand);
+boot = new_brick("control_simple", "self-booted-by-default-init", (mand_t *)&base_mand);
 if(!boot) {
   exit(-1);
 }
@@ -612,6 +613,16 @@ struct conn_info root_conn2 = {boot->addr, 0, "hook" };
 struct args args2 = { .conn1 = &root_conn2, .conn2 = &root_conn1, };
 root_strategy->ops[0][opcode_connect]((void*)root_strategy, &args2, "");
 }
+
+static_exit {
+// static exit of all other brick types
+const struct loader ** loader;
+for(loader = loaders; *loader; loader++) {
+  if((*loader)->static_exit != &exit_static_control_simple)
+    (*loader)->static_exit();
+}
+}
+
 
 data {
   struct brick_header * brick_hash[BRICK_HASH_MAX];
@@ -701,7 +712,7 @@ operation $instconn
   }
   if(load_conn->type) {
     struct output * output = GET_OUTPUT(conn);
-    struct args init_args = { .constr = TRUE, .clear = @clear };
+    struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_output_init };
     output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
     if(!init_args.success) {
       if(!load_conn->count) { // dynamic array
@@ -748,7 +759,7 @@ operation $deinstconn
     @.check(conn->link.first, "brick '%s' address %llx output '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
 #endif
     struct output * output = GET_OUTPUT(conn);
-    struct args init_args = { .destr = TRUE };
+    struct args init_args = { .destr = TRUE, .op_code = opcode_output_init };
     output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
   } else {
     @.err("input deinstantiation NYI");

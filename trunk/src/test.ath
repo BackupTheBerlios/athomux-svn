@@ -32,7 +32,7 @@ static_header {// my brick declarations
 struct test {
   name_t name;
 };
-void * glob_ptr;
+extern void * glob_ptr;
 }
 static_data {
 void * glob_ptr;

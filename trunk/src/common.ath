@@ -17,7 +17,11 @@
 
 @.define @.abort (text...)
 { @.msg("FATAL: ", text...);
+#ifdef __KERNEL__
+  panic(text...);
+#else
   exit(-1);
+#endif
 }
 
 @.define @.warn (condition,text...)
@@ -34,7 +38,11 @@
 
 @.define @.fatal (condition,text...)
 { if(condition) { @.msg("FATAL: ", "("@.string{@.protect{condition}}"): "text ...);
+#ifdef __KERNEL__
+    panic(text...);
+#else
     exit(-1);
+#endif
   }
 }
 

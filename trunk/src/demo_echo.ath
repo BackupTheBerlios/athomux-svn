@@ -1,0 +1,20 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #demo_echo
+purpose print the param string
+desc
+  /bin/echo
+enddesc
+
+
+output :>program
+
+operation $output_init
+{
+  if(!@destr) {
+    printf("%s\n", @param);
+  }
+  @success = TRUE;
+}

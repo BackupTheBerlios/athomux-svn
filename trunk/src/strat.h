@@ -62,20 +62,20 @@ void copy_str(char * dst, int maxlen, const char * src, int start, int end);
  * TODO: add further frequently used ones
  */
 
-const char * rexstr_brick;
-struct rex_buffer * rexbuf_brick;
+extern const char * rexstr_brick;
+extern struct rex_buffer * rexbuf_brick;
 int parse_brick(char * buf, int len, char * res_op, char * res_name, int len_name);
 
-const char * rexstr_connector;
-struct rex_buffer * rexbuf_connector;
+extern const char * rexstr_connector;
+extern struct rex_buffer * rexbuf_connector;
 int parse_connector(char * buf, int len, char * res_name, int len_name, index_t * res_index, char * res_op, char * res_other, int len_other, int * reslen_other);
 
-const char * rexstr_elem;
-struct rex_buffer * rexbuf_elem;
+extern const char * rexstr_elem;
+extern struct rex_buffer * rexbuf_elem;
 int parse_elem(char * buf, int len, struct conn_info * conn);
 
-const char * rexstr_inout;
-struct rex_buffer * rexbuf_inout;
+extern const char * rexstr_inout;
+extern struct rex_buffer * rexbuf_inout;
 int parse_inout(char * buf, int len, int * res_type, char * res_op, struct conn_info * conn);
 
 

@@ -1,0 +1,102 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #init
+purpose ATHOMUX Loader (common initialization)
+static_header {
+extern bool athomux_init(const struct output * on, const bool constr, char *initbrick_name, char *initbrick_param);
+
+#ifdef ATHOMUX_BOOTSTRAP
+struct brick_init initbrick;
+#ifdef TRACE
+int call_level = 0;
+char blanks[32];
+#endif
+
+#define ATHOMUX_INIT_INIT() memset(&initbrick, 0, sizeof(struct brick_init)); init_init(&initbrick, NULL, 0);
+#define ATHOMUX_INIT(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, TRUE, ai_brick, ai_param);
+#define ATHOMUX_CLEANUP(ai_brick, ai_param) athomux_init(&initbrick._conn_init._output_, FALSE, ai_brick, ai_param);
+#endif
+}
+
+static_data {
+#include <stdio.h>
+#include <stdlib.h>
+#include "control_simple.h"
+
+
+static addr_t initbrick;
+
+bool athomux_init(const struct output * on, const bool constr, char *initbrick_name, char *initbrick_param)
+{
+  struct args args = { .op_code = opcode_output_init, .destr = !constr, .constr = constr, .success = FALSE, .phys_addr = MAKE_PADDR(initbrick_name) };
+  init_init_0_output_init((const union connector *)on, &args, initbrick_param);
+  return args.success;
+}
+
+}
+
+init {
+  init_static_control_simple();
+  ini->_conn_control._input_.connect = root_strategy;
+}
+
+
+local input :<control
+
+local output :>init
+
+@.define cmd(addr_t addr, char * str) => (success_t success)
+{
+  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (success);
+}
+
+@.func boot(char * str) => (addr_t addr)
+{
+  success_t mysuccess;
+
+  @=call :<control$getaddr (DEFAULT_TRANSFER) => (mysuccess, addr);
+  @.fatal(!mysuccess, "getaddr failed");
+  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (mysuccess);
+  @.fatal(!mysuccess, "tranfer '%s' failed", str);
+}
+
+@.func unboot(addr_t addr, char * str) => (success_t success)
+{
+  success_t mysuccess;
+
+  @=call :<control$transfer (addr, strlen(str), (unsigned long)str, direct_write) => (mysuccess);
+  @.fatal(!mysuccess, "tranfer '%s' failed", str);
+  @=call :<control$delete (addr, DEFAULT_TRANSFER) => (mysuccess);
+  @.fatal(!mysuccess, "delete failed");
+}
+
+
+operation $output_init
+{
+  char str[256];
+
+  if(@destr) {
+    sprintf(str, "brick/=%s", (char *)MAKE_PTR(@args->phys_addr));
+    unboot(initbrick, str) => (@success);
+
+    exit_static_control_simple();
+  } else if(@constr) {
+#ifdef TRACE
+    memset(blanks, ' ', 31);
+    blanks[31] = '\0';
+#endif
+
+    {
+      addr_t control = DEFAULT_TRANSFER;
+      const char * @param = "";
+      cmd(control, "output:=control\n") => (@success);
+      // create root hook
+      cmd(0, "output:=_root") => (@success);
+    }
+
+    sprintf(str, "brick:=%s\n output:=program\n", (char *)MAKE_PTR(@args->phys_addr));
+    boot(str) => (initbrick);
+  }
+}

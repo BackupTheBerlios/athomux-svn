@@ -1,0 +1,6 @@
+#context pconf !klinux
+
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o
+
+$(pconf)/$(cconf)/athload: $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras)
+	$(CC) $(LDFLAGS) $(filter %.o,$^) -o $@

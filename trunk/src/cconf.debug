@@ -1,3 +1,5 @@
+#context pconf !klinux
+
 $(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG
 
 $(pconf)/$(cconf)/%.o : $(pconf)/%.c common.h strat.h Makefile

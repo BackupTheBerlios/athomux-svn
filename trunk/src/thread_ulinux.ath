@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf !klinux
+
 brick #thread_ulinux
 purpose A dummy thread_* for userspace using pthreads and dummy CPU
 desc

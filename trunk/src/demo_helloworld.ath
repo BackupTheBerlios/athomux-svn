@@ -1,0 +1,22 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #demo_helloworld
+purpose Say hello...
+desc
+  Hello World
+enddesc
+
+
+output :>program
+
+operation $output_init
+{
+  if(@destr) {
+    printf("Goodbye world!\n");
+  } else {
+    printf("Hello world!\n");
+  }
+  @success = TRUE;
+}

@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf !klinux
+
 brick #spy_trace
 purpose trace all operations and their parameters/results to a logfile
 desc

@@ -23,6 +23,16 @@
  * The interface of rex_compile() and rex_free() may be extended later,
  * in order to allocate pages from a tmp input.
  */
+
+const char * rexstr_brick;
+struct rex_buffer * rexbuf_brick;
+const char * rexstr_connector;
+struct rex_buffer * rexbuf_connector;
+const char * rexstr_elem;
+struct rex_buffer * rexbuf_elem;
+const char * rexstr_inout;
+struct rex_buffer * rexbuf_inout;
+
 struct rex_buffer {
   struct re_pattern_buffer re;
 };
@@ -160,7 +170,7 @@ int parse_elem(char * buf, int len, struct conn_info * conn)
   pos = end[0];
   conn->conn_addr = -1;
   if(!start[1]) {
-    sscanf(buf, "%llx", &conn->conn_addr);
+    sscanf(buf, "%Lx", &conn->conn_addr);
   }
   copy_str(conn->conn_name, sizeof(conn->conn_name), buf, start[2], end[2]);
   conn->conn_index = 0;

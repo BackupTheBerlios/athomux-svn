@@ -11,6 +11,12 @@ desc
   Probably doen't work at all.
 enddesc
 
+static_data {
+#ifdef __KERNEL__
+#include <asm/div64.h>
+#endif
+}
+
 data {
   len_t in_transfer;
   len_t out_transfer;
@@ -34,10 +40,15 @@ operation $get,$gettr
 {
   addr_t copy_addr = @log_addr;
   len_t copy_len = @log_len;
+#if defined(__KERNEL__) && defined(__i386__)
+  len_t max_len = @#in_transfer - do_div(@log_addr, @#in_transfer);
+  @log_addr *= @#in_transfer;
+#else
   len_t max_len = @#in_transfer - ((len_t)@log_addr % @#in_transfer);
+  @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
+#endif
   if(max_len > @log_len)
     max_len = @log_len;
-  @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
   @log_len = @#in_transfer;
   @=call :<in$op @args;
   @phys_addr += (copy_addr - @log_addr);
@@ -53,8 +64,15 @@ operation $transfer,$wait,$trput
   addr_t copy_addr = @log_addr;
   addr_t copy_paddr = @phys_addr;
   len_t copy_len = @log_len;
+#if defined(__KERNEL__) && defined(__i386__)
+  do_div(@log_addr, @#in_transfer);
+  @log_addr *= @#in_transfer;
+  do_div(@phys_addr, @#in_transfer);
+  @phys_addr *= @#in_transfer;
+#else
   @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
   @phys_addr = (@phys_addr / @#in_transfer) * @#in_transfer;
+#endif
   @log_len = @#in_transfer;
   @=call :<in$op @args;
   @log_addr = copy_addr;
@@ -66,7 +84,12 @@ operation $put,$putwait
 {
   addr_t copy_addr = @log_addr;
   len_t copy_len = @log_len;
+#if defined(__KERNEL__) && defined(__i386__)
+  do_div(@log_addr, @#in_transfer);
+  @log_addr *= @#in_transfer;
+#else
   @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
+#endif
   @log_len = @#in_transfer;
   @=call :<in$op @args;
   @log_addr = copy_addr;

@@ -1,0 +1,13 @@
+$(pconf)/%.c: %.ath common.ath pre.pl Makefile
+	./pre.pl PCONF=$(pconf) lock_ulinux=lock_klinux thread_ulinux=thread_klinux $< $@
+
+$(pconf)/%.c: env/klinux/%.c
+	ln -s ../$< $@
+
+LINSRC:=/lib/modules/$(shell uname -r)/build
+
+.PRECIOUS: %/scripts/mod/modpost
+%/scripts/mod/modpost:
+	@echo -e "\nWe need the 'modpost' utility from the Linux kernel tree; lets try to build it...\n"
+	$(MAKE) -C $(patsubst %/scripts/mod/modpost,%,$@) scripts
+	test -d $(patsubst %/modpost,%,$@) || mkdir -p $(patsubst %/modpost,%,$@) && ln -s ../modpost $@

@@ -1,0 +1,30 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #athload_help
+purpose print the athload help text
+
+
+output :>program
+
+operation $output_init
+{
+#ifdef __KERNEL__
+#define ATHLOAD_SYNTAX "insmod athomux.ko init=[program name] p""aram=[parameter string]\n\n"
+#else
+#define ATHLOAD_SYNTAX "athload [program name] [parameter string]\n\n"
+#endif
+  if(!@destr) {
+    printf(
+	   "ATHOMUX LOADER HELP\n"
+	   "-------------------\n\n"
+	   ATHLOAD_SYNTAX
+	   "\nProgram names and parameters:\n\n"
+	   "demo_helloworld\n\ta hello world implementation\n\n"
+	   "demo_echo [text]\n\t/bin/echo - do I need to say more?\n\n"
+	   "athload_help\n\tshow this help text\n\n"
+	   );
+  }
+  @success = TRUE;
+}

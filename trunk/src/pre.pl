@@ -1056,8 +1056,10 @@ sub type_hash {
 #generate code for a type table
 sub gen_type_table {
   my ($name, $max, $prototype, $hash) = @_;
+  if($prototype) {
+    return "extern const struct gen_tabentry ${name}\[$max];\n";
+  }
   my $res = "const struct gen_tabentry ${name}\[$max]";
-  return "$res;\n" if $prototype;
   $res .= " = {\n";
   while(my ($name, $tuple) = each %$hash) {
     next if $name =~ m/\A\./;

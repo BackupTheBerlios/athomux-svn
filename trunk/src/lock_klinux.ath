@@ -1,20 +1,23 @@
-  Author: Thomas Schoebel-Theuer
-  Copyright: University of Stuttgart
+  Author: Thomas Schoebel-Theuer (lock_ulinux.ath), Jens-Christian Korth (port to kernel space)
+  Copyright: University of Stuttgart, Jens-Christian Korth
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf !klinux
+context pconf klinux
 
-brick #lock_ulinux
+brick #lock_klinux
 purpose Locks
 desc
   Simple implementation using a linear list (KISS).
   For better performance, other search structures will be needed.
 enddesc
 
-static_data {
-#include <pthread.h>
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static_data {
+#include <linux/sched.h>
+#include <linux/wait.h>
+#include <asm/semaphore.h>
+
+static DECLARE_MUTEX(mutex);
 
 #define MAKE_TYPE(data_part,addr_part) ((addr_part) * 3 + (data_part))
 
@@ -38,7 +41,7 @@ struct lock {
   addr_t end;
   int mandate;
   int type;
-  pthread_cond_t queue;
+  wait_queue_head_t queue;
 };
 
 static struct lock * emptylist = NULL;
@@ -52,7 +55,7 @@ struct lock * newlock()
     return new;
   }
   new = malloc(sizeof(struct lock));
-  pthread_cond_init(&new->queue, NULL);
+  init_waitqueue_head(&new->queue);
   return new;
 }
 
@@ -66,13 +69,15 @@ void freelock(struct lock * lock)
 static inline
 void sleepon(struct lock * lock)
 {
-  pthread_cond_wait(&lock->queue, &mutex);
+  up(&mutex);
+  sleep_on(&lock->queue);
+  down(&mutex);
 }
 
 static inline
 void wakeup(struct lock * lock)
 {
-  pthread_cond_broadcast(&lock->queue);
+  wake_up_all(&lock->queue);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -172,13 +177,35 @@ void lock_sub (struct lock ** anchor, struct lock * new)
 
 }
 
+static_exit {
+  struct lock * lock;
+  while(emptylist) {
+    lock = emptylist;
+    emptylist = lock->next;
+    free(lock);
+  }
+}
+
 data {
   struct lock * anchor;
+}
+
+exit {
+  struct lock * lock;
+  while(@#anchor) {
+    lock = @#anchor;
+    @#anchor = lock->next;
+    freelock(lock);
+  }
 }
 
 //input :<mem
 
 output :>lock
+
+operation $output_init
+{
+}
 
 operation $lock
 {
@@ -189,7 +216,7 @@ operation $lock
   new->mandate = @mandate;
   new->type = MAKE_TYPE(@data_lock, @addr_lock);
   struct lock * conflict;
-  pthread_mutex_lock(&mutex);
+  down(&mutex);
   while((conflict = lock_add(&@#anchor, new, @action != action_ask))) {
     if(@action != action_wait) {
       freelock(new);
@@ -197,7 +224,7 @@ operation $lock
     }
     sleepon(conflict);
   }
-  pthread_mutex_unlock(&mutex);
+  up(&mutex);
   // no true optional locking implemented
   @try_addr = @log_addr;
   @try_len = @log_len;
@@ -211,8 +238,8 @@ operation $unlock
     .end =  @log_addr + @log_len,
     .mandate = @mandate,
   };
-  pthread_mutex_lock(&mutex);
+  down(&mutex);
   lock_sub(&@#anchor, &del);
-  pthread_mutex_unlock(&mutex);
+  up(&mutex);
   @success = TRUE;
 }

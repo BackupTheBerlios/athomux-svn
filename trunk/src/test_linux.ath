@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf !klinux
+
 brick #test_linux
 purpose Some basic testing of filesystem operations
 desc

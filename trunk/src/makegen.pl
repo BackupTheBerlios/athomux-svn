@@ -38,7 +38,7 @@ map chomp, @sources;
 my %contexts = ();
 
 foreach my $source (@sources, @target_files, @pconf_files, @cconf_files) {
-  $contexts{$source} = `grep -e '^# *context' $source`;
+  $contexts{$source} = `grep -e '^#\\? *context' $source`;
 }
 
 sub check_context {
@@ -189,7 +189,7 @@ foreach my $pconf (@pconfs) {
   foreach my $cconf (@cconfs) {
     $text .= add_file("cconf.$cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
     foreach my $target (@targets) {
-      $text .= add_file("target.$target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
+      $text .= add_file("target.$target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }
 }

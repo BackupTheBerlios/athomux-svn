@@ -33,7 +33,9 @@ extern char blanks[32];
 #include <string.h> // memset()
 #include <stdio.h> // only for printf()
 #include <stdlib.h> // to be removed!!!!!
+#ifndef __KERNEL__
 void exit(int status);
+#endif
 #else
 #define NULL (void*)0
 #endif
@@ -341,7 +343,7 @@ MAKE_ALL_ALIAS(brick_init)
 
 /////////////////////////////////////////////////////////////////////////
 
-name_t op_names[opcode_brick_max+1];
+extern name_t op_names[opcode_brick_max+1];
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -351,7 +353,12 @@ name_t op_names[opcode_brick_max+1];
 #define PC__DIRTY TRUE
 #define PC__PRESENT 2
 #ifdef __KERNEL__
+#ifdef __i386__
+#include <asm/div64.h>
+#define PC__HASH(addr,align,max) ({addr_t addr_tmp = addr; do_div(addr_tmp, align); addr_tmp & (max-1);})
+#else
 #define PC__HASH(addr,align,max) (((addr) / (align)) & ((max)-1))
+#endif
 #define PC__BASE_ADDR2(addr,whole) (addr & ~((len_t)(whole)-1))
 #define PC__BASE_ADDR(addr,whole) (PC__BASE_ADDR2(addr,whole) | PC__PRESENT)
 #define PC__BASE_OFFSET(addr,whole) (addr & ((whole)-1))
@@ -423,7 +430,7 @@ struct gen_type {
   index_t gen_offset;
 };
 
-const struct gen_type type_empty[1];
+extern const struct gen_type type_empty[1];
 
 struct load_conn {
   sname_t name;

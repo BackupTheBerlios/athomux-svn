@@ -1,4 +1,6 @@
-$(cconf)_extras=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
+#context pconf !klinux
 
-$(pconf)/$(cconf)/benchbed: $(pconf)/benchbed.c $(bricks) $(allobjs) $($(cconf)_extras)
-	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_objs) $($(cconf)_extras) -o $@ $<
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
+
+$(pconf)/$(cconf)/benchbed: $(pconf)/benchbed.c $($(pconf)_bricks) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_extras)
+	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<
