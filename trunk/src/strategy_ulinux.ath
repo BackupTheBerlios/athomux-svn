@@ -124,6 +124,8 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
    *                                         +----------------------------+
    ***************************************************************************/
   
+  printf("1\n");
+
   struct conn_info file_conn = { .conn_addr = @#.fs_addr, .conn_name = "", .conn_index = -1 };
   @=call :<fs$findconn (&file_conn, 0) : name => (@success);
   if (!@success) {
@@ -142,7 +144,7 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   for (userfs_id = 0; userfs_id < ULINUX_MAX_PROCESSES; userfs_id ++)
     if (!@#.userfs_data->image[userfs_id])
       break;
-  
+
   if (userfs_id == ULINUX_MAX_PROCESSES) 
     @.rawtrace(strategy, "=== could not create process [%s]: userfs table full\n", name);
   @#.userfs_data->image[userfs_id] = 1; // FIXME
@@ -164,6 +166,8 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   if (!@success) goto error;
   */
   //@.rawtrace(strategy, "device_dummy_linux instantiated\n");
+
+  printf("2\n");
 
   addr_t cow;
   inst_brick("copy_on_write", "") => (cow);
@@ -228,6 +232,8 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   struct conn_info posix_state = { .conn_addr = task->posix, .conn_name = "state" };
   struct conn_info posix_lock = { .conn_addr = task->posix, .conn_name = "lock" };
 
+  printf("3\n");
+
   struct conn_info stdin_fd = { .conn_addr = task->fd[0].addr, .conn_name = "fd" };
   struct conn_info stdout_fd = { .conn_addr = task->fd[1].addr, .conn_name = "fd" };
   struct conn_info stderr_fd = { .conn_addr = task->fd[2].addr, .conn_name = "fd" };
@@ -262,6 +268,8 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   @=call :<strat$instconn (&mmu_img_out) => (@success);
   if (!@success) goto error;
 
+  printf("4\n");
+
   addr_t a;
   process_struct *p = PC_ALLOC(mem, sizeof(process_struct)) => (a);
   memset(p, 0, sizeof(process_struct));
@@ -281,6 +289,8 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
   if (!@success) goto error;
   @=call :<strat$connect (&mmu_lock, &lock) => (@success);
   if (!@success) goto error;
+
+  printf("5\n");
 
   plen_t phys_len;
   elf_header header;
@@ -309,6 +319,9 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
     snprintf(a, 256, argv[index]);
     task->argv[index] = log_addr;
   }
+
+  printf("6\n");
+
   task->argv[argc] = 0;
   @=call :<strat$connect (&posix_state, &mem_out) => (@success);
   if (!@success) goto error;
@@ -339,8 +352,11 @@ define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
 
   @=call :<strat$instconn (&posix_dummy) : state_addr => (@success);
   if (!@success) goto error;
+  printf("8\n");
   @=call :<strat$instconn (&mmu_dummy) : state_addr => (@success);
   if (!@success) goto error;
+  printf("9\n");
+
 
   return;
 

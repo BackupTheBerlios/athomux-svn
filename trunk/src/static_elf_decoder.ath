@@ -133,7 +133,6 @@ output :>dummy
   for (num = 1; num <= pnum; num++) {
     phdr = (Elf32_Phdr *) (buf + offset);
     offset += psize;
-		
     unsigned flags = 0;
     if (phdr->p_flags & PF_R) flags |= PROT_READ;
     if (phdr->p_flags & PF_W) flags |= PROT_WRITE;
@@ -195,7 +194,6 @@ output :>dummy
 
 @.func load_elf() {
 
-
   Elf32_Ehdr *elf;
   plen_t phys_len;
   paddr_t phys_addr;
@@ -226,6 +224,7 @@ output :>dummy
 
 operation $output_init
 {
+  @=call ##mem:>out$output_init @args;
   load_elf();
   @success = TRUE;
 }

@@ -47,11 +47,16 @@ output :>dummy
 
 operation $output_init
 {
+  @=call :>stat$output_init @args;
+  printf("posix: 1\n");
   @=call ##file:>dummy$output_init @args : @param;
   /* the lock is used to synchronize syscall_ulinux with mmu_ulinux.
    * mmu_ulinux has to wait for the syscall thread to create the
    * syscall pipes before creating the new athomux user process */
+  printf("posix: 2\n");
   @=call :<lock(:0:)$lock [0] ((paddr_t) @param, 1) => (@success);
+  printf("posix: 3\n");
   @=call ##thread:>cpu$output_init @args : @param;
+  printf("posix: 4\n");
   @success = TRUE;
 }

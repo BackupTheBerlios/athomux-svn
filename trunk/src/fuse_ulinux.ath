@@ -5,12 +5,13 @@
 context pconf: ulinux
 
 brick #fuse_ulinux
-purpose implementation of the FUSE interface to provide a user space filesystem that contains Athomux "nest"s as files.
+purpose implementation of the FUSE interface to provide a user space filesystem that contains Athomux nests as files.
 desc
-    The address space of a uLinux process (which is an Athomux "nest") is represented as
-    a pseudo file in the Linux filesystem. These files can be mmap()ed into a Linux 
-    process. read() and write() on the mmap()ed files is redirected through the 
-    userspace filesystem to call $trans on an Athomux "nest".
+    The address space of a uLinux process (which is an Athomux "nest") is 
+    represented as a pseudo file in the Linux filesystem. These files can be 
+    mmap()ed into a Linux process. read() and write() on the mmap()ed files is 
+    redirected through the userspace filesystem to call $trans on an Athomux 
+    nest.
 enddesc
 
 static_header { 
@@ -20,7 +21,7 @@ static_header {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "fuse.h"
+#include "../env/ulinux/fuse/fuse.h"
 #include "types.h"
 }
 

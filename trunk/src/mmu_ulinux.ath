@@ -48,14 +48,19 @@ output :>dummy
 // fork a process, mmap the image into the address space, goto start
 operation $output_init
 {
+  printf("mmu: 1\n");
   //printf("mmu_ulinux aram %x\n", @param);
   @#.task = PC_GET(task, atoi(@param), sizeof(task_struct));
 
   @.rawtrace(strategy, "mmu_ulinux: exec [%s], userfs: %d, entry: [%08ld]\n", @#.task->name, @#.task->userfs_index, @#.task->entry);
 
+  printf("mmu: 2\n");
+
   // wait for syscall_ulinux to create the syscall pipes
   @=call :<lock(:0:)$lock [1] (@#.task->lock, 1) => (@success);
   @=call :<lock(:0:)$unlock [1] (@#.task->lock, 1) => (@success);
+
+  printf("mmu: 3\n");
 
   int id = fork();
   if (!id) {

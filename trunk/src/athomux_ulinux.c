@@ -25,30 +25,20 @@ extern FILE * _debug_syscall;
 
 int main(int argc, char * argv[])
 {
-
-  printf("1\n");
   ATHOMUX_ULINUX_BASE = getenv("ATHOMUX_ULINUX_BASE");
   if (! ATHOMUX_ULINUX_BASE) {
     printf("please set the environment variable ATHOMUX_ULINUX_BASE\n");
     exit(0);
   }
-
-  printf("2\n");
   snprintf(ATHOMUX_ULINUX_ROOT, 256, "%s/root", ATHOMUX_ULINUX_BASE);
-  printf("2.1\n");
   snprintf(ATHOMUX_ULINUX_USERFS, 256, "%s/fs", ATHOMUX_ULINUX_BASE);
-  printf("2.2\n");
   snprintf(ATHOMUX_ULINUX_SYSCALLS, 256, "%s/syscalls", ATHOMUX_ULINUX_BASE);
-  printf("2.3\n");
   snprintf(ATHOMUX_ULINUX_LOG, 256, "%s/log", ATHOMUX_ULINUX_BASE);
 
-  printf("3\n");
-
-  mkdir(ATHOMUX_ULINUX_USERFS, 0777);
+   mkdir(ATHOMUX_ULINUX_USERFS, 0777);
   mkdir(ATHOMUX_ULINUX_SYSCALLS, 0777);
   mkdir(ATHOMUX_ULINUX_LOG, 0777);
 
-  printf("4\n");
   snprintf(FUSE_LOG, 512, "%s/fuse.log", ATHOMUX_ULINUX_LOG);
   snprintf(SYSCALL_LOG, 512, "%s/syscall.log", ATHOMUX_ULINUX_LOG);
   snprintf(ATHOMUX_LOG, 512, "%s/athomux.log", ATHOMUX_ULINUX_LOG);

@@ -717,7 +717,10 @@ define TYPE write_t from syscall_t "unsigned int fd, addr_t buf, size_t count";
 
 operation $output_init
 {
+  printf("syscall: 0\n");
   @#.task = PC_GET(state, atoi(@param), sizeof(task_struct));
+
+  printf("syscall: 1\n");
 
   @.rawtrace(syscall, "syscall_ulinux pid: %d\n", @#.task->pid);
   unsigned int cal[2];
@@ -729,6 +732,8 @@ operation $output_init
   s.sa_flags = 0;
   sigaction(SIGPIPE, &s, 0);
 
+  printf("syscall: 2\n");
+
   while (!@#.done) {
 
     char path[256];		
@@ -739,16 +744,24 @@ operation $output_init
     sprintf(ret, "%s/%012d/athomux_return", ATHOMUX_ULINUX_SYSCALLS, @#.task->userfs_index);
     //@.rawtrace(syscall, "syscall_ulinux syscall: [%s]\n", sys);
     
+    printf("syscall: 3\n");
+
     mkdir(path, 0777);
     mkfifo(sys, 0644);
     mkfifo(ret, 0644);
 
+    printf("syscall: 4\n");
+
     // synchronize syscall thread with mmu_ulinux thread
     @=call :<lock(:0:)$unlock [0] (@#.task->lock, 1) => (@success);
+
+    printf("syscall: 5\n");
 
     @#.syscall_pipe = open(sys, O_RDONLY);
     @#.return_pipe = open(ret, O_WRONLY);
 			
+    printf("syscall: 6\n");
+
     for (;;) {
 
       memset(arg, 0, 5 * sizeof(unsigned int));
