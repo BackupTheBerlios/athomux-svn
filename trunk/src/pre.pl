@@ -1927,8 +1927,16 @@ sub parse_all {
   } else {
     warn "please start your file with Author: Copyright: and License: clauses";
   }
-  while($text =~ m/\A${ws}context.*\n/) {
-    $text = $POSTMATCH;
+  for(;;) {
+    if($text =~ m/\A${ws}(?:context|defaultbuild).*\n/) {
+      $text = $POSTMATCH;
+      next;
+    }
+    if($text =~ m/\A${ws}buildrules.*^\s*endrules/m) {
+      $text = $POSTMATCH;
+      next;
+    }
+    last;
   }
   for(;;) {
     if($text =~ m/\A${ws}(strategy)/m) {

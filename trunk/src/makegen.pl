@@ -10,6 +10,14 @@ use English;
 use integer;
 use Digest::MD5 qw(md5),qw(md5_hex);
 
+# general regex matching constants
+
+my $cppmatch = qr'(?:^#(?:[^\\\n]|\\.|\\\n)*\n)'m;
+my $commentmatch = qr'(?://[^\n]*\n|/\*(?:[^*]|\*[^/])*\*/)'m;
+my $ws = qr"(?:\s|$commentmatch|^$cppmatch)*"m;
+my $singlestringmatch = qr'(?:\"(?:[^"\\]|\\.)*\"|\'(?:[^"\\]|\\.)\')';
+my $stringmatch = qr"(?:$singlestringmatch(?:$ws$singlestringmatch)*)"m;
+
 # create additional Makefile rules out of the existing sources
 # also, create defs.h and loaders.h automatically
 
@@ -19,7 +27,7 @@ my %contexts = ();
 
 sub build_contexts {
   foreach my $source (@_) {
-    $contexts{$source} = `grep -e '^#\\? *context' $source`;
+    $contexts{$source} = `grep -e '^#\\? *\\(context\\|defaultbuild\\)' $source`;
   }
 }
 
@@ -40,18 +48,23 @@ sub check_context {
     return $nr_negative;
   }
   my ($src, $type, $forwhat) = @_;
+  my $do_build = $type =~ s/^#//; # when prefixed by #, consider 'defaultbuild'
   my $context = $contexts{$src};
   die "internal error: source '$src' not indexed" unless defined($context);
   my $try = $context;
-  while($try =~ m/^#?\s*context\s+uname\s+(-\w+)\s+(.+)\n/m) {
+  while($try =~ m/^#?\s*(context|defaultbuild)\s+cmd\s*($singlestringmatch)\s*:\s*(.*)\n/m) {
     $try = $POSTMATCH;
-    my $list = $2;
-    my $name = `uname $1`;
+    next if (not $do_build and $1 eq "defaultbuild");
+    my $list = $3;
+    my $cmd = $2;
+    $cmd =~ s/^"//; $cmd =~ s/"$//;
+    my $name = `$cmd` or warn "file '$src': context cmd '$cmd' returned exit status $?";
     chomp $name;
     return 0 unless process_list($list, $name);
   }
-  if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
-    return process_list($1, $forwhat);
+  if($context =~ m/^#?\s*(?:context|defaultbuild)\s+$type(\s*:)?\s+(.+)\n/m) {
+    warn "file '$src': please insert a ':' into the context statement" unless defined($1);
+    return process_list($2, $forwhat);
   }
   return 1;
 }
@@ -92,10 +105,14 @@ build_contexts(@target_files);
 my @targets = @target_files;
 map { s/target\.// } @targets;
 my %target_pcconf = ();
+my %buildtarget_pcconf = ();
 foreach my $pconf (@pconfs) {
   foreach my $cconf (@{$cconf_pconf{$pconf}}) {
     my $tmplist = filter_all("target.", "pconf", $pconf, \@targets);
     $target_pcconf{"$pconf.$cconf"} = filter_all("target.", "cconf", $cconf, $tmplist);
+    # same, but consider the 'defaultbuild' statement in addition to 'context'
+    $tmplist = filter_all("target.", "#pconf", $pconf, \@targets);
+    $buildtarget_pcconf{"$pconf.$cconf"} = filter_all("target.", "#cconf", $cconf, $tmplist);
   }
 }
 
@@ -132,12 +149,9 @@ print DEFS "$cconfs\n";
 
 #################
 
-sub add_file {
+sub process_makerules {
   my $fname = shift;
-  open IN, "< $fname" or die "cannot open file '$fname'";
-  local $/;
-  my $text = <IN>;
-  close IN;
+  my $text = shift;
   my $done = "";
   while($text =~ m/^-?include\s+([^\s]+)\s*\n/m) {
     my $subname = $1;
@@ -154,6 +168,35 @@ sub add_file {
     $text =~ s/$search/$subst/gm;
   }
   return "\n\n#start file $fname substitution $sub\n\n$text\n#end $fname\n\n";
+}
+
+sub add_file {
+  my $fname = shift;
+  open IN, "< $fname" or die "cannot open file '$fname'";
+  local $/;
+  my $text = <IN>;
+  close IN;
+  return process_makerules($fname, $text, @_);
+}
+
+sub add_source {
+  my $fname = shift;
+  my $res = "";
+  open IN, "< $fname" or die "cannot open file '$fname'";
+  while(my $text = <IN>) {
+    if($text =~ s/^\s*buildrules\s*//) {
+      for(;;) {
+	my $line = <IN>;
+	last if $line =~ m/^\s*endrules/;
+	$text .= $line;
+      }
+      $res = process_makerules($fname, $text, @_);
+      last;
+    }
+    last if $text =~ m/brick\s+#/;
+  }
+  close IN;
+  return $res;
 }
 
 #################
@@ -209,7 +252,8 @@ foreach my $pconf (@pconfs) {
     $text .= "$text3\n\n";
     close H;
     close LOADERS;
-    foreach my $target (@{$target_pcconf{"$pconf.$cconf"}}) {
+    next unless check_context("cconf.$cconf", "#pconf", $pconf);
+    foreach my $target (@{$buildtarget_pcconf{"$pconf.$cconf"}}) {
       $all_targets .= "${pconf}/${cconf}/$target ";
     }
   }

@@ -2,7 +2,7 @@
   Copyright: University of Stuttgart, Jens-Christian Korth
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf klinux
+context pconf: klinux
 
 brick #thread_klinux
 purpose A dummy thread_* for kernelspace using kernelthreads and dummy CPU

@@ -10,7 +10,7 @@
 #define foo xxx \
   continued, treat me as whitespace
 
-context cconf !debug
+context cconf: !debug
 
 brick #test
 

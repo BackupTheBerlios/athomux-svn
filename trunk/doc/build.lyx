@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.02, 23 Nov 2004
+Version 0.03, 24 Nov 2004
 \layout Standard
 
 
@@ -495,12 +495,12 @@ In a
 \noindent 
 
 \family typewriter 
-context pconf mypconfname1, mypconfname2, mypconfname3
+context pconf: mypconfname1, mypconfname2, mypconfname3
 \layout Standard
 \noindent 
 
 \family typewriter 
-context cconf mycconfname1, mycconfname2, mycconfname3
+context cconf: mycconfname1, mycconfname2, mycconfname3
 \layout Standard
 
 (see also the Athomux Preprocessor Guide).
@@ -555,7 +555,7 @@ cconf.*
 \noindent 
 
 \family typewriter 
-# context pconf 
+# context pconf: 
 \family default 
 \emph on 
 namelist...
@@ -574,11 +574,12 @@ Filtering at config-file level yields a kind of global restriction, valid
  for all bricks.
 \layout Subsubsection
 
-Build Platform Filters
+Generic Shell Filters
 \layout Standard
 
-Usually foreign architectures cannot be built on many architectures (exept
- you have cross-compilers etc).
+Some build problems depend on the machine where the build process is executed.
+ For example, foreign architectures cannot be built on many architectures
+ (exept you have cross-compilers etc).
  In order to limit the build configuration to the current capabilities of
  your system, the following context rules can also be used at any 
 \family typewriter 
@@ -601,29 +602,84 @@ target.*
 \noindent 
 
 \family typewriter 
-# context uname -
+# context cmd "
 \family default 
 \emph on 
-optionname
+shell-commands
+\family typewriter 
 \emph default 
+":
+\family default 
  
 \emph on 
 list
 \layout Standard
 
-As you will expect, it calls the command 
-\family typewriter 
-uname
-\family default 
- with option -
-\emph on 
-optionname
-\emph default 
- and checks whether the actual result matches the 
+As you will expect, it calls the shell commands in Perl backquotes and checks
+ whether the output of the command (after stripping the trailing newline)
+ matches the 
 \emph on 
 list
 \emph default 
  (positively or negatively as explained above).
+\layout Standard
+
+As an example, you may check for a particular processor type by 
+\family typewriter 
+#context cmd "uname -t": i386
+\backslash 
+n
+\family default 
+.
+\layout Subsubsection
+
+Filtering the Default Build Targets
+\layout Standard
+
+By using the keyword 
+\family typewriter 
+defaultbuild
+\family default 
+ in place of the keyword 
+\family typewriter 
+context
+\family default 
+ in any of the above cases, you can specify that the corresponding filter
+ rule will only affect the 
+\emph on 
+default
+\emph default 
+ target 
+\emph on 
+list
+\emph default 
+ when you just type 
+\family typewriter 
+make
+\family default 
+ without parameters.
+ For creation of all other parts of 
+\family typewriter 
+defs.make
+\family default 
+, the 
+\family typewriter 
+defaultbuild
+\family default 
+ statement has no effect.
+ 
+\layout Standard
+
+This means, you can specify anything filtered out by 
+\family typewriter 
+defaultbuild
+\family default 
+ as an explicit target as long as you did not filter it out by the normal
+ 
+\family typewriter 
+context
+\family default 
+ filters.
 \layout Subsubsection
 
 Regular Expressions for Filtering

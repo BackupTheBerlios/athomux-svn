@@ -1,5 +1,5 @@
-#context pconf klinux
-#context uname -i x86_64
+#context pconf: klinux
+#defaultbuild cmd "uname -i": x86_64
 
 include cconf-include.klinux
 

@@ -2,7 +2,7 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf !klinux
+context pconf: !klinux
 
 strategy brick #bench_fs
 purpose Benchmark the instantiation of pathnames via fs_simple

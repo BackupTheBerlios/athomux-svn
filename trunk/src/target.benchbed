@@ -1,4 +1,4 @@
-#context pconf !klinux
+#context pconf: !klinux
 
 $(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
 
