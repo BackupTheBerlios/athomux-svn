@@ -12,6 +12,22 @@
 
 context cconf: !debug
 
+buildrules global:
+# this is a comment
+endrules
+
+buildrules pconf:
+# this is a $(pconf)-comment
+endrules
+
+buildrules cconf:
+# this is a $(pconf)-$(cconf)-comment
+endrules
+
+buildrules target:
+# this is a $(pconf)-$(cconf)-$(target)-comment
+endrules
+
 brick #test
 
 purpose This is just a demo for the brick syntax

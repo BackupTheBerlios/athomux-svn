@@ -1932,7 +1932,7 @@ sub parse_all {
       $text = $POSTMATCH;
       next;
     }
-    if($text =~ m/\A${ws}buildrules.*^\s*endrules/m) {
+    if($text =~ m/\A${ws}buildrules(?:.*\n)*?\s*endrules/m) {
       $text = $POSTMATCH;
       next;
     }

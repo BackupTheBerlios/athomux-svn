@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.03, 24 Nov 2004
+Version 0.04, 24 Nov 2004
 \layout Standard
 
 
@@ -459,6 +459,175 @@ mytargetname
 \family default 
 \emph default 
 .
+\layout Subsubsection
+
+Buildrules Embedded in 
+\family typewriter 
+*.ath
+\layout Standard
+
+Further makefile rules can be added to 
+\family typewriter 
+defs.make
+\family default 
+ by statements of the following form in a 
+\family typewriter 
+*.ath
+\family default 
+ source file which must appear immediately 
+\emph on 
+before
+\emph default 
+ the 
+\family typewriter 
+brick
+\family default 
+ statement:
+\layout Standard
+\noindent 
+
+\family typewriter 
+buildrules 
+\family default 
+\emph on 
+kind
+\family typewriter 
+\emph default 
+:
+\family default 
+ 
+\emph on 
+makefile-rules-text
+\emph default 
+....
+\family typewriter 
+
+\backslash 
+n endrules
+\layout Standard
+
+where 
+\emph on 
+kind
+\emph default 
+ is one of the keywords 
+\family typewriter 
+global
+\family default 
+, 
+\family typewriter 
+pconf
+\family default 
+, 
+\family typewriter 
+cconf
+\family default 
+, or 
+\family typewriter 
+target
+\family default 
+.
+\layout Standard
+
+In a 
+\family typewriter 
+global
+\family default 
+ buildrule, no pseudo-macros are defined at all.
+ In a 
+\family typewriter 
+pconf
+\family default 
+ buildrule, only 
+\family typewriter 
+$(pconf)
+\family default 
+ can be used.
+ In a 
+\family typewriter 
+cconf
+\family default 
+ buildrule, both 
+\family typewriter 
+$(pconf)
+\family default 
+ and 
+\family typewriter 
+$(cconf)
+\family default 
+ can be used.
+ In a 
+\family typewriter 
+target
+\family default 
+ buildrule, all three pseudo-macros including 
+\family typewriter 
+$(target)
+\family default 
+ can be used.
+\layout Standard
+
+Notice that depending on the 
+\emph on 
+kind
+\emph default 
+, the number of copies of the 
+\emph on 
+makefile-rules-text
+\emph default 
+ may vary drastically.
+ For 
+\family typewriter 
+buildrules target:
+\family default 
+, the full cartesian product of all pconfs, cconfs and targets will be generated
+ and copied into 
+\family typewriter 
+defs.make
+\family default 
+.
+ Please make sure that no name clashes can occur due to multiple unparameterized
+ copies of the same 
+\emph on 
+makefile-rules-text.
+\layout Standard
+
+Please try to prefer the 
+\family typewriter 
+pconf.*
+\family default 
+, 
+\family typewriter 
+cconf.*
+\family default 
+ and 
+\family typewriter 
+target.*
+\family default 
+ files in preference of 
+\family typewriter 
+*.ath
+\family default 
+ buildrules.
+ Only when some specific bricks (e.g.
+ machine- or target-specific bricks) need additional makefile support, use
+ 
+\family typewriter 
+buildrules
+\family default 
+ statements.
+\layout Standard
+
+The most common usage for 
+\family typewriter 
+buildrules
+\family default 
+ is linking with external libraries, invocation of 
+\family typewriter 
+make
+\family default 
+ on foreign source trees (e.g.
+ foreign device drivers), and the like.
 \layout Subsection
 
 Filtering
@@ -670,7 +839,7 @@ defaultbuild
  
 \layout Standard
 
-This means, you can specify anything filtered out by 
+This means, you can explicitly specify anything filtered out by 
 \family typewriter 
 defaultbuild
 \family default 

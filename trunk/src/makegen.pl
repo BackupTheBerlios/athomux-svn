@@ -24,10 +24,29 @@ my $stringmatch = qr"(?:$singlestringmatch(?:$ws$singlestringmatch)*)"m;
 # single filter
 
 my %contexts = ();
+my %buildrules = ();
 
 sub build_contexts {
   foreach my $source (@_) {
-    $contexts{$source} = `grep -e '^#\\? *\\(context\\|defaultbuild\\)' $source`;
+    open IN, "< $source" or die "cannot open file '$source'";
+    local $/;
+    my $text = <IN>;
+    close IN;
+    $contexts{$source} = "";
+    for(;;) {
+      if($text =~ m/^#?\s*(?:context|defaultbuild).*\n/m) {
+	$contexts{$source} .= $MATCH;
+	$text = $POSTMATCH;
+	next;
+      }
+      if($text =~ m/^\s*buildrules\s+(\w+)\s*:((?:.|\n)*?)endrules/m) {
+	$buildrules{"$source:$1"} = $2;
+print"$source:$1: $2\n";
+	$text = $POSTMATCH;
+	next;
+      }
+      last;
+    }
   }
 }
 
@@ -179,24 +198,24 @@ sub add_file {
   return process_makerules($fname, $text, @_);
 }
 
-sub add_source {
-  my $fname = shift;
+sub add_sourcelist {
+  my $list = shift;
+  my $type = shift;
   my $res = "";
-  open IN, "< $fname" or die "cannot open file '$fname'";
-  while(my $text = <IN>) {
-    if($text =~ s/^\s*buildrules\s*//) {
-      for(;;) {
-	my $line = <IN>;
-	last if $line =~ m/^\s*endrules/;
-	$text .= $line;
-      }
-      $res = process_makerules($fname, $text, @_);
-      last;
+  foreach my $source (@$list) {
+    my $text = $buildrules{"$source:$type"};
+    if($text) {
+      $res .= process_makerules($source, $text, @_);
     }
-    last if $text =~ m/brick\s+#/;
   }
-  close IN;
   return $res;
+}
+
+sub add_both {
+  my $fname = shift;
+  my $list = shift;
+  my $type = shift;
+  return add_file($fname, @_) . add_sourcelist($list, $type, @_);
 }
 
 #################
@@ -267,14 +286,14 @@ print DEFS "\n$all_targets\n";
 
 print DEFS "\n$text\n";
 
-$text = "";
+$text = add_sourcelist(\@sources, "global");
 
 foreach my $pconf (@pconfs) {
-  $text .= add_file("pconf.$pconf", qr"\$[({]pconf[)}]", "$pconf");
+  $text .= add_both("pconf.$pconf", \@sources, "pconf", qr"\$[({]pconf[)}]", "$pconf");
   foreach my $cconf (@{$cconf_pconf{$pconf}}) {
-    $text .= add_file("cconf.$cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
+    $text .= add_both("cconf.$cconf", \@sources, "cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
     foreach my $target (@{$target_pcconf{"$pconf.$cconf"}}) {
-      $text .= add_file("target.$target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
+      $text .= add_both("target.$target", \@sources, "target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }
 }
