@@ -295,12 +295,31 @@ void create_conn(struct brick_header * brick, struct connector_header * conn, co
 
 void insert_conn(struct brick_header * brick, struct connector_header * conn)
 {
+#ifdef DEBUG
+  struct connector_header * tmp;
+  for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
+    if(tmp == conn) {
+       @.rawabort("connector '%s' is already inserted", conn->load_conn->name);
+    }
+  }
+#endif
   if(!brick->last) {
     brick->connectors = conn;
   } else {
     brick->last->conn_next = conn;
   }
   brick->last = conn;
+#ifdef DEBUG
+  int flag = 0;
+  for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
+    if(tmp == conn) {
+       flag++;
+    }
+  }
+  if(flag != 1) {
+    @.rawabort("connector '%s' occurred %d times", conn->load_conn->name, flag);
+  }
+#endif
 }
 
 mand_t create_brick(struct brick_header * brick, const struct loader * loader, const char * b_param, mand_t mand)
@@ -309,11 +328,11 @@ mand_t create_brick(struct brick_header * brick, const struct loader * loader, c
   brick->loader = loader;
 
   mand = loader->dynamic_init(GET_BRICK(brick), b_param, mand);
-  // init all inputs automatically (outputs must be explicitly initialized)
+  // init all external inputs automatically (outputs must be explicitly initialized)
   int i;
   for(i = 0; i < loader->conn_count; i++) {
     const struct load_conn * load_conn = &loader->conn[i];
-    if(!load_conn->type) { // only init inputs
+    if(!load_conn->type && load_conn->export) { // only init inputs
       index_t start_index = load_conn->start_index;
       int k;
       for(k = 0; k < load_conn->count; k++) {
@@ -328,19 +347,22 @@ mand_t create_brick(struct brick_header * brick, const struct loader * loader, c
 struct brick_header * new_brick(char * name, const char * b_param, mand_t * _mand)
 {
   struct brick_header * brick;
+  char * space;
   index_t index = find_loader(name);
   if(index < 0)
     return NULL;
   const struct loader * loader = loaders[index];
   
-  len_t pre_len = loader->conn_totalcount * sizeof(struct connector_header) + sizeof(struct brick_header);
-  len_t total_size = loader->instance_size + pre_len;
-  brick = malloc(total_size);
+  plen_t pre_len = loader->conn_totalcount * sizeof(struct connector_header) + sizeof(struct brick_header);
+  plen_t total_size = loader->instance_size + pre_len;
+  rawtrace("brick total_size=%ld\n", total_size);
+  space = malloc(total_size);
   rawtrace("malloc 1\n");
-  if(!brick)
+  if(!space)
     return NULL;
-  memset(brick, 0, total_size);
-  brick->instance = ((char*)brick) + pre_len;
+  memset(space, 0, total_size);
+  brick = (void*)space;
+  brick->instance = space + pre_len;
   brick->b_param = malloc(strlen(b_param)+1);
   rawtrace("malloc 2\n");
   if(!brick->b_param) {
