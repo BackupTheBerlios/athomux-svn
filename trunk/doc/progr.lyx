@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.30, 10 December 2004
+Version 0.31, 10 December 2004
 \layout Standard
 
 
@@ -2815,15 +2815,32 @@ $connect (struct conn_info * conn1, struct conn_info * conn2) => (success_t
  success)
 \layout Standard
 
-Create a new wire by connecting the own input 
+If the own input 
 \family typewriter 
 conn1
 \family default 
- to the output 
+ or the output 
 \family typewriter 
 conn2
 \family default 
- of another brick instance.
+ of another brick instance has not yet been initialized by 
+\family typewriter 
+$instconn
+\family default 
+, it will be done now (also called 
+\emph on 
+lazy
+\emph default 
+ initialization).
+ In any case, create a new wire by connecting the own input 
+\family typewriter 
+conn1
+\family default 
+ to the foreign output 
+\family typewriter 
+conn2
+\family default 
+.
 \layout Standard
 \noindent 
 
@@ -2836,6 +2853,15 @@ Disconnect the input
 conn1
 \family default 
  from its partner by deleting the wire leading to it.
+ Note: 
+\family typewriter 
+$deinstconn
+\family default 
+ is 
+\emph on 
+not
+\emph default 
+ performed on neither input or output.
 \layout Standard
 \noindent 
 

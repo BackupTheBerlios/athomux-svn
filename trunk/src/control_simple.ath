@@ -705,8 +705,7 @@ operation $instconn
     @.check(!conn, "%llx no more connectors can be allocated", conn1->conn_addr);
   } else {
     conn = get_conn(brick, conn_ix, conn1->conn_index);
-    @.check(!conn, "non-existing output '%s'", conn1->conn_name);
-    @.check(brick->loader->conn[conn_ix].type!=1, "bad connector type '%s'", conn1->conn_name);
+    @.check(!conn, "non-existing input / output '%s'", conn1->conn_name);
     if(conn->c_param != brick->b_param) {
 #if 0 // allow multiple inits during test phase
       if(conn->c_param) {
@@ -825,12 +824,24 @@ operation $connect
     @success = TRUE;
     return;
   }
+  struct input * my_in = GET_INPUT(conn);
+  if(my_in->ops == uninitialized_input) {
+    bool success;
+    @=call :>control$instconn (conn1) => (success);
+    @.check(!success, "lazy input instantiation failed");
+  }
   other_brick = find_brick_hash(@#.brick_hash, conn2->conn_addr);
   @.check(!other_brick, "other brick %llx does not exist", conn2->conn_addr);
   other_conn = find_conn(other_brick, conn2->conn_name, conn2->conn_index);
   @.check(!other_conn, "output name '%s' index %d in brick %llx does not exist", conn2->conn_name, conn2->conn_index, conn2->conn_addr);
   @.check(!other_conn->load_conn, "output '%s' in brick %llx not instantiated", conn2->conn_name, conn2->conn_addr);
   @.check(other_conn->load_conn->type!=1, "only outputs can be connected to");
+  struct output * other_out = GET_OUTPUT(other_conn);
+  if(other_out->ops == uninitialized_output) {
+    bool success;
+    @=call :>control$instconn (conn2) => (success);
+    @.check(!success, "lazy output instantiation failed");
+  }
   @.check(!other_conn->c_param, "brick '%s' output '%s' is not instantiated", other_brick->loader->name, conn2->conn_name);
   if(!type_connect(other_conn, conn) || !inner_connect(other_conn, conn) || !outer_connect(&other_conn->link, &conn->link)) {
     @.abort("connection failed, internal inconsistency");
