@@ -76,10 +76,19 @@ sub build_exceptions {
     my $text = <IN>;
     close IN;
     for(;;) {
-      if($text =~ m/^#?\s*(context)\s+(pconf|cconf|target|ath)\s*:\s*(.*)\n/m) {
+      if($text =~ m/^#?\s*context\s+($singlestringmatch)?\s*(pconf|cconf|target|ath)\s*:\s*(.*)\n/m) {
 	$text = $POSTMATCH;
+	my $cmd = $1;
 	my $type = $2;
 	my $list = $3;
+	if($cmd) {
+	  $cmd =~ s/\A"//;
+	  $cmd =~ s/"\Z//;
+	  $cmd =~ s/\\"/"/g;
+	  my $code = system $cmd;
+	  #print"code($cmd): $code\n";
+	  next if $code;
+	}
 	$list =~ s/\s//g;
 	foreach my $pattern (split /,/, $list) {
 	  my $code = 0;
@@ -120,15 +129,18 @@ foreach my $pconf (@{$names{"pconf"}}) {
   system "mkdir -p $pconf && (cd $pconf && ln -sf ../*.h ../*.c .)"
     and die "cannot create subdirs / symlinks for $pconf";
   my $pconf_part = "pconf.$pconf";
+  next if check_exception($pconf_part, $pconf_part);
   foreach my $cconf (@{$names{"cconf"}}) {
     my $cconf_part = "cconf.$cconf";
     next if check_exception($pconf_part, $cconf_part);
+    next if check_exception($cconf_part, $cconf_part);
     system "mkdir -p $pconf/$cconf"
       and die "cannot create cconf subdir $pconf/$cconf";
     foreach my $target (@{$names{"target"}}) {
       my $target_part = "target.$target";
       next if check_exception($pconf_part, $target_part);
       next if check_exception($cconf_part, $target_part);
+      next if check_exception($target_part, $target_part);
       system "mkdir -p $pconf/$cconf/extra_$target"
 	and die "cannot create cconf subdir $pconf/$cconf/extra_$target";
     }
@@ -212,6 +224,7 @@ my $text = "";
 
 foreach my $pconf (@{$names{"pconf"}}) {
   my $pconf_part = "pconf.$pconf";
+  next if check_exception($pconf_part, $pconf_part);
   $text .= "\n# pconf $pconf\n";
   $all_bricks .= "\$(${pconf}_bricks) ";
   my $text1 .= "${pconf}_bricks=";
@@ -221,6 +234,7 @@ foreach my $pconf (@{$names{"pconf"}}) {
     $basename =~ s/\.ath\Z//;
     my $ath_part = "ath.$basename";
     next if check_exception($pconf_part, $ath_part);
+    next if check_exception($ath_part, $ath_part);
     my $name1 = $name;
     $name1 =~ s/\.ath/.c/;
     $text1 .= "$pconf/$name1 ";
@@ -233,10 +247,12 @@ foreach my $pconf (@{$names{"pconf"}}) {
   foreach my $cconf (@{$names{"cconf"}}) {
     my $cconf_part = "cconf.$cconf";
     next if check_exception($pconf_part, $cconf_part);
+    next if check_exception($cconf_part, $cconf_part);
     foreach my $target (@{$names{"target"}}) {
       my $target_part = "target.$target";
       next if check_exception($pconf_part, $target_part);
       next if check_exception($cconf_part, $target_part);
+      next if check_exception($target_part, $target_part);
       $all_targets .= "${pconf}/${cconf}/$target ";
       my $objs_text = "${pconf}_${cconf}_${target}_objs=";
       open H, ">$pconf/$cconf/extra_$target/defs.h" or die "cannot create defs.h";
@@ -248,6 +264,7 @@ foreach my $pconf (@{$names{"pconf"}}) {
 	next if check_exception($pconf_part, $ath_part);
 	next if check_exception($cconf_part, $ath_part);
 	next if check_exception($target_part, $ath_part);
+	next if check_exception($ath_part, $ath_part);
 	# this test is provisionary!
 	if($basename =~ m/\Acontrol/) {
 	  $objs_text .= "${pconf}/${cconf}/extra_${target}/$basename.o ";
@@ -280,15 +297,18 @@ $text = add_sourcelist($filenames{"ath"}, "global");
 
 foreach my $pconf (@{$names{"pconf"}}) {
   my $pconf_part = "pconf.$pconf";
+  next if check_exception($pconf_part, $pconf_part);
   $text .= add_both("pconf.$pconf", $filenames{"ath"}, "pconf", qr"\$[({]pconf[)}]", "$pconf");
   foreach my $cconf (@{$names{"cconf"}}) {
     my $cconf_part = "cconf.$cconf";
     next if check_exception($pconf_part, $cconf_part);
+    next if check_exception($cconf_part, $cconf_part);
     $text .= add_both("cconf.$cconf", $filenames{"ath"}, "cconf", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf");
     foreach my $target (@{$names{"target"}}) {
       my $target_part = "target.$target";
       next if check_exception($pconf_part, $target_part);
       next if check_exception($cconf_part, $target_part);
+      next if check_exception($target_part, $target_part);
       $text .= add_both("target.$target", $filenames{"ath"}, "target", qr"\$[({]pconf[)}]", "$pconf", qr"\$[({]cconf[)}]", "$cconf", qr"\$[({]target[)}]", "$target");
     }
   }

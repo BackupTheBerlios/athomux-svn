@@ -32,7 +32,7 @@ The Build System of Athomux
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.07, 14 Dec 2004
+Version 0.08, 15 Dec 2004
 \layout Standard
 
 
@@ -818,6 +818,50 @@ in sequence
 , such that later regexes will override the effects of earlier regexes.
 \layout Standard
 
+Note: normally, in 
+\family typewriter 
+pconf.
+\family default 
+\emph on 
+myname
+\emph default 
+, you can filter any possible combination with 
+\family typewriter 
+cconf.*
+\family default 
+, 
+\family typewriter 
+target.*
+\family default 
+ and 
+\family typewriter 
+*.ath
+\family default 
+.
+ Filtering against any other 
+\family typewriter 
+pconf.*
+\family default 
+ is senseless, but filtering against 
+\family typewriter 
+pconf.
+\family default 
+\emph on 
+myname
+\emph default 
+ (
+\begin_inset Quotes eld
+\end_inset 
+
+yourself
+\begin_inset Quotes erd
+\end_inset 
+
+) is possible.
+ The latter case is however only useful for filtering with generic shell
+ conditions.
+\layout Standard
+
 HINT: if you want to exclude everything except a specific configuration,
  you can write a rule like 
 \family typewriter 
@@ -869,63 +913,46 @@ target.*
  one.
 \layout Subsubsection
 
-Generic Shell Filters
+Generic Shell Conditions
 \layout Standard
 
 Some build problems depend on the machine where the build process is executed.
  For example, foreign architectures cannot be built on many architectures
  (exept you have cross-compilers etc).
  In order to limit the build configuration to the current capabilities of
- your system, the following context rules can also be used at any 
-\family typewriter 
-pconf.*
-\family default 
-, 
-\family typewriter 
-cconf.*
-\family default 
-, 
-\family typewriter 
-target.*
-\family default 
- and 
-\family typewriter 
-*.ath
-\family default 
-:
+ your system, any context rule can be made 
+\emph on 
+conditional
+\emph default 
+ in the following way:
 \layout Standard
 \noindent 
 
 \family typewriter 
-# context cmd "
+# context "
 \family default 
 \emph on 
 shell-commands
 \family typewriter 
 \emph default 
-":
+" pconf:
 \family default 
  
 \emph on 
-list
+regex-list
 \layout Standard
 
-As you will expect, it calls the shell commands in Perl backquotes and checks
- whether the output of the command (after stripping the trailing newline)
- matches the 
-\emph on 
-list
-\emph default 
- (positively or negatively as explained above).
+As you will expect, it calls the shell commands via Perl 
+\family typewriter 
+system()
+\family default 
+ and checks whether the return code is 0 (success).
+ Upon failure, the context rule is not interpreted as a whole.
 \layout Standard
 
 As an example, you may check for a particular processor type by 
 \family typewriter 
-#context cmd "uname -t": i386
-\backslash 
-n
-\family default 
-.
+#context "test `uname -p` != i386" pconf: !.*i386.*
 \layout Subsection
 
 Sub-Configurations

@@ -1,4 +1,5 @@
 #context pconf: !.*, ulinux
+#context "test ! -f /usr/local/lib/libfuse.a && echo 'cannot build userspace fs: /usr/local/lib/libfuse.a does not exist'" target: !athomux-ulinux
 
 include target-include.ulinux
 
