@@ -10,6 +10,8 @@
 #define foo xxx \
   continued, treat me as whitespace
 
+context cconf !debug
+
 brick #test
 
 purpose This is just a demo for the brick syntax

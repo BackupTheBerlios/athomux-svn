@@ -15,8 +15,9 @@ use Digest::MD5 qw(md5),qw(md5_hex);
 
 # first, get all the relevant file names
 
-my @targets = `ls target.* | grep -v "~"`;
-map chomp, @targets;
+my @targetfiles = `ls target.* | grep -v "~"`;
+map chomp, @targetfiles;
+my @targets = @targetfiles;
 map { s/target\.// } @targets;
 
 my @pconfs = `ls pconf.* | grep -v "~"`;
@@ -30,25 +31,39 @@ map { s/cconf\.// } @cconfs;
 my @sources = `ls *.ath | grep -v common`;
 map chomp, @sources;
 
-# compute derived names
+# compute contexts of bricks
 
-my @ctargets = @sources;
-map {s/\.ath/\.c /} @ctargets;
+my %contexts = ();
 
-my @otargets = @sources;
-map {s/\.ath/\.o /} @otargets;
+foreach my $source (@sources, @targetfiles) {
+  $contexts{$source} = `grep -e '^#*context' $source`;
+}
 
-my @htargets = @sources;
-map {s/\.ath/\.h /} @htargets;
+sub check_context {
+  my ($src, $type, $forwhat) = @_;
+  my $context = $contexts{$src} or return 1;
+  if($context =~ m/^#?context\s+$type\s*(.+)\n/m) {
+    my $found = $1;
+    my @list = split /\s+/, $found;
+    my $nr_negative = 0;
+    foreach my $elem (@list) {
+      my $res = not ($elem =~ s/^!//);
+      $nr_negative++ unless $res;
+      if($forwhat =~ m/^$elem$/) {
+	return $res;
+      }
+    }
+    return $nr_negative;
+  }
+  return 1;
+}
 
 # create subdirs
 
 foreach my $pconf (@pconfs) {
   system "mkdir -p $pconf";
-  system "ln -sf ../defs.h $pconf/";
   system "ln -sf ../common.h $pconf/";
   system "ln -sf ../strat.h $pconf/";
-  system "ln -sf ../loaders.h $pconf/";
   system "ln -sf ../lib.c $pconf/";
   system "ln -sf ../strat.c $pconf/";
   foreach my $target (@targets) {
@@ -62,20 +77,6 @@ foreach my $pconf (@pconfs) {
 # create files
 
 open DEFS, ">defs.make" or die "cannot create defs.make";
-open H, ">defs.h" or die "cannot create defs.h";
-open LOADERS, ">loaders.h" or die "cannot create loaders.h";
-
-foreach my $src (@sources) {
-  my $body = $src;
-  $body =~ s/\.ath//;
-  print H "#include \"$body.h\"\n";
-  print LOADERS "  \&loader_$body,\n";
-  my @dep = `grep '^instance' $src`;
-  if(@dep) {
-    map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
-    print DEFS "$body.c $body.h : ", @dep, "\n";
-  }
-}
 
 my $pconfs = "pconf_list=";
 foreach my $pconf (@pconfs) {
@@ -119,27 +120,50 @@ my $text = "";
 foreach my $pconf (@pconfs) {
   $text .= "\n# pconf $pconf\n";
   $all_bricks .= "\$(${pconf}_bricks) ";
-  $text .= "${pconf}_bricks=";
-  foreach my $name (@ctargets) {
-    $text .= "$pconf/$name ";
-  }
-  $text .= "\n\n";
   $all_headers .= "\$(${pconf}_headers) ";
-  $text .= "${pconf}_headers=";
-  foreach my $name (@htargets) {
-    $text .= "$pconf/$name ";
-  }
-  $text .= "\n\n";
   $all_objs .= "\$(${pconf}_objs) ";
+  my $text1 .= "${pconf}_bricks=";
+  my $text2 .= "${pconf}_headers=";
+  my @pconf_sources = ();
+  foreach my $name (@sources) {
+    next unless check_context($name, "pconf", $pconf);
+    push @pconf_sources, $name;
+    my $name1 = $name;
+    $name1 =~ s/\.ath/.c/;
+    $text1 .= "$pconf/$name1 ";
+    my $name2 = $name;
+    $name2 =~ s/\.ath/.h/;
+    $text2 .= "$pconf/$name2 ";
+  }
+  $text .= "$text1\n\n";
+  $text .= "$text2\n\n";
   my $all_cconf_objs = "${pconf}_objs=";
   foreach my $cconf (@cconfs) {
     $all_cconf_objs .= "\$(${pconf}_${cconf}_objs) ";
-    $text .= "${pconf}_${cconf}_objs=";
-    foreach my $name (@otargets) {
-      $text .= "$pconf/$cconf/$name ";
+    my $text3 = "${pconf}_${cconf}_objs=";
+    foreach my $name (@pconf_sources) {
+      next unless check_context($name, "cconf", $cconf);
+      my $name3 = $name;
+      $name3 =~ s/\.ath/.o/;
+      $text3 .= "$pconf/$cconf/$name3 ";
+      open H, ">$pconf/$cconf/defs.h" or die "cannot create defs.h";
+      open LOADERS, ">$pconf/$cconf/loaders.h" or die "cannot create loaders.h";
+      my $body = $name;
+      $body =~ s/\.ath//;
+      print H "#include \"../$body.h\"\n";
+      print LOADERS "  \&loader_$body,\n";
+      my @dep = `grep '^instance' $name`;
+      if(@dep) {
+	map {s/^\s*instance\s*#(\w+).*\n/$1.ath /g} @dep;
+	$text .= "$pconf/$body.c $pconf/$body.h : @dep \n";
+      }
+      close H;
+      close LOADERS;
     }
-    $text .= "\n";
+    $text .= "$text3\n\n";
     foreach my $target (@targets) {
+      next unless check_context("target.$target", "pconf", $pconf);
+      next unless check_context("target.$target", "cconf", $cconf);
       $all_targets .= "${pconf}/${cconf}/$target ";
     }
   }
@@ -171,5 +195,3 @@ print DEFS "\n$text\n";
 print DEFS "all_targets : \$(target_list)\n";
 
 close DEFS;
-close H;
-close LOADERS;

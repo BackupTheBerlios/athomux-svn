@@ -17,7 +17,7 @@ CC=$(TIME)  gcc
 
 all : all_targets
 
-defs.make defs.h loaders.h: Makefile makegen.pl
+defs.make: Makefile makegen.pl
 	./makegen.pl
 
 allobjs=$(objs) strat.o
@@ -27,9 +27,9 @@ allobjs=$(objs) strat.o
 common.c : common.ath
 	# no real dependency
 
-%/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h defs.h loaders.h
+%/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h %/*/defs.h %/*/loaders.h
 
 clean:
-	rm -f defs.make defs.h loaders.h strat.o testfile* *~ core* gmon.out *.pre
+	rm -f defs.make testfile* *~ core* gmon.out
 	rm -rf $(pconf_list)
 

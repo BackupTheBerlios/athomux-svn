@@ -1,3 +1,4 @@
+#context cconf !no_such_version
 $(cconf)_extras=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
 
 $(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $(bricks) $(allobjs) $($(cconf)_extras)
