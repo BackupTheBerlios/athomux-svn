@@ -1782,7 +1782,19 @@ sub parse_2 {
 	if($names eq "\$op") {
 	  $::current = sp_complete($names);
 	  make_ops($body);
+	  my $secspec = sp_shorten($::current, 3);
+	  my @trylist = ();
+	  foreach my $ops_spec (keys %::ops_aliases) {
+	    next unless sp_shorten($ops_spec, 3) eq $secspec;
+	    my $tryname = sp_part($ops_spec, 4);
+	    push @trylist, $tryname;
+	  }
 	  foreach my $opname (keys %$opset) {
+	    my $allowed = 1;
+	    foreach my $tryname (@trylist) {
+	      $allowed = 0 if $opname =~ m/$tryname/;
+	    }
+	    next unless $allowed;
 	    my $target_spec = sp_complete("\$$opname");
 	    gen_ops_aliases($target_spec, $::current, 1, $opset);
 	  }
