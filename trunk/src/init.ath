@@ -37,9 +37,16 @@ bool athomux_init(const struct output * on, const bool constr, char *initbrick_n
 
 }
 
+data {
+  bool boot;
+}
+
 init {
-  init_static_control_simple();
-  ini->_conn_control._input_.connect = root_strategy;
+  if(!@#boot) { // never boot myself twice
+    @#boot = TRUE;
+    init_static_control_simple();
+    ini->_conn_control._input_.connect = root_strategy;
+  }
 }
 
 
