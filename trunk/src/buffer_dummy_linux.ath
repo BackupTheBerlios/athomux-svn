@@ -1,0 +1,148 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+// stateful dummy implementation
+brick #buffer_dummy_linux
+purpose Stateful buffer cache implementation
+desc
+  Uncomplete quick'n'dirty hack.
+  Should be revised to become pseudo-stateless.
+enddesc
+
+static_header {
+#define MAX_HASH 1024
+}
+
+static_data {
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+
+struct node {
+  addr_t log_addr;
+  len_t log_len;
+  paddr_t phys_addr;
+  int refcount;
+  int writecount;
+  version_t version;
+  struct node * hash_next;
+};
+
+extern inline 
+int hashfn(addr_t addr)
+{
+  return (addr>>12) & (MAX_HASH-1);
+}
+
+extern inline
+struct node * hash_add(struct node ** table, addr_t log_addr, len_t log_len, addr_t phys_addr)
+{
+  int index = hashfn(log_addr);
+  struct node * node = malloc(sizeof(struct node));
+  if(!node) {
+    rawtrace("cannot allocate node structure\n");
+    return NULL;
+  }
+  node->log_addr = log_addr;
+  node->log_len = log_len;
+  node->phys_addr = phys_addr;
+  node->refcount = 0;
+  node->writecount = 0;
+  node->version = vers_undef;
+  node->hash_next = table[index];
+  table[index] = node;
+  return node;
+}
+
+extern inline
+struct node * hash_find(struct node ** table, addr_t log_addr)
+{
+  int index = hashfn(log_addr);
+  struct node * node = table[index];
+  while(node && node->log_addr != log_addr) {
+    node = node->hash_next;
+  }
+  return node;
+}
+}
+
+data {
+  struct node * table[MAX_HASH];
+}
+
+input :<dev
+
+output :>out
+
+operation $get
+{
+  struct node * node = hash_find(@#table, @log_addr);
+  if(!node) {
+    void * buf = malloc(@log_len);
+    @.check(!buf, "cannot allocate buffer");
+    node = hash_add(@#table, @log_addr, @log_len, (addr_t)(unsigned long)buf);
+  }
+  node->refcount++;
+  if(@forwrite) {
+    node->writecount++;
+  }
+  @success = TRUE;
+  @phys_addr = node->phys_addr;
+  @phys_len = @log_len;
+  @version = node->version;
+}
+
+operation $put
+{
+  struct node * node = hash_find(@#table, @log_addr);
+  @.check(!node, "bad put(), log_addr %llx\n", @log_addr);
+  @.check(node->log_len != @log_len, "bad put() len pairing");
+  @.check(node->refcount <= 0, "bad put() refcount, log_addr %llx\n", @log_addr);
+  node->refcount--;
+  if(@prio) {
+    @.check (node->writecount <= 0, "bad put() writecount, log_addr %llx\n", @log_addr);
+    node->writecount--;
+    node->version = vers_old;
+  }
+  @success = TRUE;
+}
+
+operation $transfer
+{
+#ifdef DEBUG
+  struct node * node = hash_find(@#table, @log_addr);
+  @.check(!node, "bad transfer(), log_addr %llx\n", @log_addr);
+  @.check(node->phys_addr != @phys_addr, "bad transfer() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);
+#endif
+  @=call :<dev$transfer @args;
+}
+
+operation $wait
+{
+  struct node * node = hash_find(@#table, @log_addr);
+  @.check (!node, "bad wait(), addr %llx\n", @log_addr);
+#ifdef DEBUG
+  @.check(node->phys_addr != @phys_addr, "bad wait() phys_addr %lx!=%lx, log_addr %llx\n", @phys_addr, node->phys_addr, @log_addr);
+#endif
+  @=call :<dev$wait @args;
+  if(@success) {
+    node->version = vers_newest;
+  }
+}
+
+// static nest, these are dummy operations
+
+operation $create
+{
+  @success = TRUE;
+}
+
+operation $delete,$move
+{
+  @success = FALSE;
+}
+

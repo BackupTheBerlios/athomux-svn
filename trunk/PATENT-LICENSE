@@ -1,0 +1,110 @@
+Athomux Public Patent License version 1
+
+
+                             Preamble
+
+This patent license is intended to ensure compatibility of all my
+current and future patent rights with Athomux under the GPL and/or LGPL.
+
+In case of conflict with the GPL or LGPL, the obligations from the
+GPL resp. LGPL are intended to take precedence, such that the result
+of the conflict resolution remains as close as possible to the
+intentions of this license.
+
+               TERMS AND CONDITTIONS FOR USING MY PATENTS
+
+  0. Scope of this License
+This patent license refers to any current or future patent owned by
+Dr. Thomas Schoebel-Theuer, Europaplatz 4, D-70565 Stuttgart, Germany.
+
+The term GPL refers to the Gnu General Public License version 2 as
+published by the Free Software Foundation. The term LGPL refers to
+the Gnu Lesser General Public License version 2.1 as published by
+the Free Software Foundation. When future versions of these
+licenses appear, a new version of this document with modfied
+conditions may appear; conditions for GPL version 2 and LGPL
+version 2.1 will remain intact in such a case.
+
+This license applies to anyone creating Athomux bricks and to
+anyone copying, distributing or modifying such a work under the terms
+and conditions of the GPL or LGPL.
+
+Other uses of my patents, such as creating or distributing non-(L)GPL
+open source or closed source software (whether related to Athomux or not),
+are outside the scope of this license and may require a different
+patent license in general. For creation of non-Athomux GPL'ed software,
+chances are high to get a similar royalty-free public license from me.
+
+  1. Public royalty-free patent license for anything covered by the (L)GPL
+Anyone who copies, distributes or modifies software under the terms and
+conditions of the GPL or LGPL which also falls under section 0 of this
+document, is granted a royalty-free non-exclusive patent license to do
+anything which is required by the GPL or LGPL.
+
+  2. Public grant of license for actions not covered by the (L)GPL
+For actions inside the scope of this document, but outside the scope of the
+GPL or LGPL (such as executing binary code), or for actions not specifically
+regulated by the GPL or LGPL, a public royality-free non-exclusive patent
+license is granted to anyone who meets all of the following conditions:
+
+  a) you or somebody closely related to you must not sue me or any
+     licensee of any GPL'ed or LGPL'ed software for patent infringement
+     or for infringement of any other intellectual property right.
+     Doing so will immediately terminate all your rights covered by
+     this license and not covered by the GPL or LGPL.
+
+  b) as a licensee of any GPL'ed or LGPL'ed software, you must not violate
+     the terms and conditions of that software (even if not related to
+     Athomux). As soon as you correct all (inadverted) violations of the GPL
+     or LGPL, this condition will reinforce.
+     Exeption: when you receive software under dual or multiple licenses,
+     dropping the GPL or LGPL while faithfully respecting at least one of
+     the remaining licenses does not count as violation of the GPL or LGPL.
+
+Stuttgart, 28 October 2004,
+
+Dr. Thomas Schoebel-Theuer
+
+                 END OF TERMS AND CONDITIONS
+
+-----------------------------------------------------------------------
+
+Some explanations:
+
+For some basic technologies used in the Athomux project,
+I have submitted patent applications. Currently it is not yet clear
+whether and how far patents will be granted, when they will be granted,
+and for which countries they will hold.
+
+Patents are independent from copyright, thus even software released
+under (L)GPL can be independently restricted by patents, as far as patent
+restrictions don't conflict with the (L)GPL. In practice,
+a patent holder cannot restrict the mere distribution of _source_
+code (since mere _publication_ of patented principles is not protected
+by patents), but he may charge you a fee for _using_ (i.e. actually
+executing) it. For example, end users _could_ be charged for _execution_,
+since the GPL clearly states the following: "Activities other than copying,
+distribution and modification are not covered by this License;
+they are outside its scope."
+
+However, charging end users is not my intention.
+
+The patents are primarily intended to apply to COMMERCIAL usage by
+closed-source software. As long as you write new bricks, distribute,
+modify, compile, execute and sell (L)GPL'ed software based on that,
+you will never have to pay a charge for doing so. Starting a new
+brick implementation and putting it under (L)GPL does not even
+require an explicit permission from me; just include a reference to
+this file in the header of your brick. This means, Athomux
+as founded by me will always be free (both in terms of freedom and
+of royality-freeness) and will remain so.
+
+However, if you write and publish bricks under a non-(L)GPL license,
+or if you violate the (L)GPL, or if you start _another_ project
+(whether closed source, open source, even under GPL, or not) which
+uses technologies patented by me, you may have to obtain a patent
+license from me. In any such a case or if in doubt, please
+contact me. For GPL'ed usage by other projects, there are _very_
+high chances that I will grant a similar free public patent license.
+For non-GPL usage, chances are lower for getting a license
+free of charge.

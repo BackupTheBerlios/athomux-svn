@@ -1,0 +1,135 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+strategy brick #bench_fs
+purpose Benchmark the instantiation of pathnames via fs_simple
+desc
+  work in progress
+enddesc
+
+static_header {
+#define BUFSIZE 10
+typedef char path_t[128];
+}
+
+static_data {
+#include <stdlib.h>
+ // #define ALT
+#define FILE_BENCH
+#define LEVELS 10
+}
+
+data {
+  addr_t fs_logaddr;
+  int last;
+  path_t paths[BUFSIZE];
+  index_t ix[BUFSIZE];
+}
+
+input :<strat
+
+output :>dummy
+
+@.func random_path(int depth, bool new, bool timeit)
+{
+  char * path = @#paths[@#last % BUFSIZE];
+#ifdef ALT
+  if(chdir("/tmp")) exit(-1);
+#else
+  if(@#last >= BUFSIZE) {
+    struct conn_info conn = { .conn_addr = @#fs_logaddr, .conn_name = "out", .conn_index = @#ix[@#last%BUFSIZE], };
+    @=call :<strat$deinstconn (&conn) => (@success);
+    @.fatal(!@success, "bad de-inst");
+  }
+#endif
+  if(new) {
+    char * pos = path;
+    int i;
+    for(i = 0; i < depth; i++) {
+      int nr = random() % 100;
+      int plus = sprintf(pos, "/name%02d", nr);
+#ifdef ALT
+      if(mkdir(pos+1, 7*64));
+      if(chdir(pos+1)) exit(-1);
+#endif
+      pos += plus;
+    }
+#ifndef ALT
+    struct conn_info conn = { .conn_addr = @#fs_logaddr, .conn_name = "out", .conn_index = -1, };
+    @=call :<strat$instconn (&conn, TRUE) : path => (@success);
+    @.fatal(!@success, "random path '%s' instantiation failed", path);
+    @#ix[@#last%BUFSIZE] = conn.conn_index;
+#ifdef FILE_BENCH
+    addr_t test_addr = 0;
+    @=call :<strat$getaddr (DEFAULT_TRANSFER) => (@success, test_addr);
+    @.fatal(!@success, "test_linux address generation failed");
+    @=call :<strat$instbrick (test_addr, "test_linux") : "/etc/sensors.conf" => (@success);
+    @.fatal(!@success, "test_linux instantiation failed");
+    struct conn_info conn2 = { .conn_addr = test_addr, .conn_name = "in" };
+    @=call :<strat$connect (&conn2, &conn) => (@success);
+    @.fatal(!@success, "test_linux connect failed");
+    struct conn_info conn3 = { .conn_addr = test_addr, .conn_name = "out" };
+    char str[16];
+    sprintf(str, "%d", timeit);
+    @=call :<strat$instconn (&conn3, TRUE) : str => (@success);
+    @.fatal(!@success, "test_linux init failed");
+#if 1 // this is wrong! should be done automatically!
+    @=call :<strat$disconnect (&conn2) => (@success);
+    @.fatal(!@success, "test_linux disconnect failed");
+#endif
+    @=call :<strat$deinstbrick (test_addr) => (@success);
+    @.fatal(!@success, "test_linux deinstantiation failed");
+#endif
+#endif
+  }
+  @#last++;
+}
+
+operation $output_init
+{
+#ifdef DEBUG
+  char buf[DEFAULT_TRANSFER*8];
+  @=call :<strat$transfer (0, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  if(@success) {
+    printf("%s", buf);
+  }
+#endif
+  struct conn_info in_info = { .conn_addr = 0, .conn_name = "_fs" };
+  struct conn_info out_info;
+  @=call :<strat$getconn (&in_info, &out_info, sizeof(out_info)) => (@success);
+  @.fatal(!@success, "cannot find fs instance");
+  @#fs_logaddr = out_info.conn_addr;
+  printf("---------------- init bench_fs %llx ------------------\n", @#fs_logaddr);
+#ifdef DEBUG
+  @=call :<strat$transfer (@#fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  if(@success) {
+    printf("%s", buf);
+  }
+#endif
+  int i;
+  int count = atoi(@param);
+  for(i = 0; i < count; i++) {
+    random_path(LEVELS, TRUE, count == 1);
+    if(!@success)
+      exit(-1);
+  }
+  printf("de-init all\n");
+#ifdef DEBUG
+  @=call :<strat$transfer (@#fs_logaddr, sizeof(buf), (paddr_t)buf, direct_read) => (@success);
+  if(@success) {
+    printf("%s", buf);
+  }
+#endif
+  if(count == 1) {
+    printf("---------------- bench chain of 1 dir instance -----------------\n");
+    random_path(1, TRUE, TRUE);
+  }
+  printf("---------------- dealloc all  ------------------\n");
+  for(i = 0; i < BUFSIZE; i++) {
+    random_path(LEVELS, FALSE, count == 1);
+    if(!@success)
+      exit(-1);
+  }
+  printf("--------------------- done.\n");
+}

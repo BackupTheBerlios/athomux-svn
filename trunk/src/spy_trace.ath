@@ -1,0 +1,149 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #spy_trace
+purpose trace all operations and their parameters/results to a logfile
+desc
+  Simple provisionary implementation.
+  Use for debugging / regression testing.
+enddesc
+
+static_data {
+#include <stdio.h>
+}
+
+data {
+  FILE * file;
+  bool do_phys;
+}
+
+input :<in(:2:)
+
+input :<hook
+
+output :>out(:2:)
+
+operation $op
+{
+  op_t op_code = @op_code;
+  switch(op_code) {
+  case opcode_getaddr:
+  case opcode_getaddrcreateget:
+    fprintf(@#file, "op_%s(:%d:) '%s' ", op_names[op_code], @sect_code, @param);
+    break;
+  default:
+    fprintf(@#file, "op_%s(:%d:) '%s'  %llx:%llx ", op_names[op_code], @sect_code, @param, @log_addr, @log_len);
+  }
+  if(@#do_phys) {
+    switch(op_code) {
+    case opcode_transfer:
+    case opcode_tr:
+    case opcode_trput:
+      fprintf(@#file, "phys_addr=%lx ", @phys_addr);
+      break;
+    default:;
+    }
+  }
+  switch(op_code) {
+  case opcode_transfer:
+    fprintf(@#file, "direction=%d prio=%d", @direction, @prio);
+    break;
+  case opcode_wait:
+    fprintf(@#file, "prio=%d action=%d", @prio, @action);
+    break;
+  case opcode_get:
+    fprintf(@#file, "forwrite=%d", @forwrite);
+    break;
+  case opcode_lock:
+    fprintf(@#file, "data_lock=%d addr_lock=%d try_addr=%llx try_len=%llx action=%d", @data_lock, @addr_lock, @try_addr, @try_len, @action);
+    break;
+  case opcode_unlock:
+    fprintf(@#file, "try_addr=%llx try_len=%llx", @try_addr, @try_len);
+    break;
+  case opcode_getaddr:
+    fprintf(@#file, "log_len=%llx where=%d exclu=%d action=%d try_len=%llx", @log_len, @where, @exclu, @action, @try_len);
+    break;
+  case opcode_create:
+  case opcode_createget:
+    fprintf(@#file, "clear=%d melt=%d", @clear, @melt);
+    break;
+  case opcode_move:
+    fprintf(@#file, "offset=%llx offset_max=%llx", @offset, @offset_max);
+    break;
+  case opcode_tr:
+    fprintf(@#file, "direction=%d prio=%d", @direction, @prio);
+    break;
+  case opcode_gettr:
+    fprintf(@#file, "forwrite=%d prio=%d", @forwrite, @prio);
+    break;
+  case opcode_put:
+  case opcode_trput:
+  case opcode_putwait:
+    fprintf(@#file, "prio=%d", @prio);
+    break;
+  case opcode_getaddrcreateget:
+    fprintf(@#file, "log_len=%llx exclu=%d action=%d create=%d melt=%d try_len=%llx", @log_len, @exclu, @action, @clear, @melt, @try_len);
+    break;
+  default:;
+  }
+  fprintf(@#file, "\n");
+  fflush(@#file);
+
+  @=call :<in(:@sect_code:)$op @args;
+
+  fprintf(@#file, "\tsuccess=%d ", @success);
+  if(@#do_phys) {
+    switch(op_code) {
+    case opcode_transfer:
+    case opcode_tr:
+      fprintf(@#file, "phys_len=%lx", @phys_len);
+      break;
+    case opcode_get:
+    case opcode_gettr:
+    case opcode_createget:
+      fprintf(@#file, "phys_addr=%lx phys_len=%lx ", @phys_addr, @phys_len);
+      break;
+    default:;
+    }
+  }
+  switch(op_code) {
+  case opcode_get:
+    fprintf(@#file, "version=%d", @version);
+    break;
+  case opcode_lock:
+  case opcode_unlock:
+    fprintf(@#file, "try_addr=%llx try_len=%llx", @try_addr, @try_len);
+    break;
+  case opcode_getaddr:
+  case opcode_getaddrcreateget:
+    fprintf(@#file, "log_addr=%llx log_len=%llx", @log_addr, @log_len);
+    if(@#do_phys && op_code == opcode_getaddrcreateget) {
+      fprintf(@#file, "phys_addr=%lx phys_len=%lx ", @phys_addr, @phys_len);
+    }
+    break;
+  case opcode_move:
+    fprintf(@#file, "offset=%llx", @offset);
+    break;
+  default:;
+  }
+  fprintf(@#file, "\n");
+  fflush(@#file);
+}
+
+operation $output_init
+{
+  if(@destr) {
+    fclose(@#file);
+    @success = TRUE;
+  }
+  if(@constr) {
+    @#do_phys= FALSE;
+    if(*@param == '+') {
+      @param++;
+      @#do_phys = TRUE;
+    }
+    @#file = fopen(@param, "w");
+    @success = @#file != NULL;
+  }
+}

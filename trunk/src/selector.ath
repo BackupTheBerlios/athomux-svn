@@ -1,0 +1,34 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #selector
+purpose Select a part of a nest specified by offset and len
+desc
+  Incomplete demo implementation, dont use
+enddesc
+
+data {
+  addr_t offset;
+  len_t  len;
+}
+
+input :<in
+
+output :>out
+
+operation $get,$put,$transfer,$wait
+{
+  addr_t copy_addr = @log_addr;
+  @log_addr -= @#offset;
+  if (@log_addr >= 0 && @log_addr+@log_len <= @#len) {
+    @=call :<in$op @args;
+  }
+  @log_addr = copy_addr;
+}
+
+operation $output_init
+{
+  //....
+  @success = TRUE;
+}

@@ -1,0 +1,122 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #pipe_dummy
+purpose Stateful pipe Implementation
+desc
+  Performance does not matter.
+  NOT YET TESTED
+enddesc
+
+@.define BUF_LEN (DEFAULT_TRANSFER)
+
+data {
+  addr_t read_locked;
+  addr_t write_locked;
+  bool closed;
+  char log_buf[BUF_LEN];
+  char phys_buf[BUF_LEN*2];
+}
+
+instance #lock_ulinux as lock_read;
+instance #lock_ulinux as lock_write;
+
+output :>out
+
+operation $output_init
+{  
+  @=call #.lock_read:>lock$output_init @args;
+  @=call #.lock_write:>lock$output_init @args;
+  @=call #.lock_read:>lock$lock (0, -1, lock_write, lock_none) => (@success);
+  @=call #.lock_write:>lock$lock (BUF_LEN, -1-BUF_LEN, lock_write, lock_none) => (@success);
+}
+
+@.define default_checks()
+{
+  @.check(@log_len >= BUF_LEN, "log_len limit %x exceeded: %llx", BUF_LEN, @log_len);
+}
+
+@.define do_transfer(addr_t start, len_t len, plen_t offs)
+{
+  if(@direction == direct_read) {
+    memcpy(MAKE_PTR(@phys_addr+offs), @#log_buf + start, len);
+  } else {
+    memcpy(@#log_buf + start, MAKE_PTR(@phys_addr+offs), len);
+  }
+}
+
+operation $transfer
+{
+  default_checks();
+  len_t len = @log_len;
+  addr_t log_addr = @log_addr % BUF_LEN;
+  if(log_addr + len > BUF_LEN) {
+    len = BUF_LEN - log_addr;
+  }
+  @phys_len = len;
+  do_transfer(log_addr, len, 0);
+  if(len < @log_len) {
+    len = @log_len - len;
+    do_transfer(0, len, @phys_len);
+    @phys_len += len;
+  }
+  @success = TRUE;
+}
+
+operation $wait,$put
+{
+  @success = TRUE;
+}
+
+operation $get
+{
+  default_checks();
+  addr_t log_addr = @log_addr % BUF_LEN;
+  @phys_addr = MAKE_PADDR(@#phys_buf + log_addr);
+  @phys_len = @log_len;
+  @success = TRUE;
+}
+
+@.define do_reserve(lock_write, write_locked)
+{
+  @=call #.lock_write:>lock$lock (@#write_locked, @log_len, lock_read, lock_none) => (@success);
+  @log_addr = @#write_locked;
+  @#write_locked += @log_len;
+}
+
+operation $getaddr
+{
+  default_checks();
+  if(!@where) { // writer
+   if(!@log_len) {
+     @#closed = TRUE;
+   } else {
+     @#closed = FALSE;
+     do_reserve(lock_write, write_locked);
+   }
+  } else { // reader
+   if(@#closed) {
+     len_t rest = @#write_locked - @#read_locked;
+     if(@log_len > rest) {
+       @log_len = rest;
+       if(!rest) {
+         return;
+       }
+     }
+   }
+   do_reserve(lock_read, read_locked);
+  }
+  @success = TRUE;
+}
+
+operation $create
+{
+  @=call #.lock_read:>lock$unlock (@log_addr, @log_len) => (@success);
+}
+
+operation $delete
+{
+  @=call #.lock_write:>lock$unlock (@log_addr, @log_len) => (@success);
+}
+

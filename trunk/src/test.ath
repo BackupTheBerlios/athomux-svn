@@ -1,0 +1,312 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+// Comment: demonstrate features (contents makes no sense)
+/* other
+ * /multiline comment
+ * with wrong (((({{{{[[[[)) nesting
+ */
+#define foo xxx \
+  continued, treat me as whitespace
+
+brick #test
+
+purpose This is just a demo for the brick syntax
+
+description
+  This brick does nothing useful. Dont use it actually.
+enddescription
+
+example
+  Cannot be used at all.
+endexample
+
+attr attrname1=1
+attr attrname2=16:24
+attr attrname3=16:32:8
+
+static_header {// my brick declarations
+struct test {
+  name_t name;
+};
+void * glob_ptr;
+}
+static_data {
+void * glob_ptr;
+}
+data { // my brick vars
+#line 1 // ignore that:{{{{{{{
+  int state;
+}
+
+init { // my brick init
+  @#state = 0;
+}
+
+instance #test1 as subtest_instance;
+alias :>out1 as :>sub_out;
+alias :<in2 as :<sub_in;
+wire :<loc_in as :>loc_out;
+wire #test:<loc_in as #test.subtest_instance:>loc_out;
+
+instance #test1 as subtest2;
+wire :<in1 as :>local_out;
+wire :>out1 as :<local_in;
+// test whole array inputs/outputs
+alias :<in_arr1[] as :<arr1[];
+wire :<in_arr2[] as :>arr2[];
+alias :>o_arr1[] as :>oarr1[];
+wire :>o_arr2[] as :<iarr2[];
+// test aliasing of array members
+wire :<in_arr3[1] as :>single_out;
+wire :>o_arr3[1] as :<single_in;
+wire :<in_arr3[2] as :>arr3[3];
+wire :>o_arr3[2] as :<iarr3[1];
+
+input :<in1(:2:)
+attr5 attrname4 = 17
+attr5 attrname5 = 17:19
+attr8 attrname6 = 16:32:16
+data { // my input vars
+	int xxx;
+}
+init { // my input init
+	@<xxx = 1;
+}
+
+use PC test;
+use HASH hash[32] on test,test function (x);
+
+local input :<local_in
+
+operation $input_init
+{
+  @=inputcall :<local_in$retract (prio_none) => ();
+}
+
+operation $retract
+{
+}
+
+local output :>local_out
+
+operation $put
+{
+  success_t success;
+  @=inputcall :<local_in$input_init (FALSE, FALSE) => (success);
+  @=inputcall :<local_in$input_init @args;
+  @=inputcall :>local_out$retract (0, -1) => (success);
+  @=inputcall :>local_out$retract @args;
+}
+
+local output :>arr2[4]
+
+operation $put
+{
+}
+
+local input :<iarr2[4]
+
+local output :>single_out
+
+operation $put
+{
+}
+
+local input :<iarr3[4]
+
+local output :>arr3[4]
+
+operation $put
+{
+}
+
+local input :<single_in
+
+input :<in2
+
+input :<in3[16]
+
+local input :<loc_in
+use TYPE foreign_t "addr_t a, len_t b";
+
+local output :>loc_out
+define export TYPE subtype "addr_t a, len_t b:2";
+
+output :>out1(:3:)
+data { // my output vars
+  int outstate;
+}
+init { // my output init
+  @>outstate = 0;
+}
+
+define TYPE mytype1 "addr_t a, len_t b:7, .sub1{int x, int y}, .sub2{long z}, paddr_t zzz";
+define TYPE mytype2 "addr_t c, len_t d : OFFSET(c)";
+define TYPE myother from mytype1,mytype2 "=.sub2,addr_t e, len_t f";
+
+@.func _test(int x)
+{
+  void * ptr = NULL;
+  printf("%llx", ptr@*myother->"e");
+  printf("%llx", ptr@*foreign_t->a);
+  @.deftype mytype1 { printf("%lx", ptr@*->z); }
+  int len = @.sizeof(mytype1);
+  (void)len;
+}
+
+@.func _test2(int x) => (int y)
+{
+  y = x * x;
+}
+
+operation $output_init
+{
+printf("\001");
+  addr_t start;
+  void * xxx = PC_ALLOC(test, 17) => (start);
+printf("\002");
+  void * ptr = PC_GET(test, start, 17);
+printf("\002");
+  ptr = PC_GET(test, start, 17);
+printf("\003");
+  PC_SET(test, start, 17, ptr, TRUE);
+printf("\004");
+  PC_DIRTY(test, start);
+printf("\005");
+  PC_UNSET(test, start);
+printf("\006");
+  PC_FLUSH(test);
+printf("\007");
+  // test lists (this makes no sense)
+  LI_INIT(test, 0);
+  LI_APPEND(test, 0, 1);
+  LI_PREPEND(test, 1, 2);
+  LI_REMOVE(test, 3);
+  xxx = LI_GET(test, 0, TRUE);
+  // test hashes
+#if 0
+  BASE_hash
+#endif
+  HASH_FIND(hash, start);
+}
+
+operation $get
+{
+  addr_t start = @log_addr;
+printf("\001");
+  glob_ptr = PC_GET(test, start, 17);
+  glob_ptr = PC_GET(test, start, 17);
+printf("\002");
+}
+
+@.define @.test(x,y)
+{
+  int x = 0;
+  int y = x * x;
+  y = x;
+}
+
+operation $put
+{
+  int res1, res2;
+  @=call :<in1$put (0, 0, 0) => (res1);
+  @=call :<in1(:1:)$put (0, 0, 0) => (res1);
+  @=call :<in2$get (0, 0, 0) => (res1, res2);
+  @=call :<in3[2]$get [1] (0, 0, 0) : "test" => (res1, res2);
+  @=call :<in1$put @args;
+  @=call $put @args;
+  @=call $put [@#_mand] @args : "test";
+  @=call :<sub_in$put @args : "test2";
+  @=call :>sub_out$put @args : "test3";
+  @=call :<local_in$put @args : "test4";
+  @=call :>local_out$put @args : "test5";
+  // test array calls
+  @=call #.subtest2:<in_arr1[0]$put @args; 
+  @=call :<arr1[0]$put @args;
+  @=call #.subtest2:<in_arr2[0]$put @args; 
+  @=call :>arr2[0]$put @args;
+  @=call #.subtest2:>o_arr2[0]$put @args;
+  @=call :<iarr2[0]$put @args;
+  // test calls of array members
+  //wire :<in_arr3[1] as :>single_out;
+  @=call #.subtest2:<in_arr3[1]$put @args; // this is not optimized! because instead [1] an expression could be used!
+  @=call :>single_out$put @args;
+  // wire :>o_arr3[1] as :<single_in;
+  @=call #.subtest2:>o_arr3[res1]$put @args;
+  @=call :<single_in$put @args;
+  // test individually connected arrays
+  @=call :<iarr3[0]$put @args;
+  @=call :<iarr3[1]$put @args;
+  // test variable access
+  @log_len++;
+  @>outstate++;
+  @#state++;
+  @.test(a,b);
+  _test(0);
+  _test2 (2) => (res2);
+  // test nested calls
+  @=call #test.subtest_instance:>out1$output_init (FALSE, FALSE) => (@success);
+  @=call #.subtest_instance:>out1$output_init @args;
+  @=call #.subtest_instance:<in1$output_init @args;
+  // test _deeply_ nested calls
+  @=call #test.subtest_instance.sub2:>out1$output_init (FALSE, FALSE) => (@success);
+  @=call #.subtest_instance.sub2:>out1$output_init @args;
+  @=call #.subtest_instance.sub2:<in1$output_init @args;
+  @mandate++;
+}
+
+output :>out_arr[4]
+data {
+  int i;
+}
+init {
+  @>i = 0;
+}
+
+@.define @=call myfunc (in1, in2, @!def:xx) => (yy)
+{
+  yy = in1 + in2 + xx;
+}
+
+operation $get
+{
+  int a, b, c;
+  @>i++;
+  @>out_arr[2].i++;
+  @=call myfunc (a, b, 3) => (c);
+}
+
+section (:1:)
+
+operation $get
+{
+  @>i--;
+}
+
+@.copy(0){@.cpp{
+#include <stdio.h>
+@.define my_bufsiz (BUFSIZ)
+}}
+
+operation $create
+{
+#if 0
+  my_bufsiz
+  @.isdef(my_bufsiz)
+  @.undef(my_bufsiz)
+  my_bufsiz
+  @.isdef(my_bufsiz)
+  @.shuffle[1,0]{text1}{text2}
+  @.expshuffle[1,0]{text1}{text2}
+#endif
+}
+
+// test dynamic arrays
+
+input :<dyn_in[]
+
+operation $input_init
+{
+}

@@ -1,0 +1,216 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #lock_ulinux
+purpose Locks
+desc
+  Simple implementation using a linear list (KISS).
+  For better performance, other search structures will be needed.
+enddesc
+
+static_data {
+#include <pthread.h>
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#define MAKE_TYPE(data_part,addr_part) ((addr_part) * 3 + (data_part))
+
+char confl[9][9] = {
+  { 0, 0, 0,   0, 0, 0,   0, 0, 0},
+  { 0, 0, 1,   0, 0, 1,   1, 1, 1},
+  { 0, 1, 1,   0, 1, 1,   1, 1, 1},
+
+  { 0, 0, 0,   0, 0, 0,   1, 1, 1},
+  { 0, 0, 1,   0, 0, 1,   1, 1, 1},
+  { 0, 1, 1,   0, 1, 1,   1, 1, 1},
+
+  { 0, 1, 1,   1, 1, 1,   1, 1, 1},
+  { 0, 1, 1,   1, 1, 1,   1, 1, 1},
+  { 0, 1, 1,   1, 1, 1,   1, 1, 1},
+};
+
+struct lock {
+  struct lock * next;
+  addr_t start;
+  addr_t end;
+  int mandate;
+  int type;
+  pthread_cond_t queue;
+};
+
+static struct lock * emptylist = NULL;
+
+static inline
+struct lock * newlock()
+{
+  struct lock * new;
+  if((new = emptylist)) {
+    emptylist = new->next;
+    return new;
+  }
+  new = malloc(sizeof(struct lock));
+  pthread_cond_init(&new->queue, NULL);
+  return new;
+}
+
+static inline
+void freelock(struct lock * lock)
+{
+  lock->next = emptylist;
+  emptylist = lock;
+}
+
+static inline
+void sleepon(struct lock * lock)
+{
+  pthread_cond_wait(&lock->queue, &mutex);
+}
+
+static inline
+void wakeup(struct lock * lock)
+{
+  pthread_cond_broadcast(&lock->queue);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+/* Insert a new lock into the list given by anchor.
+ * Returns NULL when there is no conlict, otherwise a pointer
+ * to the (first) conflicting lock.
+ */
+struct lock * lock_add (struct lock ** anchor, struct lock * new, bool do_modify)
+{
+  struct lock * modify = NULL;
+  struct lock * modify2 = NULL;
+  struct lock * elem;
+  /* First run trough the list without actually adding new items.
+   * Only after the whole list has been checked for conflicts, additions
+   * must be carried out.
+   */
+  for(elem = *anchor; elem; elem = elem->next) {
+    if(elem->mandate == new->mandate) {
+      // we are modifying our own locks
+      if(elem->type == new->type) {
+	// try to merge regions
+	if(elem->end >= new->start && new->end >= elem->start) {
+	  modify2 = modify;
+	  modify = elem;
+	}
+      }
+    } else if(elem->end > new->start && new->end > elem->start) {
+      // we have a region conflict
+      if(confl[elem->type][new->type]) {
+	return elem;
+      }
+    }
+  }
+  if(do_modify) {
+    if(modify) {
+      if(new->start < modify->start) modify->start = new->start;
+      if(new->end > modify->end) modify->end = new->end;
+      wakeup(modify);
+      if(modify2) {
+	// there existed more than 1 candidate...
+	// merge / remove anything which now becomes mergable again
+	//...
+      }
+      freelock(new);
+    } else {
+      new->next = *anchor;
+      *anchor = new;
+    }
+  } else {
+    freelock(new);
+  }
+  return NULL;
+}
+
+/* Remove a lock
+ */
+void lock_sub (struct lock ** anchor, struct lock * new)
+{
+  struct lock ** base;
+  struct lock * elem;
+  // NOTICE: (*base) may change during the loop
+  for(base = anchor; (elem = *base); base = &(*base)->next) {
+    if(elem->mandate == new->mandate) {
+      // we are modifying our own locks
+      // we should remove all conflicting parts
+      if(elem->end > new->start && new->end > elem->start) {
+	// now we have a conflict, remove something
+	if(elem->start < new->start) {
+	  if(elem->end > new->end) {
+	    // we have to split the elem into 2 parts
+	    struct lock * elem2 = newlock();
+	    elem2->start = new->end;
+	    elem2->end = elem->end;
+	    elem2->mandate = elem->mandate;
+	    elem2->type = elem->type;
+	    elem2->next = elem;
+	    *base = elem2;
+	  }
+	  elem->end = new->start;
+	  wakeup(elem);
+	} else {
+	  elem->start = new->end;
+	  wakeup(elem);
+	  if(elem->start >= elem->end) {
+	    *base = elem->next;
+	    freelock(elem);
+	    if(!*base) {
+	      break;
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+}
+
+data {
+  struct lock * anchor;
+}
+
+//input :<mem
+
+output :>lock
+
+operation $lock
+{
+  @.check(@log_len <= 0, "bad lock length");
+  struct lock * new = newlock();
+  new->start = @log_addr;
+  new->end = @log_addr + @log_len;
+  new->mandate = @mandate;
+  new->type = MAKE_TYPE(@data_lock, @addr_lock);
+  struct lock * conflict;
+  pthread_mutex_lock(&mutex);
+  while((conflict = lock_add(&@#anchor, new, @action != action_ask))) {
+    if(@action != action_wait) {
+      freelock(new);
+      break;
+    }
+    sleepon(conflict);
+  }
+  pthread_mutex_unlock(&mutex);
+  // no true optional locking implemented
+  @try_addr = @log_addr;
+  @try_len = @log_len;
+  @success = !conflict;
+}
+
+operation $unlock
+{
+  struct lock del = {
+    .start = @log_addr,
+    .end =  @log_addr + @log_len,
+    .mandate = @mandate,
+  };
+  pthread_mutex_lock(&mutex);
+  lock_sub(&@#anchor, &del);
+  pthread_mutex_unlock(&mutex);
+  @success = TRUE;
+}

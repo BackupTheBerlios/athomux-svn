@@ -1,0 +1,438 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #map_dummy
+purpose A non-persistent dummy map for testing
+desc
+  A trivial experimental implementation
+  Use as plugin for regression testing
+enddesc
+
+static_header {
+#define PERSISTENT
+//#define DIRECT_MEM
+#define UNIFY
+#define MAX_ELEMS (1024*200)
+
+typedef char block_t[DEFAULT_TRANSFER];
+typedef block_t table_t[MAX_ELEMS];
+}
+
+static_data {
+#undef MEM_INIT
+
+#include <stdlib.h>
+#ifdef PERSISTENT
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#endif
+
+struct all {
+  bool used[MAX_ELEMS];
+  index_t permut[MAX_ELEMS];
+  table_t table;
+  int max_index;
+};
+
+struct local {
+  paddr_t paddr[MAX_ELEMS];
+  bool forwrite[MAX_ELEMS];
+#ifdef UNIFY
+  index_t count[MAX_ELEMS];
+#endif
+};
+}
+
+data {
+  struct all * all;
+  struct local * loc;
+#ifdef PERSISTENT
+  int fh;
+#endif
+#ifdef DEBUG
+  int nr_moves;
+  len_t move_size;
+  len_t move_delta;
+  int nr_ops[opcode_brick_max];
+#endif
+}
+
+init {
+#ifdef PERSISTENT
+  @#fh = open("testfile", O_CREAT | O_RDWR, S_IRWXU);
+  lseek(@#fh, sizeof(struct all), SEEK_SET);
+  static char buf[1] = "";
+  write(@#fh, buf, 1);
+  @#all = mmap(NULL, sizeof(struct all), PROT_READ|PROT_WRITE, MAP_SHARED, @#fh, 0);
+#else
+  @#all = malloc(sizeof(struct all));
+#endif
+  @#loc = malloc(sizeof(struct local));
+  if(!@#all->max_index) {
+    int i;
+    for(i = 0; i < MAX_ELEMS; i++) {
+      @#all->permut[i] = i;
+#ifdef MEM_INIT
+      fill_random(i);
+#endif
+    }
+  }
+}
+
+exit {
+  int used_count = 0;
+  int free_count = 0;
+  int i;
+  for(i = 0; i < @#all->max_index; i++) {
+    if(@#all->used[i]) {
+      used_count++;
+    } else {
+      free_count++;
+    }
+  }
+  if(used_count)
+    printf("used: %d free: %d ratio = %5.2f%%\n", used_count, free_count, (float)free_count * 100.0 / used_count);
+#ifdef DEBUG
+  op_t op;
+  for(op = 0; op < opcode_brick_max; op++) {
+    printf("Nr_%-15s: %8d\n", op_names[op], @#nr_ops[op]);
+  }
+  if(@#nr_moves)
+    printf("moves: %d size: %lld (%lld) delta: %lld (%lld)\n", @#nr_moves, @#move_size/DEFAULT_TRANSFER, @#move_size/DEFAULT_TRANSFER / @#nr_moves, @#move_delta/DEFAULT_TRANSFER, @#move_delta/DEFAULT_TRANSFER / @#nr_moves);
+#endif
+#ifdef UNIFY
+  int nr_bad = 0;
+  int total_bad = 0;
+  for(i = 0; i < MAX_ELEMS; i++) {
+    if(@#loc->count[i]) {
+      total_bad += @#loc->count[i];
+      nr_bad++;
+    }
+  }
+  if(nr_bad) {
+    printf("----------- UNRELEASED USAGE COUNTERS: %d (total %d)\n", nr_bad, total_bad);
+  }
+#endif
+#ifdef PERSISTENT
+  munmap(@#all, sizeof(struct all));
+  close(@#fh);
+#else
+  free(@#all);
+#endif
+  free(@#loc);
+}
+
+@.define fill_random(int index)
+{
+  char * ptr = @#all->table[@#all->permut[index]];
+  //RAND_pseudo_bytes(ptr, DEFAULT_TRANSFER); // this is too slow!!!
+  memset(ptr, 0xff, DEFAULT_TRANSFER);
+}
+
+@.define count(op)
+{
+#ifdef DEBUG
+  @#nr_ops[op]++;
+#endif
+}
+
+input :<hook
+
+output :>out
+
+@.define do_transfer(int index, direction_t direction)
+{
+  void * addr = MAKE_PTR(@phys_addr);
+  @.fatal(!addr, "bad addr");
+  paddr_t len = (paddr_t)@log_len;
+  @phys_len = 0;
+  //trace("addr=%llx len=%lx direction=%d\n", @log_addr, len, direction);
+  if(direction == direct_read) {
+    while(len >= DEFAULT_TRANSFER) {
+      memcpy(addr, @#all->table[@#all->permut[index++]], DEFAULT_TRANSFER);
+      len -= DEFAULT_TRANSFER;
+      @phys_len += DEFAULT_TRANSFER;
+      addr += DEFAULT_TRANSFER;
+    }
+  } else if(direction == direct_write) {
+    while(len >= DEFAULT_TRANSFER) {
+      memcpy(@#all->table[@#all->permut[index++]], addr, DEFAULT_TRANSFER);
+      len -= DEFAULT_TRANSFER;
+      @phys_len += DEFAULT_TRANSFER;
+      addr += DEFAULT_TRANSFER;
+    }
+  }
+  @.fatal(len>0, "rest len=%lx", len);
+}
+
+operation $transfer,$tr
+{
+  count(@op_code);
+  int index = @log_addr / DEFAULT_TRANSFER;
+  @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
+  @.check(!@#all->used[index], "illegal access at address %llx", @log_addr);
+#ifndef DIRECT_MEM
+  do_transfer(index, @direction);
+#else
+  @phys_len = DEFAULT_TRANSFER;
+#endif
+  @success = TRUE; 
+}
+
+operation $wait
+{
+  count(opcode_wait);
+  @success = TRUE;
+}
+
+operation $get,$gettr
+{
+  count(@op_code);
+  @.fatal(@log_len != DEFAULT_TRANSFER, "log_len != DEFAULT_TRANSFER NYI");
+  int index = @log_addr / DEFAULT_TRANSFER;
+  @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
+  @.check(!@#all->used[index], "illegal access at address %llx", @log_addr);
+#ifdef UNIFY
+  if(!@#loc->count[index]++) {
+#endif
+    if(!@#loc->paddr[index]) {
+#ifdef DIRECT_MEM
+      @#loc->paddr[index] = MAKE_PADDR(@#all->table[@#all->permut[index]]);
+#else
+      @#loc->paddr[index] = MAKE_PADDR(malloc(@log_len));
+#endif
+    }
+#ifdef UNIFY
+  }
+#endif
+  @#loc->forwrite[index] |= @forwrite;
+  @phys_addr = @#loc->paddr[index];
+  //trace("phys_addr=%lx\n", @phys_addr);
+  @log_len = @phys_len = DEFAULT_TRANSFER;
+  @version = vers_undef;
+  if(@op_code == opcode_gettr) {
+#ifndef DIRECT_MEM
+    do_transfer(index, direct_read);
+#endif
+    @version = vers_newest;
+  }
+  @success = TRUE;
+}
+
+operation $put,$trput,$putwait
+{
+  count(@op_code);
+  @.fatal(@log_len != DEFAULT_TRANSFER, "log_len != DEFAULT_TRANSFER NYI");
+  int index = @log_addr / DEFAULT_TRANSFER;
+  @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
+  @.warn(!@#all->used[index], "put of undefined element at address %llx", @log_addr);
+  @.warn(@prio && !@#loc->forwrite[index], "you forgot to set the @forwrite parameter at the previous $get when now trying a $put with @prio==%d, @log_addr==%llx\n", @prio, @log_addr);
+  @direction = direct_write;
+  if(@op_code == opcode_trput || @prio) {
+#ifndef DIRECT_MEM
+    do_transfer(index, direct_write);
+#endif
+  } else {
+#ifdef DEBUG
+    @.warn(memcmp(MAKE_PTR(@#loc->paddr[index]), @#all->table[@#all->permut[index]], DEFAULT_TRANSFER), "unsaved difference in memory contents - is this correct?");
+#endif
+  }
+  //trace("phys_addr=%lx\n", @phys_addr);
+#ifdef UNIFY
+  if(--@#loc->count[index] <= 0) {
+    @.check(@#loc->count[index] < 0, "counter underflow -> incorrect pairing of $get / $put");
+#endif
+#ifdef DEBUG
+#ifndef DIRECT_MEM
+    free(MAKE_PTR(@phys_addr));
+    @#loc->paddr[index] = 0;
+#endif
+#endif
+    @#loc->forwrite[index] = FALSE;
+#ifdef UNIFY
+  }
+#endif
+  @success = TRUE;
+}
+
+operation $create
+{
+  count(opcode_create);
+  int index = @log_addr / DEFAULT_TRANSFER;
+  @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
+  paddr_t len = (paddr_t)@log_len;
+  while(len >= DEFAULT_TRANSFER) {
+    if(@clear) {
+      memset(@#all->table[@#all->permut[index]], 0, DEFAULT_TRANSFER);
+    }
+    @#all->used[index++] = TRUE;
+    len -= DEFAULT_TRANSFER;
+  }
+  @.fatal(len>0, "rest len=%lx", len);
+  if(index > @#all->max_index)
+    @#all->max_index = index;
+  @success = TRUE;
+}
+
+operation $delete
+{
+  count(opcode_delete);
+  int index = @log_addr / DEFAULT_TRANSFER;
+  @.fatal(index<0 || index>=MAX_ELEMS, "bad address %llx", @log_addr);
+  paddr_t len = (paddr_t)@log_len;
+  while(len >= DEFAULT_TRANSFER) {
+#ifdef MEM_INIT
+    fill_random(index);
+#endif
+    @#all->used[index++] = FALSE;
+    len -= DEFAULT_TRANSFER;
+  }
+  @.fatal(len>0, "rest len=%lx", len);
+  @success = TRUE;
+}
+
+@.define _copy(addr_t source, addr_t target)
+{
+  int s_index = source / DEFAULT_TRANSFER;
+  @.fatal(s_index<0 || s_index>=MAX_ELEMS, "bad source address %llx", source);
+  int t_index = target / DEFAULT_TRANSFER;
+  @.fatal(t_index<0 || t_index>=MAX_ELEMS, "bad target address %llx", target);
+  @#all->used[t_index] = @#all->used[s_index];
+  @#all->used[s_index] = FALSE;
+  index_t old = @#all->permut[t_index];
+  @#all->permut[t_index] = @#all->permut[s_index];
+  @#all->permut[s_index] = old;
+  paddr_t old_paddr = @#loc->paddr[t_index];
+  @#loc->paddr[t_index] = @#loc->paddr[s_index];
+  @#loc->paddr[s_index] = old_paddr;
+  bool old_forwrite = @#loc->forwrite[t_index];
+  @#loc->forwrite[t_index] = @#loc->forwrite[s_index];
+  @#loc->forwrite[s_index] = old_forwrite;
+#ifdef UNIFY
+  index_t old_count = @#loc->count[t_index];
+  @#loc->count[t_index] = @#loc->count[s_index];
+  @#loc->count[s_index] = old_count;
+#endif
+#ifdef MEM_INIT
+  fill_random(s_index);
+#endif
+}
+
+@.define _copy2(int s_index, int t_index)
+{
+  @#all->used[t_index] = @#all->used[s_index];
+  @#all->used[s_index] = FALSE;
+  index_t old = @#all->permut[t_index];
+  @#all->permut[t_index] = @#all->permut[s_index];
+  @#all->permut[s_index] = old;
+  paddr_t old_paddr = @#loc->paddr[t_index];
+  @#loc->paddr[t_index] = @#loc->paddr[s_index];
+  @#loc->paddr[s_index] = old_paddr;
+  bool old_forwrite = @#loc->forwrite[t_index];
+  @#loc->forwrite[t_index] = @#loc->forwrite[s_index];
+  @#loc->forwrite[s_index] = old_forwrite;
+#ifdef UNIFY
+  index_t old_count = @#loc->count[t_index];
+  @#loc->count[t_index] = @#loc->count[s_index];
+  @#loc->count[s_index] = old_count;
+#endif
+#ifdef MEM_INIT
+  fill_random(s_index);
+#endif
+}
+
+@.define MOVE1(ptr,type)
+{
+  memcpy(tmp, ptr + source + len, victim_size*sizeof(type));
+  memmove(ptr + source + offs, ptr + source, len*sizeof(type));
+  memcpy(ptr + source, tmp, victim_size*sizeof(type));
+}
+
+@.define MOVE2(ptr,type)
+{
+  memcpy(tmp, ptr + source - offs, victim_size*sizeof(type));
+  memmove(ptr + source - offs, ptr + source, len*sizeof(type));
+  memcpy(ptr + source + len - victim_size, tmp, victim_size*sizeof(type));
+}
+
+operation $move
+{
+  trace("************** move %llx:%llx --> %llx\n", @log_addr, @log_len, @offset_max);
+  @.fatal(@offset_max < @offset, "bad offset_max %llx < %llx", @offset_max, @offset);
+  @.fatal(@log_len % DEFAULT_TRANSFER, "rest len=%llx", @log_len % DEFAULT_TRANSFER);
+  count(opcode_move);
+#ifdef DEBUG
+  @#nr_moves++;
+  @#move_size += @log_len;
+  @#move_delta += @offset;
+#endif
+  if(@offset > 0) {
+#ifdef MEM_INIT
+    addr_t end_addr = @log_addr + @log_len;
+    int border = @log_addr / DEFAULT_TRANSFER;
+    int source = end_addr / DEFAULT_TRANSFER - 1;
+    int target = @offset / DEFAULT_TRANSFER + source;
+    @.fatal(source<0 || source>=MAX_ELEMS, "bad source address %x", source);
+    @.fatal(target<0 || target>=MAX_ELEMS, "bad target address %x", target);
+    if(target >= @#all->max_index)
+      @#all->max_index = target+1;
+
+    while(source >= border) {
+      _copy2(source, target);
+      source--;
+      target--;
+    }
+#else
+    int len = @log_len / DEFAULT_TRANSFER;
+    int offs = @offset / DEFAULT_TRANSFER;
+    int source = @log_addr / DEFAULT_TRANSFER;
+    int max_addr = source + len + offs;
+    @.fatal(source<0 || max_addr>=MAX_ELEMS, "bad address %x %x (MAX_ELEMS=%x), offs=%x", source, max_addr, MAX_ELEMS, offs);
+    if(max_addr > @#all->max_index)
+      @#all->max_index = max_addr;
+    int victim_size = offs;
+    if(victim_size > len)
+	    victim_size = len;
+    memmove(@#all->used + source + offs, @#all->used + source, len*sizeof(bool));
+    memset(@#all->used + source, 0, victim_size*sizeof(bool));
+    paddr_t tmp[victim_size];
+    MOVE1(@#all->permut, index_t);
+    MOVE1(@#loc->paddr, paddr_t);
+    MOVE1(@#loc->forwrite, bool);
+#ifdef UNIFY
+    MOVE1(@#loc->count, index_t);
+#endif
+#endif
+  } else if(@offset < 0) {
+#ifdef MEM_INIT
+    addr_t end_addr = @log_addr + @log_len;
+    addr_t source;
+    addr_t target;
+    for(source = @log_addr; source < end_addr; source += DEFAULT_TRANSFER) {
+      target = (addr_t)((offs_t)source + @offset);
+      _copy (source, target);
+    }
+#else
+    int len = @log_len / DEFAULT_TRANSFER;
+    int offs = -@offset / DEFAULT_TRANSFER;
+    int source = @log_addr / DEFAULT_TRANSFER;
+    @.fatal(source<0 || source+len>=MAX_ELEMS, "bad address %x", source);
+    int victim_size = offs;
+    if(victim_size > len)
+	    victim_size = len;
+    memmove(@#all->used + source - offs, @#all->used + source, len*sizeof(bool));
+    memset(@#all->used + source + len - victim_size, 0, victim_size*sizeof(bool));
+    paddr_t tmp[victim_size];
+    MOVE2(@#all->permut, index_t);
+    MOVE2(@#loc->paddr, paddr_t);
+    MOVE2(@#loc->forwrite, bool);
+#ifdef UNIFY
+    MOVE2(@#loc->count, index_t);
+#endif
+#endif
+  }
+  @success = TRUE;
+}

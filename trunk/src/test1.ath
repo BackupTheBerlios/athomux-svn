@@ -1,0 +1,109 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #test1
+
+purpose This is just a demo for the brick syntax
+
+description
+  This brick does nothing useful. Dont use it actually.
+enddescription
+
+example
+  Cannot be used at all.
+endexample
+
+attr attrname1=1
+attr attrname2=16:24
+attr attrname3=16:32:8
+
+static_data {// my brick declarations
+struct test1 {
+  name_t name;
+};
+}
+
+data { // my brick vars
+  int state;
+}
+
+init { // my brick init
+  @#state = 0;
+}
+
+instance #test2 as sub2;
+
+input :<in1(:2:)
+attr5 attrname4 = 17
+attr5 attrname5 = 17:19
+attr8 attrname6 = 16:32:16
+data { // my input vars
+	int xxx;
+}
+init { // my input init
+	@<xxx = 1;
+}
+
+input :<in2
+use TYPE to_sub_t "addr_t a, len_t b";
+use TYPE in2_type "int x";
+
+local input :<loc_in
+use TYPE subtype "addr_t a, len_t b";
+local output :>loc_out
+define export TYPE foreign_t "addr_t a, len_t b:1";
+
+
+input :<in_arr1[4]
+input :<in_arr2[4]
+input :<in_arr3[4]
+output :>o_arr1[4]
+output :>o_arr2[4]
+
+operation $put
+{
+}
+
+output :>o_arr3[4]
+
+operation $put
+{
+}
+
+output :>out1(:3:)
+data {
+  int outstate;
+}
+
+define export TYPE out1_type "int x";
+
+operation $output_init
+{
+}
+
+operation $put
+{
+}
+
+output :>out_arr[4]
+data {
+  int i;
+}
+init {
+  @>i = 0;
+}
+
+operation $get
+{
+  @>i++;
+  @>out1.outstate++;
+  @>out_arr[2].i++;
+}
+
+section (:1:)
+
+operation $get
+{
+  @>i--;
+}

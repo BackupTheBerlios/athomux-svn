@@ -1,0 +1,72 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #device_dummy_linux
+purpose Dummy device driver for testing under Linux
+desc
+  Just a trivial interface to read() and write().
+  Use only for testing!
+  Standalone ATHOMUX versions will definitely require other
+  implementations. In particular, internal driver hierarchies
+  will be needed in most cases.
+  We also need to implement automatic converters for porting
+  Linux/*BSD drivers to Athomux.
+enddesc
+
+static_data {
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+}
+
+data {
+  int unix_file;
+}
+
+init {
+  @#unix_file = open(@param, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+  if(@#unix_file < 0) {
+    //@.abort("file '%s' open error: %s\n", @param, strerror(errno));
+    exit(-1);
+  }
+}
+
+// has no input
+
+output :>out
+
+operation $transfer
+{
+  int success;
+
+  success = lseek(@#unix_file, @log_addr, SEEK_SET);
+  @.check(success != @log_addr, "bad lseek()");
+  switch(@direction) {
+    case direct_read:
+      success = read(@#unix_file, MAKE_PTR(@phys_addr), @log_len);
+      @phys_len = (len_t)success;
+      //provisionary: this should be checked at wait(), not here!
+      @.check(success != @log_len, "bad read()");
+      break;
+    case direct_write:
+      success = write(@#unix_file, MAKE_PTR(@phys_addr), @log_len);
+      @phys_len = (len_t)success;
+      @.check(success != @log_len, "bad write()");
+      break;
+    case direct_stop:
+    default:
+      @.err("transfer: direct_stop not implemented");
+  }
+  @success = TRUE;
+}
+
+operation $wait
+{
+  @success = TRUE;
+}

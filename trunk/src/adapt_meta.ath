@@ -1,0 +1,156 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #adapt_meta
+purpose Split single-channel input nest into dual-channel (norma;+meta) nest
+desc
+  A KISS implementation
+enddesc
+
+static_data {
+#define GAP (DEFAULT_TRANSFER * 512)
+
+struct adapt_meta_control {
+  addr_t magic;
+  len_t normal_start;
+  len_t normal_end;
+};
+}
+
+data {
+  paddr_t control;
+}
+
+input :<hook
+
+input :<in
+
+output :>out(:2:)
+
+operation $output_init
+{
+  @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
+  if(@destr) {
+    if(@#control) {
+      @=call :<in$trput (0, DEFAULT_TRANSFER, @#control) => (@success);
+      @#control = 0;
+    }
+  }
+  if(@constr) {
+    @=call :<in$gettr (0, DEFAULT_TRANSFER, TRUE) => (@success, @#control);
+    if(!@success) {
+      @=call :<in$createget (0, DEFAULT_TRANSFER) => (@success, @#control);
+      @.fatal(!@success, "cannot initialize");
+      struct adapt_meta_control * control = MAKE_PTR(@#control);
+      control->magic = MAGIC_adapt_meta;
+      control->normal_start = GAP;
+      control->normal_end = GAP;
+      trace("++++++++++++++++++ init adapt_meta +++++++++++++++++++++\n");
+      @=call :<in$transfer (0, DEFAULT_TRANSFER, @#control, direct_write) => (@success);
+    }
+    struct adapt_meta_control * control = MAKE_PTR(@#control);
+    @.fatal(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  }
+}
+
+operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$create,$delete,$tr,$gettr,$trput,$putwait,$createget,$getaddrcreateget
+{
+  @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
+  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  addr_t old_addr = @log_addr;
+  @log_addr += control->normal_start;
+  @=call :<in$op @args;
+  if(@success) {
+    addr_t border = @log_addr + @log_len;
+    if(border >= control->normal_end) {
+      control->normal_end = border;
+    }
+  }
+  @log_addr = old_addr;
+}
+
+operation $move
+{
+  @.fatal(@sect_code != 0, "bad sect_code %d", @sect_code);
+  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  addr_t old_addr = @log_addr;
+  @log_addr += control->normal_start;
+  @=call :<in$move @args;
+  if(@success) {
+    addr_t border = @log_addr + @log_len;
+    if(@offset > 0) {
+      border += @offset;
+    }
+    if(border >= control->normal_end) {
+      control->normal_end = border;
+    }
+  }
+  @log_addr = old_addr;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+section (:1:)
+
+operation $transfer,$wait,$get,$put,$lock,$unlock,$getaddr,$delete,$tr,$gettr,$trput,$putwait,$createget,$getaddrcreateget
+{
+  @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
+  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  addr_t old_addr = @log_addr;
+  @.check(old_addr+@log_len+DEFAULT_TRANSFER > control->normal_start, "bad access outside meta region");
+  @log_addr += DEFAULT_TRANSFER;
+  @=call :<in(:0:)$op @args;
+  @log_addr = old_addr;
+  @sect_code = 1;
+}
+
+@.define _shift(struct adapt_meta_control * control, addr_t border)
+{
+  if(border > control->normal_start) {
+    offs_t delta = border - control->normal_start + GAP;
+    len_t size = control->normal_end - control->normal_start;
+    trace("shifting size=%llx delta=%lld\n", size, delta);
+    if(size > 0) {
+      @=call :<in(:0:)$move (control->normal_start, size, delta) => (@success, delta);
+      @.check(!@success, "reorg failed");
+    }
+    control->normal_start += delta;
+    control->normal_end += delta;
+  }
+}
+
+operation $create
+{
+  @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
+  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  addr_t old_addr = @log_addr;
+  addr_t border = old_addr+@log_len+DEFAULT_TRANSFER;
+  _shift(control, border);
+  @log_addr += DEFAULT_TRANSFER;
+  @=call :<in(:0:)$create @args;
+  @log_addr = old_addr;
+  @sect_code = 1;
+}
+
+operation $move
+{
+  @.fatal(@sect_code != 1, "bad sect_code %d", @sect_code);
+  struct adapt_meta_control * control = MAKE_PTR(@#control);
+  @.check(control->magic != MAGIC_adapt_meta, "bad magic %lld", control->magic);
+  addr_t old_addr = @log_addr;
+  addr_t border = old_addr+@log_len+DEFAULT_TRANSFER;
+  if(@offset_max > 0) {
+    border += @offset_max;
+  }
+  _shift(control, border);
+  @log_addr += DEFAULT_TRANSFER;
+  @=call :<in(:0:)$move @args;
+  @log_addr = old_addr;
+  @sect_code = 1;
+}
+

@@ -1,0 +1,153 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #thread_ulinux
+purpose A dummy thread_* for userspace using pthreads and dummy CPU
+desc
+  This is a userspace-specific implementation.
+  By calling $op on the :>cpu output, a new thread is created
+  executing the operation on the :<exec input in parallel to
+  the caller.
+  If you want to wait on termination of the thread, use an
+  explicit synchronization mechanism for that.
+enddesc
+
+static_data {
+#include "control_simple.h"
+#include <pthread.h>
+
+/* The pthread library will allocate the stack for the new thread
+ * for us. Thus we have no access to the new stack until the thread
+ * is actually running. Since we need to _copy_ vital data like
+ * the args to the new stack, we need to synchonize upon
+ * that transfer (via a pthread condition).
+ *
+ * This is simple, but slow and BAD.
+ *
+ * IN GENERAL when implementing OTHER thread_* allowing explicit
+ * access to the new stack _before_ the new thread actually starts
+ * execution, the transfer should be done by the original thread,
+ * such that NO SYNCHRONIZATION is necessary.
+ * First you will need to allocate new stack space from some
+ * mem input.
+ * Then you will need to setup the new stack in such a way that
+ * the new thread will just find the thread_info as pre-existing
+ * local variable on its stack. Notice that this is not only
+ * architecture-specific, but also compiler-specific or even
+ * compile-flag specific (think of -fomit-frame-pointer and the
+ * like).
+ * However, when you implement a native thread_* by hand,
+ * you will have to deal with that problem anyway.
+ *
+ * HINT: try to use as less as assembly code as possible, and
+ * try to be as generic as possible.
+ * You may define a C structure for the stack layout with #ifdefs
+ * depending on architecture and compiler flags, such that it runs
+ * correctly under a variety of architectures, compilers and flags
+ * (in ideal case).
+ *
+ * You may declare the same variables once again as local variables
+ * of your thread_handler (but as volatile, such that the compiler
+ * cannot put it in a register).
+ *
+ * You may use an extension of gcc allowing pointers to labels
+ * inside your thread_handler via the unary operator &&. Then
+ * your code is gcc-specific, but uses less assembly.
+ * Take a look at the following hack:
+
+#include <stdio.h>
+
+int condition = 0;
+
+void * sub(void)
+{
+  // This is always true, but ensures that dead code elimination
+  // will not kill the code thereafter.
+  if(!condition) {
+    return &&label; // this disrupts static scope rules at runtime!
+  }
+ label:
+  printf("Hello World!\n");
+  return NULL; // this is actually the exit code of main()
+}
+
+int main(void)
+{
+  register void * ptr = sub();
+  // This may lead to stack corruption, but shows that the pointer
+  // value can actually be used!
+  goto *ptr;
+}
+ *
+ * The program really works, but only thanks to identical stack
+ * layouts of both functions (no real variables actually on the stack).
+ * Try it out! Just add a definition like
+ *   volatile char space[256] = "xxx";
+ * to one of both functions, and you will get a coredump!
+ * Add the same definition _consistently_ to _both_ functions,
+ * and it will work again! (at least with Intel architecture;
+ * I have not tried SPARC having register windows)
+ *
+ * Don't actually use "goto *ptr", but just use the pointer as
+ * return address stored in your artificially created stack frame.
+ *
+ * I have not actually tried it, but using this hack it _should_
+ * be possible to write thread_* without any assembly code!
+ * Only the scheduler in cpu_* will need assembly when actually
+ * switching to the new stack after you have registered your new stack
+ * with it.
+ */
+
+struct thread_info {
+  pthread_cond_t sync;
+  pthread_mutex_t mutex;
+  const struct output * on;
+  struct args * myargs;
+  const char * myparam;
+};
+
+void * thread_handler(void * _info)
+{
+  // copy all vital data to the local stack
+  struct thread_info * info = _info;
+  const struct output * on = info->on;
+  struct args myargs;
+  memcpy(&myargs, info->myargs, sizeof(struct args));
+  // HACK (not correct)
+  // TODO: use atomic increment opcode instead
+  myargs.mandate = base_mand++;
+  int len = strlen(info->myparam);
+  char myparam[len+1];
+  strcpy(myparam, info->myparam);
+  // signal that the old data will no longer be accessed
+  pthread_mutex_lock(&info->mutex);
+  pthread_cond_signal(&info->sync);
+  pthread_mutex_unlock(&info->mutex);
+  on->ops[myargs.sect_code][myargs.op_code]((void*)on, &myargs, myparam);
+  return NULL;
+}
+
+}
+
+input :<exec
+
+output :>cpu
+
+operation $op
+{ 
+  static pthread_t dummy_id;
+  struct thread_info info = {
+    .sync = PTHREAD_COND_INITIALIZER,
+    .mutex = PTHREAD_MUTEX_INITIALIZER,
+    .on = @#_conn_exec._input_.connect,
+    .myargs = @args,
+    .myparam = @param,
+  };
+  pthread_mutex_lock(&info.mutex);
+  int code = pthread_create(&dummy_id, NULL, thread_handler, &info);
+  // wait until all data has been copied to the new stack
+  pthread_cond_wait(&info.sync, &info.mutex);
+  pthread_mutex_unlock(&info.mutex);
+  @success = !code;
+}

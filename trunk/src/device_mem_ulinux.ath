@@ -1,0 +1,51 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #device_mem_ulinux
+purpose Memory allocator for Linux environment, log_addr==phys_addr
+desc
+  Just a trivial interface to malloc().
+  The logical and physical addresses are always identical.
+  Standalone ATHOMUX versions will definitely require other
+  device_mem implementations.
+enddesc
+
+static_data {
+#include <stdlib.h>
+}
+
+output :>out
+
+operation $getaddr,$getaddrcreateget
+{
+  @log_addr = (addr_t)(long)malloc(@log_len);
+  @phys_addr = @log_addr;
+  @phys_len = @log_len;
+  @success = @log_addr != 0;
+}
+
+operation $get,$gettr
+{
+  @phys_addr = @log_addr;
+  @phys_len = @log_len;
+  @version = vers_newest;
+  @success = TRUE;
+}
+
+operation $delete,$putdelete
+{
+  free((void*)(long)@log_addr);
+  @success = TRUE;
+}
+
+// dummy ops
+operation $transfer,$wait,$put,$tr,$trput,$putwait
+{
+  @success = TRUE;
+}
+
+operation $create,$createget
+{
+  @success = FALSE;
+}

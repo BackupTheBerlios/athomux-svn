@@ -1,0 +1,75 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #adapt_simple
+purpose Split the granularity of the input into smaller pieces at the output
+desc
+  VERY INCOMPLETE, NOT YET TESTED
+  Just a coredump of some ideas from my brain when experiencing
+  the first problems with implementing some concepts.
+  Probably doen't work at all.
+enddesc
+
+data {
+  len_t in_transfer;
+  len_t out_transfer;
+}
+
+init {
+  @#in_transfer = DEFAULT_TRANSFER;
+  @#out_transfer = 1;
+}
+
+input :<in
+
+output :>out
+
+operation $output_init
+{ // TODO: parse argument for different out_transfer size
+  @success = TRUE;
+}
+
+operation $get,$gettr
+{
+  addr_t copy_addr = @log_addr;
+  len_t copy_len = @log_len;
+  len_t max_len = @#in_transfer - ((len_t)@log_addr % @#in_transfer);
+  if(max_len > @log_len)
+    max_len = @log_len;
+  @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
+  @log_len = @#in_transfer;
+  @=call :<in$op @args;
+  @phys_addr += (copy_addr - @log_addr);
+  @phys_len = copy_len;
+  if(@phys_len > max_len)
+    @phys_len = max_len;
+  @log_addr = copy_addr;
+  @log_len = copy_len;
+}
+
+operation $transfer,$wait,$trput
+{
+  addr_t copy_addr = @log_addr;
+  addr_t copy_paddr = @phys_addr;
+  len_t copy_len = @log_len;
+  @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
+  @phys_addr = (@phys_addr / @#in_transfer) * @#in_transfer;
+  @log_len = @#in_transfer;
+  @=call :<in$op @args;
+  @log_addr = copy_addr;
+  @phys_addr = copy_paddr;
+  @log_len = copy_len;
+}
+
+operation $put,$putwait
+{
+  addr_t copy_addr = @log_addr;
+  len_t copy_len = @log_len;
+  @log_addr = (@log_addr / @#in_transfer) * @#in_transfer;
+  @log_len = @#in_transfer;
+  @=call :<in$op @args;
+  @log_addr = copy_addr;
+  @log_len = copy_len;
+}
+

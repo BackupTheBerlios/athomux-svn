@@ -1,0 +1,583 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+strategy brick #fs_simple
+purpose Translate pathnames to recursive instantiation of dir_simple
+desc
+  Create a virtual brick instance "fs" in the control output
+  and report it as being registered in the new virtual ATHOMUX_MAINDIR.
+  Recursively instantiate dir_simple for each pathname component
+  whenever necessary.
+  Each dynamic virtual output of fs corresponds to an open file,
+  whose pathname is supplied by @param. Connecting to such a virtual
+  output is automatically redirected to the underlying dir_*.
+
+  CURRENTLY INCOMPLETE AND NOT FULLY TESTED
+
+  TODO: do not rely on dir_simple, but work with any dir_* type.
+
+enddesc
+
+static_header {
+#define PATH_HASH_MAX 512
+#define INDEX_HASH_MAX 512
+#define VCONN_HASH_MAX 512
+}
+
+static_data {
+struct path {
+  struct path * path_next;
+  struct path * index_next;
+  struct vconn  * chain;
+  struct conn_info alias;
+  int index;
+  int len;
+  char name[0];
+};
+
+struct vconn {
+  struct vconn * chain_next;
+  struct vconn * hash_next;
+  struct path * belonging;
+  struct conn_info conn;
+};
+
+int make_conns(struct vconn * chain, char * res, int res_len)
+{
+  int len = 0;
+  for(; chain; chain = chain->chain_next) {
+    len += snprintf(res+len, res_len-len, "%llx:%s[%d]%s", 
+		    chain->conn.conn_addr, chain->conn.conn_name, chain->conn.conn_index,
+		    chain->chain_next ? "," : "");
+    if(len >= res_len)
+      return 0;
+  }
+  return len;
+}
+
+
+index_t make_conns_info(struct vconn * chain, struct conn_info * info, int in_len)
+{
+  index_t len = 0;
+  for(; chain; chain = chain->chain_next) {
+    if(in_len < sizeof(struct conn_info)) {
+      return 0;
+    }
+    memcpy(info, &chain->conn, sizeof(struct conn_info));
+    in_len -= sizeof(struct conn_info);
+    len += sizeof(struct conn_info);
+    info++;
+  }
+  return len;
+}
+
+
+//static inline
+int path_hash(const char * name, int len)
+{
+  int res;
+  if(len <= 2) {
+    return name[0] % PATH_HASH_MAX;
+  }
+  res = name[0];
+  res *= len;
+  res += name[len-1];
+  res <<= 2;
+  res += name[len/2];  
+  return res % PATH_HASH_MAX;
+}
+
+static inline
+int index_hash(int index)
+{
+  return index % INDEX_HASH_MAX;
+}
+
+struct path * path_find(struct path ** hash, const char * name, int len)
+{
+  int index = path_hash(name, len);
+  struct path * tmp;
+  for(tmp = hash[index]; tmp; tmp = tmp->path_next) {
+    if(tmp->len == len && !strcmp(tmp->name, name)) {
+      return tmp;
+    }
+  }
+  return NULL;
+}
+
+struct path * index_find(struct path ** hash, int index)
+{
+  int ix = index_hash(index);
+  struct path * tmp;
+  for(tmp = hash[ix]; tmp; tmp = tmp->index_next) {
+    if(tmp->index == index) {
+      return tmp;
+    }
+  }
+  return NULL;
+}
+
+void path_add(struct path ** hash, struct path * new)
+{
+  int ix = path_hash(new->name, new->len);
+  new->path_next = hash[ix];
+  hash[ix] = new;
+}
+
+struct path * path_del(struct path ** hash, char * name, int len)
+{
+  int index = path_hash(name, len);
+  struct path ** ptr = &hash[index];
+  struct path * tmp;
+  while((tmp = *ptr)) {
+    if(tmp->len == len && !strcmp(tmp->name, name)) {
+      *ptr = tmp->path_next;
+      return tmp;
+    }
+    ptr = &tmp->path_next;
+  }
+  return NULL;
+}
+
+void index_add(struct path ** hash, struct path * new)
+{
+  int ix = index_hash(new->index);
+  new->index_next = hash[ix];
+  hash[ix] = new;
+}
+
+struct path * index_del(struct path ** hash, int index)
+{
+  int ix = index_hash(index);
+  struct path ** ptr = &hash[ix];
+  struct path * tmp;
+  while((tmp = *ptr)) {
+    if(tmp->index == index) {
+      *ptr = tmp->index_next;
+      return tmp;
+    }
+    ptr = &tmp->index_next;
+  }
+  return NULL;
+}
+
+//static inline
+int vconn_hash(struct conn_info * info)
+{ 
+	//TODO: improve both performance and distribution of hash functions
+	return (int)(path_hash(info->conn_name, 1) + info->conn_index +
+							 (info->conn_addr / DEFAULT_TRANSFER)) % VCONN_HASH_MAX;
+}
+
+struct vconn * vconn_find(struct vconn ** hash, struct conn_info * info)
+{
+  int index = vconn_hash(info);
+  struct vconn * tmp;
+  for(tmp = hash[index]; tmp; tmp = tmp->hash_next) {
+    if(tmp->conn.conn_index == info->conn_index &&
+			 tmp->conn.conn_addr == info->conn_addr &&
+			 !strcmp(tmp->conn.conn_name, info->conn_name)) {
+			return tmp;
+    }
+  }
+  return NULL;
+}
+
+void vconn_add(struct vconn ** hash, struct vconn * new)
+{
+  int ix = vconn_hash(&new->conn);
+  new->hash_next = hash[ix];
+  hash[ix] = new;
+}
+
+//TODO: use doubly linked lists for O(1) removal
+struct vconn * vconn_del(struct vconn ** hash, struct vconn * old)
+{
+  int index = vconn_hash(&old->conn);
+  struct vconn ** ptr = &hash[index];
+  struct vconn * tmp;
+  while((tmp = *ptr)) {
+		if(tmp == old) {
+      *ptr = tmp->hash_next;
+      return tmp;
+    }
+    ptr = &tmp->hash_next;
+  }
+  return NULL;
+}
+}
+
+data {
+  addr_t fs_logaddr;
+  len_t  fs_len;
+  int max_index;
+  addr_t  root_addr;
+  struct path * path_hash[PATH_HASH_MAX];
+  struct path * index_hash[INDEX_HASH_MAX];
+  struct vconn * vconn_hash[VCONN_HASH_MAX];
+}
+
+input :<strat
+
+input :<mem
+
+input :<hook
+
+output :>control
+
+operation $output_init
+{
+  trace("init fs_simple\n");
+  if(@constr && !@#fs_logaddr) {
+    // get root address
+    struct conn_info in_info = { .conn_addr = 0, .conn_index = 0, .conn_name = "_root", };
+    if(@param[0]) {
+      strncpy(in_info.conn_name, @param, sizeof(in_info.conn_name));
+    }
+    struct conn_info out_info = {};
+    @=call :<strat$getconn (&in_info, &out_info, sizeof(out_info)) => (@success);
+    @.fatal(!@success, "cannot find root");
+    trace("found root '%s'\n", out_info.conn_name);
+    @#root_addr = out_info.conn_addr;
+    // reserve space for our virtual brick instance
+    @#fs_len = DEFAULT_TRANSFER * 256;
+    @=call :<strat$getaddr (@#fs_len) => (@success, @#fs_logaddr, @#fs_len);
+    trace("got fs_logaddr %llx\n", @#fs_logaddr);
+  }
+  if(@destr && @#fs_logaddr) {
+    @=call :<strat$delete (@#fs_logaddr, @#fs_len) => (@success);
+  }
+}
+
+/* TODO: use this instead of $output_init for creating arbitrarily many
+ * virtual fs instances.
+ */
+operation $instbrick,$deinstbrick
+{
+  @.check(@log_addr == @#fs_logaddr, "operation not allowed on virtual fs brick");
+  @=call :<strat$op @args;
+}
+
+operation $connect
+{
+  struct conn_info * conn1 = @conn1;
+  struct conn_info * conn2 = @conn2;
+  if(conn2->conn_addr == @#fs_logaddr) {
+    @.check(strcmp(conn2->conn_name,"out"), "bad connector name '%s'", conn2->conn_name);
+    struct path * path = index_find(@#index_hash, conn2->conn_index);
+    if(!path) {
+      return;
+    }
+    @=call :<strat$connect (conn1, &path->alias) => (@success);
+    if(@success) {
+      struct vconn * vconn = malloc(sizeof(struct vconn));
+      if(!vconn) {
+	@=call :<strat$disconnect (conn1) => ();
+	@success = FALSE;
+	return;
+      }
+      memcpy(&vconn->conn, conn1, sizeof(vconn->conn));
+      vconn->belonging = path;
+      vconn->chain_next = path->chain;
+      path->chain = vconn;
+      vconn_add(@#vconn_hash, vconn);
+    }
+    return;
+  }
+  @=call :<strat$OP_NAME @args;
+}
+
+operation $disconnect
+{
+  struct conn_info * conn1 = @conn1;
+  struct vconn * vconn = vconn_find(@#vconn_hash, conn1);
+  if(vconn) {
+    struct path * path = vconn->belonging;
+    struct vconn ** ptr;
+    struct vconn * tmp;
+    for(ptr = &path->chain; (tmp = *ptr); ptr = &tmp->chain_next) {
+      if(tmp == vconn) {
+	*ptr = vconn->chain_next;
+	break;
+      }
+    }
+    vconn_del(@#vconn_hash, vconn);
+    free(vconn);
+  }
+  @=call :<strat$OP_NAME @args;
+}
+
+@.func pathelem (struct conn_info * output_info, struct conn_info * next_inputinfo, char * path_elem, bool clear)
+{
+  @success = FALSE;
+  trace("pathelem '%s'\n", path_elem);
+  if(!next_inputinfo->conn_addr) {
+    @=call :<strat$getconn (output_info, next_inputinfo, sizeof(struct conn_info)) => (@success);
+    @.check(!@success, "path elem at index %d does not exist", output_info->conn_index);
+  }
+  if(!next_inputinfo->conn_addr) { // create the _parent_ dir instance
+    trace("creating '%s'\n", path_elem);
+    @=call :<strat$getaddr (DEFAULT_TRANSFER) => (@success, next_inputinfo->conn_addr);
+    @.check (!@success, "cannot allocate space for dir instance");
+    @=call :<strat$instbrick (next_inputinfo->conn_addr, "dir_simple") : "" => (@success);
+    @.check (!@success, "instantiation of dir failed");
+    strcpy(next_inputinfo->conn_name, "in");
+    @=call :<strat$connect (next_inputinfo, output_info) => (@success);
+    @.check(!@success, "connect failed");
+    strcpy(next_inputinfo->conn_name, "dir");
+    @=call :<strat$instconn (next_inputinfo, clear) : "" => (@success);
+    @.check(!@success, "dir init failed");
+    if(!path_elem[0]) { // return the "dir" output
+      memcpy(output_info, next_inputinfo, sizeof(struct conn_info));
+      next_inputinfo->conn_addr = 0;
+      return;
+    }
+    // now create the output
+    output_info->conn_addr = next_inputinfo->conn_addr;
+    next_inputinfo->conn_addr = 0;
+    strcpy(output_info->conn_name, "out");
+    output_info->conn_index = -1;
+    @=call :<strat$instconn (output_info, clear) : path_elem => (@success);
+    return;
+  }
+  // assume that we already have the input of a dir_simple instance
+#ifdef DEBUG
+  @.check(strcmp(next_inputinfo->conn_name,"in"), "bad dir '%s'", next_inputinfo->conn_name);
+#endif
+  output_info->conn_addr = next_inputinfo->conn_addr;
+  if(!path_elem[0]) { // return the "dir" output
+    next_inputinfo->conn_addr = 0;
+    strcpy(output_info->conn_name, "dir");
+    output_info->conn_index = 0;
+    @=call :<strat$getconn (output_info, next_inputinfo, sizeof(struct conn_info)) : "" => (@success);
+    return;
+  }
+  @=call :<strat$findconn (output_info, next_inputinfo, sizeof(struct conn_info)) : path_elem => (@success);
+  if(!@success) { // did not exist: instantiate output
+    strcpy(output_info->conn_name, "out");
+    output_info->conn_index = -1;
+    next_inputinfo->conn_addr = 0;
+    @=call :<strat$instconn (output_info, clear) : path_elem => (@success);
+  }
+}
+
+operation $instconn
+{
+  struct conn_info * conn1 = @conn1;
+  if(conn1->conn_addr != @#fs_logaddr) {
+    @=call :<strat$instconn @args;
+    return;
+  }
+  trace("---- instantiating path %s\n", @param);
+  @.check(strcmp(conn1->conn_name,"out"), "bad output name '%s'", conn1->conn_name);
+  int len = strlen(@param);
+  int start_pos = 0;
+  @.check(@param[start_pos] != '/', "cannot handle relative paths");
+  start_pos++;
+  struct conn_info output_info = { .conn_addr = @#root_addr, .conn_index = 0, .conn_name = "out" };
+  struct conn_info next_inputinfo = {};
+  int pos;
+  for(;;) {
+    pos = start_pos + 1;
+    if(@param[pos] == '/') { // ignore consecutive slashes
+      start_pos = pos;
+      continue;
+    }
+    if(@param[pos] == '.') { // treat special . and ..
+      if(!@param[pos+1]) {
+        start_pos = pos;
+        continue;
+      }
+      if(@param[pos+1] == '/') {
+        start_pos = pos+1;
+        continue;
+      }
+      if(@param[pos+1] == '.') {
+	// NYI
+      }
+    }
+    // notice: trailing slashes will lead to an empty string!
+    while(@param[pos] && @param[pos] != '/') {
+      pos++;
+    } 
+    int comp_len = pos - start_pos;
+    char buf[comp_len+1];
+    copy_str(buf, comp_len+1, @param, start_pos, pos);
+    trace("-- path elem '%s'\n", buf);
+    pathelem(&output_info, &next_inputinfo, buf, @clear);
+    if(!@success) {
+      return;
+    }
+    if(!@param[pos]) {
+      break;
+    }
+    start_pos = pos+1;
+  }
+  int alloclen = len + sizeof(struct path) + 2;
+  paddr_t phys_addr;
+  phys_addr = (paddr_t)malloc(alloclen);
+  @.check(!phys_addr, "cannot alloc space for path");
+  struct path * path = MAKE_PTR(phys_addr);
+  path->chain = NULL;
+  path->len = len;
+  path->index = @#max_index++;
+  memcpy(&path->alias, &output_info, sizeof(path->alias));
+  strcpy(path->name, @param);
+  path_add(@#path_hash, path);
+  index_add(@#index_hash, path);
+  trace("added %d '%s'\n", path->index, path->name);
+  conn1->conn_index = path->index;
+  @success = TRUE;
+}
+
+@.func _deinst_path(addr_t addr)
+{
+  for(;;) {
+    if(addr == @#root_addr) {
+      break;
+    }
+    struct conn_info curr = { .conn_addr = addr, .conn_name = "in", .conn_index = 0 };
+    struct conn_info prev = {};
+    success_t oldsuccess;
+    @=call :<strat$getconn (&curr, &prev, sizeof(prev)) => (oldsuccess);
+    @=call :<strat$deinstbrick (addr) => (@success);
+    trace("_deinst_path success=%d\n", @success);
+    addr = prev.conn_addr;
+    if(!@success || !oldsuccess || !addr) {
+      break;
+    }
+    @=call :<strat$deinstconn (&prev) => (@success);
+    if(!@success) {
+      break;
+    }
+  }
+}
+
+operation $deinstconn
+{
+  struct conn_info * conn1 = @conn1;
+  if(conn1->conn_addr != @#fs_logaddr) {
+    @=call :<strat$deinstconn @args;
+    return;
+  }
+  struct path * path = index_find(@#index_hash, conn1->conn_index);
+  if(!path) {
+    return;
+  }
+  @.check(path->chain, "output has remaining connections");
+#if 1
+  _deinst_path(path->alias.conn_addr);
+#endif
+  path_del(@#path_hash, path->name, path->len);
+  index_del(@#index_hash, path->index);
+  trace("removed '%s'\n", path->name);
+  @success = TRUE;
+}
+
+operation $getconn
+{
+  struct conn_info * conn1 = @conn1;
+	// virtually modify the maindir
+  if(!conn1->conn_addr && !strcmp(conn1->conn_name, "_fs")) {
+    @.check(@conn_len < sizeof(struct conn_info), "not enough space");
+    struct conn_info * res_conn = @res_conn;
+    res_conn->conn_addr = @#fs_logaddr;
+    strcpy(res_conn->conn_name, "hook");
+    res_conn->conn_index = 0;
+    @conn_len = sizeof(struct conn_info);
+    @success = TRUE;
+    return;
+  }
+	// virtually create my outputs
+  if(conn1->conn_addr == @#fs_logaddr) {
+    struct path * path = index_find(@#index_hash, conn1->conn_index);
+    if(!path) {
+      return;
+    }
+    @conn_len = make_conns_info(path->chain, @res_conn, @conn_len);
+		if(@conn_len) {
+      @success = TRUE;
+		}
+    return;
+  }
+	// nothing to modify virtually
+  @=call :<strat$getconn @args;
+}
+
+operation $findconn
+{
+  struct conn_info * conn1 = @conn1;
+  if(conn1->conn_addr != @#fs_logaddr) {
+    @=call :<strat$findconn @args;
+    return;
+  }
+  int len = strlen(@param); 
+  struct path * path = path_find(@#path_hash, @param, len);
+  if(!path) {
+    return;
+  }
+	strcpy(conn1->conn_name, "out");
+	conn1->conn_index = path->index;
+	@conn_len = make_conns_info(path->chain, @res_conn, @conn_len);
+  @success = TRUE;
+}
+
+operation $transfer
+{
+  if(@log_addr != @#fs_logaddr) {
+    @=call :<strat$transfer @args;
+		// virtuall append my infos to the maindir
+    if(!@log_addr && @direction == direct_read && @success && @phys_len > 3) {
+      @phys_len -= 3;
+      char * str = MAKE_PTR(@phys_addr+@phys_len);
+      int plus = snprintf(str, (plen_t)@log_len - @phys_len,
+			  "  output _fs = {\n    connect _fs=%llx:hook\n  }\n}\n", @#fs_logaddr);
+      @phys_len += plus;
+    }
+    return;
+  }
+  if(@direction == direct_read) {
+    int i;
+    int pos;
+    char * str = MAKE_PTR(@phys_addr);
+    pos = snprintf(str, @log_len, "brick=fs{\n");
+    if(pos >= @log_len) return;
+    for(i = 0; i < PATH_HASH_MAX; i++) {
+      struct path * tmp;
+      for(tmp = @#index_hash[i]; tmp; tmp = tmp->index_next) {
+				pos += snprintf(str+pos, @log_len-pos,
+												"  output out[%d]={\n    c_param out[%d]=%s\n",
+												tmp->index, tmp->index, tmp->name);
+        if(pos >= @log_len) return;
+				pos += snprintf(str+pos, @log_len-pos,
+												"\n    connect out[%d]=", tmp->index);
+        if(pos >= @log_len) return;
+				pos += make_conns(tmp->chain, str+pos, @log_len-pos);
+        if(pos >= @log_len) return;
+				pos += snprintf(str+pos, @log_len-pos, "\n  }\n");
+        if(pos >= @log_len) return;
+      }
+    }
+    pos += snprintf(str+pos, @log_len-pos, "}\n");
+    if(pos >= @log_len) return;
+    @phys_len = pos+1;
+    @success = TRUE;
+  } else {
+    @.abort("writing NYI");
+  }
+}
+
+operation $wait
+{
+  if(@log_addr == @#fs_logaddr) {
+    @success = TRUE;
+    return;
+  }
+  @=call :<strat$op @args;
+}
+
+operation $get,$put,$getaddr
+{
+  @=call :<strat$op @args;
+}

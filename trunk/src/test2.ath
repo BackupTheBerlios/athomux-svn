@@ -1,0 +1,80 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #test2
+
+purpose This is just a demo for the brick syntax
+
+description
+  This brick does nothing useful. Dont use it actually.
+enddescription
+
+example
+  Cannot be used at all.
+endexample
+
+attr attrname1=1
+attr attrname2=16:24
+attr attrname3=16:32:8
+
+static_data {// my brick declarations
+struct test2 {
+  name_t name;
+};
+}
+
+data { // my brick vars
+  int state;
+}
+
+init { // my brick init
+  @#state = 0;
+}
+
+input :<in1(:2:)
+attr5 attrname4 = 17
+attr5 attrname5 = 17:19
+attr8 attrname6 = 16:32:16
+data { // my input vars
+	int xxx;
+}
+init { // my input init
+	@<xxx = 1;
+}
+
+input :<in2
+
+local input :<loc_in
+local output :>loc_out
+
+output :>out1(:3:)
+data {
+  int outstate;
+}
+
+operation $output_init
+{
+}
+
+output :>out_arr[4]
+data {
+  int i;
+}
+init {
+  @>i = 0;
+}
+
+operation $get
+{
+  @>i++;
+  @>out1.outstate++;
+  @>out_arr[2].i++;
+}
+
+section (:1:)
+
+operation $get
+{
+  @>i--;
+}

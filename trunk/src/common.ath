@@ -1,0 +1,229 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+@.define @.msg (kind, text...)
+{ printf(kind "OP "OPERATION" file "BASEFILE" line %d op(%s) sect(%d) mand(%d): "text"\n", __LINE__, op_names[@op_code], @sect_code, @#_mand ...);
+}
+
+@.macro @.errmsg (text...)
+{ @.msg("error: ", text...)
+}
+
+@.define @.err (text...)
+{ @.errmsg(text...);
+  return;
+}
+
+@.define @.abort (text...)
+{ @.msg("FATAL: ", text...);
+  exit(-1);
+}
+
+@.define @.warn (condition,text...)
+{ if(condition) { @.msg("warning: ", "("@.string{@.protect{condition}}"): "text ...);
+    printf("breakpoint\n");
+  }
+}
+
+@.define @.check (condition,text...)
+{ if(condition) { @.msg("error: ", "("@.string{@.protect{condition}}"): "text ...);
+    return;
+  }
+}
+
+@.define @.fatal (condition,text...)
+{ if(condition) { @.msg("FATAL: ", "("@.string{@.protect{condition}}"): "text ...);
+    exit(-1);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+@.define @.sizeof(name) ((plen_t)&(NULL@*name->LASTFIELD))
+
+////////////////////////////////////////////////////////////////////////
+
+/* Pointer Cache routines
+ */
+
+@.define _PC_HASH(name, addr)
+(
+  PC__HASH(addr, PC_@@name@@_ALIGN, PC_@@name@@_MAX)
+)
+
+/* Notice: when PC_@@name@@_WHOLE == 1, the whole thing will be completely
+ * eliminated by the compiler (e.g. base_addr == _addr, and
+ * base_len == _len, and base_offset will be 0).
+ * Similarly, no code will be generated for dirty==FALSE.
+ */
+@.macro __PC_GET(name, _addr, _len, dirty)
+{
+  index_t index = _PC_HASH(name, _addr);
+  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
+  plen_t base_offset = PC__BASE_OFFSET(_addr, PC_@@name@@_WHOLE);
+  if((elem->pc_addr & ~(addr_t)PC__DIRTY) != base_addr) {
+    plen_t base_len = PC__BASE_LEN(base_offset, _len, PC_@@name@@_WHOLE);
+    _PC_GET(&@#_pc_@@name, elem, base_addr, base_len);
+  }
+  @#_pc_@@name.pc_write |= (dirty & PC__DIRTY);
+  elem->pc_addr |= (dirty & PC__DIRTY);
+}
+
+@.define PC_GET(name, addr_t _addr, plen_t _len)
+({
+  __PC_GET(name, _addr, _len, FALSE);
+  elem->pc_ptr + base_offset;
+})
+
+@.define PC_GET_DIRTY(name, addr_t _addr, plen_t _len)
+({
+  __PC_GET(name, _addr, _len, TRUE);
+  elem->pc_ptr + base_offset;
+})
+
+@.define PC_SET(name, addr_t _addr, plen_t _len, void * _ptr, bool dirty)
+{
+  index_t index = _PC_HASH(name, _addr);
+  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  if(elem->pc_addr & PC__PRESENT) {
+    _PC_PUT(&@#_pc_@@name, elem);
+  }
+  addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
+  plen_t base_offset = PC__BASE_OFFSET(_addr, PC_@@name@@_WHOLE);
+  plen_t base_len = PC__BASE_LEN(base_offset, _len, PC_@@name@@_WHOLE);
+  elem->pc_addr = base_addr | (dirty & PC__DIRTY);
+  elem->pc_len = base_len;
+  elem->pc_ptr = MAKE_PTR(MAKE_PADDR(_ptr) & ~(PC_@@name@@_WHOLE-1));
+  @#_pc_@@name.pc_write |= dirty;
+}
+
+@.define PC_UNSET(name, addr_t _addr)
+{
+  index_t index = _PC_HASH(name, _addr);
+  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  if(elem->pc_addr & PC__PRESENT) {
+    _PC_PUT(&@#_pc_@@name, elem);
+  }
+}
+
+@.define PC_DIRTY(name, addr_t _addr)
+{
+  index_t index = _PC_HASH(name, _addr);
+  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  addr_t base_addr = PC__BASE_ADDR(_addr, PC_@@name@@_WHOLE);
+  if((elem->pc_addr & ~(addr_t)PC__DIRTY) == base_addr) {
+    elem->pc_addr |= PC__DIRTY;
+    @#_pc_@@name.pc_write = TRUE;
+  }
+}
+
+@.define PC_FLUSH(name)
+{
+  if(@#_pc_@@name.pc_version) {
+    _PC_ALL_PUT(&@#_pc_@@name, PC_@@name@@_MAX);
+    @#_pc_@@name.pc_version++;
+    @#_pc_@@name.pc_write = FALSE;
+  }
+}
+
+@.define PC_ALLOC(name, len_t _len) => (log_addr)
+({
+  struct pc_elem * elem = _PC_ALLOC(&@#_pc_@@name, _len, PC_@@name@@_ALIGN, PC_@@name@@_WHOLE, PC_@@name@@_MAX);
+  log_addr = elem->pc_addr & ~(addr_t)(PC__DIRTY | PC__PRESENT);
+  elem->pc_ptr;
+})
+
+@.define PC_FREE(name, addr_t _addr, len_t _len)
+{
+  index_t index = _PC_HASH(name, _addr);
+  struct pc_elem * elem = &@#_pc_@@name.pc_elem[index];
+  _PC_FREE(&@#_pc_@@name, elem, _addr, _len);
+}
+
+@.define PC_BASEADDR(name, _addr)
+({
+  PC__BASE_ADDR2(_addr, PC_@@name@@_WHOLE)
+})
+
+////////////////////////////////////////////////////////////////////////
+
+/* Doubly linked cyclic ring lists
+ */
+
+
+@.define _LI_CONNECT(addr_t left, struct link * ptr_left, addr_t right, struct link * ptr_right)
+{
+  ptr_left->l_next = right;
+  ptr_right->l_prev = left;
+}
+
+@.define LI_CONNECT(name, addr_t left, addr_t right)
+{
+  struct link * ptr_left = PC_GET_DIRTY(name, left, PC_@@name@@_WHOLE);
+  struct link * ptr_right = PC_GET_DIRTY(name, right, PC_@@name@@_WHOLE);
+  _LI_CONNECT(left, ptr_left, right, ptr_right);
+}
+
+@.define LI_INIT(name, addr_t _start)
+{
+  struct link * ptr_start = PC_GET_DIRTY(name, _start, PC_@@name@@_WHOLE);
+  _LI_CONNECT(_start, ptr_start, _start, ptr_start);
+}
+
+@.define LI_APPEND(name, addr_t _start, addr_t _elem)
+{
+  struct link * ptr_start = PC_GET_DIRTY(name, _start, PC_@@name@@_WHOLE);
+  struct link * ptr_elem = PC_GET_DIRTY(name, _elem, PC_@@name@@_WHOLE);
+  addr_t _next = ptr_start->l_next;
+  struct link * ptr_next = PC_GET_DIRTY(name, _next, PC_@@name@@_WHOLE);
+  _LI_CONNECT(_start, ptr_start, _elem, ptr_elem);
+  _LI_CONNECT(_elem, ptr_elem, _next, ptr_next);
+}
+
+@.define LI_PREPEND(name, addr_t _start, addr_t _elem)
+{
+  struct link * ptr_start = PC_GET_DIRTY(name, _start, PC_@@name@@_WHOLE);
+  struct link * ptr_elem = PC_GET_DIRTY(name, _elem, PC_@@name@@_WHOLE);
+  addr_t _prev = ptr_start->l_prev;
+  struct link * ptr_prev = PC_GET_DIRTY(name, _prev, PC_@@name@@_WHOLE);
+  _LI_CONNECT(_prev, ptr_prev, _elem, ptr_elem);
+  _LI_CONNECT(_elem, ptr_elem, _start, ptr_start);
+}
+
+@.define LI_REMOVE(name, addr_t _elem)
+{
+  struct link * ptr_elem = PC_GET(name, _elem, PC_@@name@@_WHOLE);
+  LI_CONNECT(name, ptr_elem->l_prev, ptr_elem->l_next);
+}
+
+@.define LI_GET(name, addr_t _elem, bool dirty)
+({
+  __PC_GET(name, _elem, PC_@@name@@_WHOLE, dirty);
+  elem->pc_ptr;
+})
+
+////////////////////////////////////////////////////////////////////////
+
+/* Hashes
+ */
+
+@.define HASH_FIND(name, addr)
+{
+#if 0 // test macro expansion
+  BASE_@@name
+  @.expand(2){BASE_@@name}
+  @.compute(2+3)
+  @.compute{ my $x = "a"; "${x}b"; }
+  //@.compute{ my $error = }
+  @.if(0!=0) {
+   text1
+  } @.elsif(1==2) {
+   text2
+  } @.else {
+   text3
+  }
+  LI_GET(@.expand{BASE_@@name}, addr, FALSE);
+#endif
+}

@@ -1,0 +1,975 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+strategy brick #control_simple
+purpose (De)instantiate other bricks upon request from the control output
+desc
+  A control_* capable of controlling itself, i.e. running the instances
+  in the same address space as itself.
+  It has no code input, no dynamic linking, no image output.
+  Currently it uses malloc(), since the outermost control will always
+  run in a non-Athomux environment. Is it possible to use an
+  explicit :<mem input instead, such that both circular self-control
+  and sub-control of logically subsidiary environments is possible??
+  Preliminary test implementation, bound to a singe-address-space
+  execution environment (e.g. Linux userspace or Linux kernelspace).
+  A lot of stuff is missing.
+enddesc
+
+static_header {
+mand_t base_mand;
+
+struct output * root_strategy;
+
+// Restrictions: a brick representation must fit in DEFAULT_TRANSFER
+#define REPRES_MAX DEFAULT_TRANSFER
+#define BRICK_HASH_MAX (1024*2)
+
+struct connector_link {
+  struct connector_link * first;
+  struct connector_link * chain;
+};
+
+struct connector_header {
+  struct connector_link link;
+  struct connector_header * conn_next;
+  struct brick_header * belonging;
+  void * instance;
+  char * c_param;
+  const struct load_conn * load_conn;
+  index_t c_index;
+};
+
+struct brick_header {
+  addr_t addr;
+  struct brick_header * brick_hash_next;
+  void * instance;
+  char * b_param;
+  const struct loader * loader;
+  struct connector_header * connectors;
+  struct connector_header * last;
+  struct connector_header connector[0];
+};
+
+}
+
+static_data {
+
+#define LINK_TO_CONN(p) ((struct connector_header *)(p))
+
+#define GET_BRICK(brickheader) (brickheader->instance)
+#define GET_INPUT(connheader) ((struct input*)(connheader->instance))
+#define GET_OUTPUT(connheader) ((struct output*)GET_INPUT(connheader))
+
+////////////////////////////////////////////////////////////////////
+
+struct brick_control_simple * root_instance = NULL;
+
+struct brick_header * boot = NULL;
+
+mand_t base_mand = 1;
+
+#include "defs.h"
+
+static const struct loader * loaders[] = {
+#include "loaders.h"
+  NULL
+};
+
+////////////////////////////////////////////////////////////////////
+
+#define MAINDIR_MAX 32
+
+struct main_dir_entry {
+  struct connector_link link;
+  sname_t name;
+};
+
+static struct main_dir_entry main_dir[MAINDIR_MAX] = {};
+
+bool new_main_dir(char * name)
+{
+  int i;
+  for(i = 0; i < MAINDIR_MAX; i++) {
+    struct main_dir_entry * tmp = &main_dir[i];
+    if(tmp->name[0]) continue;
+    strncpy(tmp->name, name, sizeof(tmp->name));
+    return TRUE;
+  }
+  rawtrace("failed to create maindir %s\n", name);
+  return FALSE;
+}
+
+struct main_dir_entry * find_main_dir(char * name)
+{
+  int i;
+  for(i = 0; i < MAINDIR_MAX; i++) {
+    struct main_dir_entry * tmp = &main_dir[i];
+    if(!strcmp(tmp->name, name)) {
+      return &main_dir[i];
+    }
+  }
+  return NULL;
+}
+
+#define PR(myargs...) \
+   res += snprintf(buf+res, len-res, myargs); \
+   if(res >= len) return 0
+
+int main_dir_info(char * buf, int len)
+{
+  int res = 0;
+  PR("brick=ATHOMUX_MAINDIR {\n");
+  int i;
+  for(i = 0; i < MAINDIR_MAX; i++) {
+    struct main_dir_entry * tmp = &main_dir[i];
+    if(!tmp->name[0]) continue;
+    PR("  output=%s {\n    connect %s=", tmp->name, tmp->name);
+    struct connector_link * chain;
+    for(chain = tmp->link.first; chain; chain = chain->chain) {
+      struct connector_header * tmp2 = LINK_TO_CONN(chain);
+      PR("%s%llx:%s",
+	 chain == tmp->link.first ? "" : ",",
+	 tmp2->belonging->addr,  tmp2->load_conn->name);
+    }
+    PR("\n  }\n");
+  }
+  PR("}\n");
+  return res;
+}
+
+////////////////////////////////////////////////////////////////////
+
+int find_loader(char * name)
+{
+  const struct loader ** ptr = loaders;
+  int i;
+  for(i = 0, ptr = loaders; *ptr; ptr++, i++) {
+    if(!strcmp((*ptr)->name, name)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+
+static inline
+int brick_hash_fn(addr_t addr)
+{
+  return ((unsigned long)addr / REPRES_MAX) % BRICK_HASH_MAX;
+}
+
+void insert_brick_hash(struct brick_header ** brick_hash, struct brick_header * brick)
+{
+  int index = brick_hash_fn(brick->addr);
+  brick->brick_hash_next = brick_hash[index];
+  brick_hash[index] = brick;
+}
+
+struct brick_header * find_brick_hash(struct brick_header ** brick_hash, addr_t addr)
+{
+  struct brick_header * try;
+  int index = brick_hash_fn(addr);
+  for(try = brick_hash[index]; try; try = try->brick_hash_next) {
+    if(try->addr == addr)
+      return try;
+  }
+  return NULL;
+}
+
+/* find static connector info by given connector name
+ */
+index_t find_load_conn(struct brick_header * brick, char * name)
+{
+  // TODO: replace linear search with hashing, but only for n > 10
+  // or the like (due to overhead of hashing)
+  const struct loader * loader = brick->loader;
+  rawtrace("searching for '%s' in '%s' parameter '%s'\n", name, loader->name, brick->b_param);
+  int i;
+  for(i = 0; i < loader->conn_count; i++) {
+    const struct load_conn * try = &loader->conn[i];
+    if(strcmp(try->name, name)) continue;
+    rawtrace("found '%s'\n", try->name);
+    return i;
+  }
+  return -1;
+}
+
+struct connector_header * new_conn(struct brick_header * brick, index_t conn)
+{
+  int i;
+  index_t start_index = brick->loader->conn[conn].start_index;
+  index_t count = brick->loader->conn[conn].count;
+  if(!count) { // dynamic array
+    static index_t counter = 10000; // PROVISIONARY!!!!!
+    struct connector_header * res = malloc(sizeof(struct connector_header));
+    memset(res, 0, sizeof(struct connector_header));
+    res->c_index = counter++;
+    rawtrace("dynamic connector %d\n", res->c_index);
+    return res;
+  }
+  struct connector_header * try = &brick->connector[start_index];
+  for(i = 0; i < count; i++, try++) {
+    if(!try->c_param) {
+      try->c_index = i;
+      rawtrace("found new index %d\n", i);
+      return try;
+    }
+  }
+  return NULL;
+}
+
+struct connector_header * get_conn(struct brick_header * brick, index_t conn, index_t index)
+{
+  rawtrace("index %d\n", index);
+  index_t count = brick->loader->conn[conn].count;
+  if(!count) {
+    struct connector_header * try;
+    for(try = brick->connectors; try; try = try->conn_next) {
+      if(try->c_index == index) {
+        return try;
+      }
+    }
+#ifdef DEBUG
+    printf("search in dynamic array for %d failed\n", index);
+    exit(-1);
+#endif
+    return NULL;
+  }
+  index_t start_index = brick->loader->conn[conn].start_index;
+  if(index < 0 || index >= count) {
+#ifdef DEBUG
+    printf("bad index %d\n", index);
+    exit(-1);
+#endif
+    return NULL;
+  }
+  return &brick->connector[start_index+index];
+}
+
+struct connector_header * find_conn(struct brick_header * brick,
+				    char * name, index_t index)
+{
+  rawtrace("find_conn '%s' %d\n", name, index);
+#ifdef DEBUG
+  if(index < 0) {
+    printf("bad index %d\n", index);
+    exit(-1);
+  }
+#endif
+  index_t conn = find_load_conn(brick, name);
+  if(conn < 0)
+    return NULL;
+  return get_conn(brick, conn, index);
+}
+
+struct connector_header * find_param(struct brick_header * brick,
+				     const char * c_param, int type)
+{
+  // TODO: replace linear search with hashing
+  struct connector_header * try;
+  for(try = brick->connectors; try; try = try->conn_next) {
+    if(try->c_param && !strcmp(try->c_param, c_param)) {
+      return try;
+    }
+  }
+  return NULL;
+}
+
+void create_conn(struct brick_header * brick, struct connector_header * conn, const struct load_conn * load_conn, index_t index)
+{
+  conn->belonging = brick;
+  conn->load_conn = load_conn;
+  conn->c_index = index;
+  if(!load_conn->count) { // dynamic array
+    conn->instance = malloc(load_conn->size);
+    memset(conn->instance, 0, load_conn->size);
+    rawtrace("dynamic instance %ld\n", load_conn->size);
+    load_conn->init_code(conn->instance, brick->instance);
+  } else {
+    conn->instance = brick->instance + load_conn->offset + load_conn->size * index;
+  }
+}
+
+void insert_conn(struct brick_header * brick, struct connector_header * conn)
+{
+  if(!brick->last) {
+    brick->connectors = conn;
+  } else {
+    brick->last->conn_next = conn;
+  }
+  brick->last = conn;
+}
+
+mand_t create_brick(struct brick_header * brick, const struct loader * loader, const char * b_param, mand_t mand)
+{
+  strcpy(brick->b_param, b_param);
+  brick->loader = loader;
+
+  mand = loader->dynamic_init(GET_BRICK(brick), b_param, mand);
+  // init all inputs automatically (outputs must be explicitly initialized)
+  int i;
+  for(i = 0; i < loader->conn_count; i++) {
+    const struct load_conn * load_conn = &loader->conn[i];
+    if(!load_conn->type) { // only init inputs
+      index_t start_index = load_conn->start_index;
+      int k;
+      for(k = 0; k < load_conn->count; k++) {
+	create_conn(brick, &brick->connector[start_index + k], load_conn, k);
+	insert_conn(brick, &brick->connector[start_index + k]);
+      }
+    }
+  }
+  return mand;
+}
+
+struct brick_header * new_brick(char * name, const char * b_param, mand_t * _mand)
+{
+  struct brick_header * brick;
+  index_t index = find_loader(name);
+  if(index < 0)
+    return NULL;
+  const struct loader * loader = loaders[index];
+  
+  len_t pre_len = loader->conn_totalcount * sizeof(struct connector_header) + sizeof(struct brick_header);
+  len_t total_size = loader->instance_size + pre_len;
+  brick = malloc(total_size);
+  rawtrace("malloc 1\n");
+  if(!brick)
+    return NULL;
+  memset(brick, 0, total_size);
+  brick->instance = ((char*)brick) + pre_len;
+  brick->b_param = malloc(strlen(b_param)+1);
+  rawtrace("malloc 2\n");
+  if(!brick->b_param) {
+    free(brick);
+    rawtrace("free 1\n");
+    return NULL;
+  }
+  *_mand = create_brick(brick, loader, b_param, *_mand);
+  return brick;
+}
+
+bool type_connect(struct connector_header * out_h, struct connector_header * in_h)
+{
+  if(!out_h->load_conn->type || in_h->load_conn->type) {
+    rawtrace("bad type");
+    return FALSE;
+  }
+  const struct gen_type * in_type = in_h->load_conn->gen_type;
+  const struct gen_type * out_type = out_h->load_conn->gen_type;
+  // both arrays are sorted
+  for(; in_type->gen_typename; in_type++) {
+    int compare = -1;
+    for(; out_type->gen_typename; out_type++) {
+      compare = strcmp(out_type->gen_typename, in_type->gen_typename);
+      if(compare >= 0) break;
+    }
+    if(compare) {
+      rawtrace("could not find typename %s\n", in_type->gen_typename);
+      return FALSE;
+    }
+    void * in_instance = GET_BRICK(in_h->belonging);
+    GEN_DEREF(in_instance,, in_type->gen_offset, const struct gen_tabentry*) = out_type->gen_table;
+  }
+  return TRUE;
+}
+
+bool inner_connect(struct connector_header * out_h, struct connector_header * in_h)
+{
+  if(!out_h->load_conn->type || in_h->load_conn->type) {
+    rawtrace("bad type");
+    return FALSE;
+  }
+  // TODO: connect other array members
+  struct input * input = GET_INPUT(in_h);
+  struct output * output = GET_OUTPUT(out_h);
+  // check that output has not less sections than input
+  if(in_h->load_conn->sect_count > out_h->load_conn->sect_count) {
+    rawtrace("bad sect_count");
+    return FALSE;
+  }
+  input->connect = output;
+  input->rev_next = output->rev_chain;
+  output->rev_chain = input;
+  return TRUE;
+}
+
+bool outer_connect(struct connector_link * out_h, struct connector_link * in_h)
+{
+  in_h->first = out_h;
+  in_h->chain = out_h->first;
+  out_h->first = in_h;
+  return TRUE;
+}
+
+int gen_info(struct brick_header * brick, char * buf, int len)
+{
+  const struct loader * loader = brick->loader;
+  struct connector_header * conn;
+  int res = 0;
+  int add_count = 0;
+  // produce general info
+  PR("brick=%s {\n", loader->name);
+  if(brick->b_param && brick->b_param[0]) {
+    PR("  b_param %s=%s\n", loader->name, brick->b_param);
+  }
+  PR("%s", loader->static_info);
+  // produce input info
+  for(conn = brick->connectors; conn; conn = conn->conn_next) {
+    if(conn->load_conn->type) continue;
+    // only show the _first_ uninitialized connector
+    if(!conn->c_param)
+      continue;
+    PR("  input=%s {\n", conn->load_conn->name); 
+    if(conn->c_param && conn->c_param[0]) {
+      PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
+    }
+    PR("%s", conn->load_conn->static_info);
+    if(conn->link.first) {
+      struct connector_link * l_conn = conn->link.first;
+      addr_t addr = 0;
+      const char * name;
+      if(l_conn->chain) {
+	struct main_dir_entry * entry = (void*)l_conn;
+	name = entry->name;
+      } else {
+        struct connector_header * c_conn = LINK_TO_CONN(l_conn);
+	addr = c_conn->belonging->addr;
+	name = c_conn->load_conn->name;
+      }
+      PR("    connect %s==%llx:%s\n", conn->load_conn->name, addr, name);
+    }
+    PR("  }\n");
+  }
+  // produce output info
+  add_count = 0;
+  for(conn = brick->connectors; conn; conn = conn->conn_next) {
+    if(!conn->load_conn->type) continue;
+    // only show the _first_ uninitialized connector
+    if(!conn->c_param && add_count++)
+      continue;
+
+    if(conn->c_param) {
+      PR("  output=%s {\n", conn->load_conn->name);
+      if(conn->c_param[0]) {
+	PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
+      }
+      PR("%s    connect %s=", 
+	 conn->load_conn->static_info, conn->load_conn->name);
+      struct connector_link * chain;
+      for(chain = conn->link.first; chain; chain = chain->chain) {
+        struct connector_header * tmp = LINK_TO_CONN(chain);
+	PR("%s%llx:%s",
+	   chain == conn->link.first ? "" : ",",
+	   tmp->belonging->addr,  tmp->load_conn->name);
+      }
+      PR("\n");
+    } else {
+      PR("  output==%s {\n", conn->load_conn->name);
+    }
+    PR("  }\n");
+  }
+  PR("}\n");
+  return res+1; // include trailing nullbyte
+}
+
+bool disconnect(struct connector_header * in_h)
+{
+  struct connector_link * out_l = in_h->link.first;
+  if(!out_l) {
+    return FALSE;
+  }
+  struct input * input = NULL;
+  if(!out_l->chain) {
+    struct connector_header * out_h = LINK_TO_CONN(out_l);
+    input = GET_INPUT(in_h);
+    if(!out_h->load_conn->type || in_h->load_conn->type) {
+      return FALSE;
+    }
+  }
+  struct connector_link ** ptr;
+  for(ptr = &out_l->first; *ptr; ptr = &(*ptr)->chain) {
+    if(*ptr == &in_h->link) {
+      *ptr = in_h->link.chain;
+      in_h->link.first = NULL;
+      if(input) {
+	struct input ** other = &input->connect->rev_chain;
+	while(*other != input) {
+          other = &(*other)->rev_next;
+        }
+        *other = input->rev_next;
+	input->connect = NULL;
+      }
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+#if 1 /* This should not be used, because disconnecting active
+       * instances must be prohibited.
+       * Consequence: first disconnect all outputs by hand.
+       * If anyone needs an automatic strategy for doing this,
+       * please implement it as a strategy_* brick.
+       */
+void disconnect_all(struct connector_header * out_h)
+{
+  struct connector_link * in_h;
+  for(in_h = out_h->link.first; in_h; in_h = in_h->chain) {
+    struct input * input = GET_INPUT(LINK_TO_CONN(in_h));
+    //rawtrace("xxxxxx %s[%d] <-- %s[%d]\n", out_h->load_conn->name, out_h->index, in_h->load_conn->name, in_h->index);
+    in_h->first = NULL;
+    input->connect = NULL;
+  }
+  out_h->link.first = NULL;
+}
+#endif
+
+bool delete_brick(struct brick_header ** hash, struct brick_header * brick, const char * b_param)
+{
+  struct connector_header * tmp;
+  struct brick_header ** ptr;
+  int index = brick_hash_fn(brick->addr);
+  for(ptr = &hash[index]; *ptr; ptr = &(*ptr)->brick_hash_next) {
+    if(*ptr == brick) {
+#if 1
+      // look whether all outputs are disconnected
+      for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
+	if(!tmp->load_conn->type) continue;
+	if(tmp->link.first) {
+	  return FALSE;
+	}
+      }
+#endif
+      *ptr = brick->brick_hash_next;
+      brick->loader->dynamic_exit(GET_BRICK(brick), b_param);
+      // first deinstantate outputs while inputs remain connected
+      for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
+	if(!tmp->load_conn->type) continue;
+#if 1
+	disconnect_all(tmp);
+#endif
+	if(tmp->c_param && tmp->c_param != brick->b_param) {
+	  struct args init_args = { .destr = TRUE };
+	  struct output * output = GET_OUTPUT(tmp);
+	  output->ops[0][opcode_output_init]((void*)output, &init_args, b_param);
+	  free(tmp->c_param);
+	  rawtrace("free 4\n");
+	  tmp->c_param = NULL;
+	}
+      }
+      for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
+	if(tmp->load_conn->type) continue;
+	disconnect(tmp);
+	if(tmp->c_param && tmp->c_param != brick->b_param) {
+	  free(tmp->c_param);
+	  rawtrace("free 4\n");
+	}
+      }
+      free(brick->b_param);
+      rawtrace("free 2\n");
+      free(brick);
+      rawtrace("free 1\n");
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+}
+
+static_init {
+// simplistic bootstrap: create an instance which controls itself!
+if(boot) {
+  return; // never boot myself twice
+}
+rex_init();
+// create initial instance
+boot = new_brick("control_simple", "self-booted-by-default-init", &base_mand);
+if(!boot) {
+  exit(-1);
+}
+// static init of all other brick types
+const struct loader ** loader;
+for(loader = loaders; *loader; loader++) {
+  (*loader)->static_init();
+}
+// [1] is the control output; beware when adding/removing connectors
+create_conn(boot, &boot->connector[1], &conns_control_simple[1], 0);
+insert_conn(boot, &boot->connector[1]);
+boot->connector[1].c_param = boot->b_param;
+boot->addr = REPRES_MAX;
+root_instance = GET_BRICK(boot);
+root_instance->last_addr = boot->addr + REPRES_MAX;
+root_strategy = &root_instance->_conn_control._output_;
+insert_brick_hash(root_instance->brick_hash, boot);
+struct conn_info root_conn1 = {0, 0, "control" };
+struct args args1 = { .conn1 = &root_conn1, };
+root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
+struct conn_info root_conn2 = {boot->addr, 0, "hook" };
+struct args args2 = { .conn1 = &root_conn2, .conn2 = &root_conn1, };
+root_strategy->ops[0][opcode_connect]((void*)root_strategy, &args2, "");
+}
+
+data {
+  struct brick_header * brick_hash[BRICK_HASH_MAX];
+  addr_t last_addr;
+  mand_t mand;
+}
+
+init {
+  @#mand = 10;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+input :<hook
+
+output :>control
+
+operation $instbrick
+{
+  @.check(!@log_addr, "trying to instantiate at address 0 (reserved for MAINDIR)");
+  struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+  @.check(brick, "trying to create '%s' on an existing '%s' instance (%llx)", @name, brick->loader->name, @log_addr);
+  brick = new_brick(@name, @param, &@#mand);
+  @.check(!brick, "brick '%s' creation failed", @name);
+  trace("created %s %llx -> %p\n", @name, @log_addr, brick);
+  brick->addr = @log_addr;
+  insert_brick_hash(@#brick_hash, brick);
+  @success = TRUE;
+}
+
+operation $deinstbrick
+{
+  @.check(!@log_addr, "trying to deinstantiate at address 0 (reserved for MAINDIR)");
+  struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+  @.check(!brick, "brick %llx does not exist", @log_addr);
+  @success = delete_brick(@#brick_hash, brick, @param);
+  @.check(!@success, "deinst %llx failed\n", @log_addr);
+}
+
+operation $instconn
+{
+  struct brick_header * brick;
+  struct conn_info * conn1 = @conn1;
+  if(!conn1->conn_addr) { // handle main directory
+    trace("creating maindir '%s'\n", conn1->conn_name);
+    if(!new_main_dir(conn1->conn_name)) {
+      return;
+    }
+    @success = TRUE;
+    return;
+  }
+  // normal bricks
+  brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  trace("inst_conn %llx -> %p\n", conn1->conn_addr, brick);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  index_t conn_ix = find_load_conn(brick, conn1->conn_name);
+  @.check(conn_ix<0, "connector name '%s' does not exist", conn1->conn_name);
+  struct connector_header * conn;
+  if(conn1->conn_index < 0) { // search for free array member
+    conn = new_conn(brick, conn_ix);
+    @.check(!conn, "%llx no more connectors can be allocated", conn1->conn_addr);
+  } else {
+    conn = get_conn(brick, conn_ix, conn1->conn_index);
+    @.check(!conn, "non-existing output '%s'", conn1->conn_name);
+    @.check(brick->loader->conn[conn_ix].type!=1, "bad connector type '%s'", conn1->conn_name);
+    if(conn->c_param != brick->b_param) {
+#if 1 // allow multiple inits during test phase
+      if(conn->c_param) {
+	free(conn->c_param);
+	trace("free 4\n");
+	conn->c_param = NULL;
+      }
+#endif
+      @.check(conn->c_param != NULL, "in/output %s already instantiated", conn1->conn_name);
+    }
+  }
+  if(!conn->c_param) {
+    conn->c_param = malloc(strlen(@param)+1);
+    trace("malloc 4\n");
+    @.check(!conn->c_param, "no space for parameter string");
+  }
+  strcpy(conn->c_param, @param);
+  const struct load_conn * load_conn = &brick->loader->conn[conn_ix];
+  struct brick_header * old = conn->belonging;
+  if(!old) {
+    create_conn(brick, conn, load_conn, conn->c_index);
+  }
+  if(load_conn->type) {
+    struct output * output = GET_OUTPUT(conn);
+    struct args init_args = { .constr = TRUE, .clear = @clear };
+    output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
+    if(!init_args.success) {
+      if(!load_conn->count) { // dynamic array
+	free(conn->instance);
+      }
+      if(conn->c_param) {
+	free(conn->c_param);
+	trace("free 4\n");
+      }
+      // TODO: fix further memory leak
+      @.err("$output_init failed");
+    }
+  } else {
+    @.abort("input instantiation '%s' NYI", conn1->conn_name);
+  }
+  if(!old) {
+    insert_conn(brick, conn);
+  }
+  conn1->conn_index = conn->c_index;
+  @success = TRUE;
+  trace("instantiated '%s' index %d c_param '%s'\n", conn1->conn_name, conn1->conn_index, @param);
+}
+
+operation $deinstconn
+{
+  struct conn_info * conn1 = @conn1;
+  if(!conn1->conn_addr) {
+    @.errmsg("ATHOMUX_MAINDIR output deinstantiation NYI");
+    return;
+  }
+  struct connector_header * conn;
+  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
+  @.check(!conn, "non-existing output name '%s'", conn1->conn_name);
+  @.check(!conn->load_conn, "non-instantiated output '%s'", conn1->conn_name);
+  @.check(conn->load_conn->type!=1, "bad connector type '%s'", conn1->conn_name);
+  @.check(!conn->c_param, "output %s not instantiated", conn1->conn_name);
+  @.check(conn->c_param==brick->b_param, "output %s is fixed, cannot de-instantiate", conn1->conn_name);
+  if(conn->load_conn->type) {
+#if 0
+    disconnect_all(conn);
+#else
+    @.check(conn->link.first, "brick '%s' address %llx output '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
+#endif
+    struct output * output = GET_OUTPUT(conn);
+    struct args init_args = { .destr = TRUE };
+    output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
+  } else {
+    @.err("input deinstantiation NYI");
+  }
+  free(conn->c_param);
+  trace("free 4\n");
+  conn->c_param = NULL;
+  @success = TRUE;
+}
+
+operation $connect
+{
+  struct conn_info * conn1 = @conn1;
+  struct conn_info * conn2 = @conn2;
+  struct connector_header * conn;
+  struct brick_header * other_brick;
+  struct connector_header * other_conn;
+  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
+  @.check(!conn, "non-existing input '%s'", conn1->conn_name);
+  @.check(conn->load_conn->type!=0, "only inputs can be connected");
+  @.check(conn->link.first != NULL, "input '%s' already connected", conn1->conn_name);
+  if(!conn2->conn_addr) { // special case: main directory
+    struct main_dir_entry * entry = find_main_dir(conn2->conn_name);
+    @.check(!entry, "non-existing maindir output '%s'", conn2->conn_name);
+    if(!outer_connect(&entry->link, &conn->link)) {
+      @.abort("connection failed, internal inconsistency");
+    }
+    entry->link.chain = &entry->link; // cycle is special!
+    @success = TRUE;
+    return;
+  }
+  other_brick = find_brick_hash(@#brick_hash, conn2->conn_addr);
+  @.check(!other_brick, "other brick %llx does not exist", conn2->conn_addr);
+  other_conn = find_conn(other_brick, conn2->conn_name, conn2->conn_index);
+  @.check(!other_conn, "output name '%s' index %d in brick %llx does not exist", conn2->conn_name, conn2->conn_index, conn2->conn_addr);
+  @.check(!other_conn->load_conn, "output '%s' in brick %llx not instantiated", conn2->conn_name, conn2->conn_addr);
+  @.check(other_conn->load_conn->type!=1, "only outputs can be connected to");
+  @.check(!other_conn->c_param, "brick '%s' output '%s' is not instantiated", other_brick->loader->name, conn2->conn_name);
+  if(!type_connect(other_conn, conn) || !inner_connect(other_conn, conn) || !outer_connect(&other_conn->link, &conn->link)) {
+    @.abort("connection failed, internal inconsistency");
+  }
+  trace("connected %llx:%s.%s <- %llx:%s:%s\n", conn2->conn_addr, other_brick->loader->name, other_conn->load_conn->name, brick->addr, brick->loader->name, conn->load_conn->name);
+  @success = TRUE;
+}
+
+operation $disconnect
+{
+  struct conn_info * conn1 = @conn1;
+  struct connector_header * conn;
+  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
+  @.check(!conn, "non-existing input name '%s'", conn1->conn_name);
+  @.check(!conn->load_conn, "non-instantiated input '%s'", conn1->conn_name);
+  @.check(conn->load_conn->type!=0, "only inputs can be connected");
+  @.check(!conn->link.first, "input %s not connected", conn1->conn_name);
+  disconnect(conn);
+  @success = TRUE;
+}
+
+@.define mk_conn_info(struct connector_link * first)
+{
+  struct conn_info * info = @res_conn;
+  plen_t rest = @conn_len;
+  struct connector_link * tmp;
+  for(tmp = first; tmp; tmp = tmp->chain) {
+    if(rest < sizeof(struct conn_info)) {
+      return;
+    }
+    struct connector_header * tmp2 = LINK_TO_CONN(tmp);
+    info->conn_addr = tmp2->belonging->addr;
+    info->conn_index = tmp2->c_index;
+    strncpy(info->conn_name, tmp2->load_conn->name, sizeof(info->conn_name));
+    info++;
+    rest -= sizeof(struct conn_info);
+  }
+  @conn_len -= rest;
+}
+
+operation $getconn
+{
+  struct conn_info * conn1 = @conn1;
+  struct connector_header * conn;
+  if(!conn1->conn_addr) {
+    struct main_dir_entry * entry = find_main_dir(conn1->conn_name);
+    if(entry) {
+      @success = TRUE;
+      mk_conn_info(entry->link.first);
+    }
+    return;
+  }
+  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  conn = find_conn(brick, conn1->conn_name, conn1->conn_index);
+  if(conn) {
+    @success = TRUE;
+    mk_conn_info(conn->link.first);
+  }
+}
+
+operation $findconn
+{
+  struct conn_info * conn1 = @conn1;
+  struct connector_header * conn;
+  struct brick_header * brick = find_brick_hash(@#brick_hash, conn1->conn_addr);
+  @.check(!brick, "brick address %llx does not exist", conn1->conn_addr);
+  conn = find_param(brick, @param, 1);
+  if(conn) {
+    strncpy(conn1->conn_name, conn->load_conn->name, sizeof(conn1->conn_name));
+    conn1->conn_index = conn->c_index;
+    @success = TRUE;
+    if(@res_conn) {
+      mk_conn_info(conn->link.first);
+    }
+  }
+}
+
+operation $transfer
+{
+  if(@direction == direct_read) {
+    if(!@log_addr) {
+      @phys_len = main_dir_info(MAKE_PTR(@phys_addr), @log_len);
+    } else {
+      struct brick_header * brick = find_brick_hash(@#brick_hash, @log_addr);
+      @.check(!brick, "brick address %llx does not exist", @log_addr);
+      @phys_len = gen_info(brick, MAKE_PTR(@phys_addr), @log_len);
+    }
+    if(@phys_len > 0 && @phys_len < @log_len) {
+      @success = TRUE;
+    }
+  } else if(@direction == direct_write) {
+    char * buf = MAKE_PTR(@phys_addr);
+    int len = (int)@log_len;
+    int pos;
+    char op;
+    pos = parse_brick(buf, len, &op, @name, sizeof(@name));
+    if(pos >= 0 && op > 0) { // brick command
+      if(op == ':') { // instantiate brick
+	@=call $instbrick @args;
+	if(!@success)
+	  return;
+      } else if(op == '/') { // delete it
+	@=call $deinstbrick @args;
+	return;
+      }
+    }
+    // connect/disconnect inputs
+    pos = 0;
+    struct conn_info conn1 = { .conn_addr = @log_addr, };
+    @conn1 = &conn1;
+    for(;;) {
+      char tmp[512];
+      int tmp_len = 0;
+      int found = parse_connector(buf+pos, len-pos, conn1.conn_name, sizeof(conn1.conn_name), &conn1.conn_index, &op, tmp, sizeof(tmp), &tmp_len);
+      if(found < 0)
+	break;
+      pos += found; 
+      @success = FALSE;
+      if(op == '/') { // delete
+	@=call $disconnect @args;
+      } else if(op == ':') { // construct
+        struct conn_info conn2 = {};
+        found = parse_elem(tmp, tmp_len, &conn2);
+	if(found > 0) {
+	  @conn2 = &conn2;
+  	  @=call $connect @args;
+	}
+        if(!@success)
+	  return;
+      }
+    }
+    // (de)instantiate outputs
+    pos = 0;
+    for(;;) {
+      int type;
+      int found = parse_inout(buf+pos, len-pos, &type, &op, &conn1);
+      if(found < 0)
+	break;
+      pos += found;
+      if(!type || !op) {
+	continue;
+      }
+      conn1.conn_addr = @log_addr;
+      @success = FALSE;
+      if(op == ':') {
+	@=call $instconn @args;
+      } else if(op == '/') {
+	@=call $deinstconn @args;
+      }
+      if(!@success)
+        return;
+    }
+  }
+  @success = TRUE;
+}
+
+operation $wait,$create,$delete
+{
+  @success = TRUE;
+}
+
+operation $get,$createget
+{
+  @.abort("not implemented");
+}
+
+operation $put
+{
+  @.abort("not implemented");
+}
+
+operation $getaddr
+{
+  // no real freespace management, just allocate new virtual address each time
+  // ignore input parameters
+  if(!@log_len) {
+    @log_len = REPRES_MAX;
+  }
+  @log_addr = @#last_addr;
+  @#last_addr += @log_len;
+  @success = TRUE;
+}
