@@ -1966,14 +1966,23 @@ sub parse_1 {
   my ($text,$subbrick,$macros) = @_;
   my $remember = not defined(sp_part($::current,1,1));
   $text = parse_subinstances($text, $remember);
+  $::current = sp_part($::current,1) . ":<BRICK(:0:)";
   # brick operations
   for(;;) {
+    if($text =~ m/\A(${ws}(static[^(]+$parenmatch)$ws$bracematch)/m) {
+      $text = $POSTMATCH;
+      if($remember) {
+	push @::funcs, $1;
+	push @::funcs_outputs, sp_shorten($::current, 3);
+      }
+      next;
+    }
     if($text =~ m/\A${ws}operation$ws($specmatch)($ws$bracematch)/m) {
       my $name = $1;
       my $body = $2;
       $text = $POSTMATCH;
       if($remember) {
-	$::current = sp_complete($name, sp_part($::current,1) . ":<BRICK(:0:)");
+	$::current = sp_complete($name, $::current);
 	make_ops($::current, $body);
 	gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
       }
