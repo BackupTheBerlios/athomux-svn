@@ -222,6 +222,63 @@ void missing_putdeleteputaddr(const union connector * on, struct args * args, co
   on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
 }
 
+void missing_getaddrtrdeleteputaddr(const union connector * on, struct args * args, const char * param)
+{
+  args->op_code = opcode_getaddr;
+  args->log_len = args->try_len = args->phys_len;
+  args->where = TRUE;
+  args->exclu = TRUE;
+  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_tr;
+  args->direction = direct_read;
+  on->output.ops[args->sect_code][opcode_tr](on, args, param);
+  if(!args->success || args->phys_len != args->log_len) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_delete;
+  on->output.ops[args->sect_code][opcode_delete](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_putaddr;
+  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+}
+
+void missing_getaddrcreatetrputaddr(const union connector * on, struct args * args, const char * param)
+{
+  args->op_code = opcode_getaddr;
+  args->log_len = args->try_len = args->phys_len;
+  args->where = TRUE;
+  args->exclu = TRUE;
+  on->output.ops[args->sect_code][opcode_getaddr](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_delete;
+  args->clear = FALSE;
+  on->output.ops[args->sect_code][opcode_delete](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_tr;
+  args->direction = direct_read;
+  on->output.ops[args->sect_code][opcode_tr](on, args, param);
+  if(!args->success || args->phys_len != args->log_len) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_putaddr;
+  on->output.ops[args->sect_code][opcode_putaddr](on, args, param);
+}
+
 #define ADD_MISSING(name,sect) [opcode_##name] = &missing_##sect##_##name
 
 #define ADD_ALL_MISSING(sect)                                                 \
@@ -259,6 +316,8 @@ void missing_putdeleteputaddr(const union connector * on, struct args * args, co
   ADD_MISSING(putputaddr,sect),                                               \
   ADD_MISSING(putdelete,sect),                                                \
   ADD_MISSING(putdeleteputaddr,sect),                                         \
+  ADD_MISSING(getaddrtrdeleteputaddr,sect),                                   \
+  ADD_MISSING(getaddrcreatetrputaddr,sect),                                   \
                                                                               \
   ADD_MISSING(input_init,sect),                                               \
   ADD_MISSING(retract,sect),                                                  \
@@ -302,6 +361,8 @@ name_t op_names[opcode_brick_max+1] = {
   "putputaddr",
   "putdelete",
   "putdeleteputaddr",
+  "getaddrtrdeleteputaddr",
+  "getaddrcreatetrputaddr",
   "bad_output_max",
   // INPUT OPCODES
   "input_init",

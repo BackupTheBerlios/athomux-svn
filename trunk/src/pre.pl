@@ -1344,6 +1344,8 @@ sub add_attr {
   "putputaddr" => ["log_addr,log_len,prio:=prio_background", "success", "where" ],
   "putdelete" => ["log_addr,log_len", "success", "prio" ],
   "putdeleteputaddr" => ["log_addr,log_len", "success", "where,prio"],
+  "getaddrtrdeleteputaddr" => ["phys_addr,phys_len,action:=action_wait", "success", "log_addr,log_len,direction"],
+  "getaddrcreatetrputaddr" => ["phys_addr,phys_len,action:=action_wait,melt:=TRUE", "success", "log_addr,log_len,clear,direction"],
 # strategy ops
   "instbrick"    => ["log_addr,name", "success"],
   "deinstbrick"  => ["log_addr", "success"],

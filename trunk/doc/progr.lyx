@@ -1784,8 +1784,8 @@ This pre-allocates space in the undefined part of the logical address space
 must
 \emph default 
  fill your own data in.
- The buffer muste then be made available to the reader by the following
- operation:
+ The buffer must then be made available to the reader by the following operation
+:
 \layout Standard
 \noindent 
 
@@ -1795,9 +1795,38 @@ $putputaddr (addr_t log_addr, len_t log_len, prio := prio_background) =>
 \layout Paragraph
 
 Physical IO on Pipes
+\layout Subparagraph
+
+Reader
+\layout Standard
+\noindent 
+
+\family typewriter 
+$getaddrtrdeleteputaddr (paddr_t phys_addr, plen_t phys_len, action_t action
+ := action_wait) => (success_t success)
 \layout Standard
 
-NYI
+This corresponds to conventional Unix 
+\family typewriter 
+read()
+\family default 
+ with copy semantics.
+\layout Subparagraph
+
+Writer
+\layout Standard
+\noindent 
+
+\family typewriter 
+$getaddrcreatetrputaddr (paddr_t phys_addr, plen_t phys_len, action_t action
+ := action_wait, bool melt := TRUE) => (success_t success)
+\layout Standard
+
+This corresponds to conventional Unix 
+\family typewriter 
+write()
+\family default 
+ with copy semantics.
 \layout Subsection
 
 Operations Defined on Inputs

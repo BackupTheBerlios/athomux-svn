@@ -139,6 +139,8 @@ typedef enum {
   opcode_putputaddr,
   opcode_putdelete,
   opcode_putdeleteputaddr,
+  opcode_getaddrtrdeleteputaddr,
+  opcode_getaddrcreatetrputaddr,
   // last dummy index
   opcode_output_max,
   // INPUT OPERATIONS
@@ -284,6 +286,8 @@ static_operation missing_##sect##_getaddrgettr;                               \
 static_operation missing_##sect##_putputaddr;                                 \
 static_operation missing_##sect##_putdelete;                                  \
 static_operation missing_##sect##_putdeleteputaddr;                           \
+static_operation missing_##sect##_getaddrtrdeleteputaddr;                     \
+static_operation missing_##sect##_getaddrcreatetrputaddr;                     \
                                                                               \
 static_operation missing_##sect##_input_init;                                 \
 static_operation missing_##sect##_retract;                                    \
@@ -338,6 +342,8 @@ MAKE_ALL_ALIAS(getaddrgettr)
 MAKE_ALL_ALIAS(putputaddr)
 MAKE_ALL_ALIAS(putdelete)
 MAKE_ALL_ALIAS(putdeleteputaddr)
+MAKE_ALL_ALIAS(getaddrtrdeleteputaddr)
+MAKE_ALL_ALIAS(getaddrcreatetrputaddr)
 
 MAKE_ALL_ALIAS(input_init)
 MAKE_ALL_ALIAS(retract)
