@@ -6,12 +6,27 @@
 
 #define BASEFILE "common.c"
 
+//////////////////////////////////////////////////////////////////////////
+
+// debugging
+
 #ifdef DEBUG
+#include <stdio.h>
 int call_level = 0;
 char blanks[32] = "                               ";
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////
+#include "../debug.names"
+
+#define DEBUG_OPEN(name) \
+  _debug_##name = fopen("debug."#name, "w");
+
+void open_debug()
+{
+#include "../debug.init"
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 #define MISSING(name)                                                         \
 void missing_##name(const union connector * on, struct args * args, const char * param)\

@@ -37,6 +37,9 @@ void shutdown_handler(int signum)
 
 int main(int argc, char * argv[])
 {
+#ifdef DEBUG
+  open_debug();
+#endif
   int arg_nr = 0;
   int i;
   for (i=1; i<argc; i++) {

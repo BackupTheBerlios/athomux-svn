@@ -13,6 +13,9 @@
 
 int main(int argc, char * argv[])
 {
+#ifdef DEBUG
+  open_debug();
+#endif
   init_static_control_simple();
   void ask(addr_t addr)
     {

@@ -337,4 +337,6 @@ operation $input_init
   }	
   if(!@.is_connected(:<in2)) {
   }	
+  @.trace(test, "mist\n");
+  @.trace(test, "mist2\n");
 }

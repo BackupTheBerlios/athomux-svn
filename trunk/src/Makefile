@@ -17,7 +17,7 @@ CC=$(TIME)  gcc
 
 all : all_targets
 
-defs.make: Makefile makegen.pl pconf.* cconf.* target.* *.ath
+defs.make debug.init: Makefile makegen.pl pconf.* cconf.* target.* *.ath
 ifdef SUBMAKE
 	@echo Warning: Infinite make recursion attempt detected. There might be a problem with your file timestamps!
 else
@@ -27,6 +27,8 @@ else
 	@$(MAKE) SUBMAKE=1 -is check_broken >/dev/null 2>/dev/null
 	@$(MAKE) SUBMAKE=1 -s show_broken
 endif
+
+*/*/lib.o : debug.init
 
 -include defs.make
 
@@ -39,6 +41,6 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f defs.make testfile* *~ core* gmon.out
+	rm -f defs.make debug.* testfile* *~ core* gmon.out
 	rm -rf $(pconf_list)
 

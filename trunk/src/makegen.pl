@@ -25,6 +25,7 @@ my $stringmatch = qr"(?:$singlestringmatch(?:$ws$singlestringmatch)*)"m;
 
 my %contexts = ();
 my %buildrules = ();
+my %debugnames = ();
 
 sub build_contexts {
   foreach my $source (@_) {
@@ -41,6 +42,11 @@ sub build_contexts {
       }
       if($text =~ m/^\s*buildrules\s+(\w+)\s*:\s*\n?((?:.*\n)*?)\s*endrules/m) {
 	$buildrules{"$source:$1"} = $2;
+	$text = $POSTMATCH;
+	next;
+      }
+      if($text =~ m/@\.trace\s*\(\s*(\w+)/g) {
+	$debugnames{$1} = 1;
 	$text = $POSTMATCH;
 	next;
       }
@@ -309,3 +315,17 @@ print DEFS "show_broken:\n\t\@echo Ignoring broken targets: \$(broken_targets)|s
 print DEFS "all_targets: \$(filter-out \$(broken_targets),\$(target_list))\n";
 
 close DEFS;
+
+
+#################################################################
+
+# debug config
+
+open DEBUG, "> debug.init" or die "cannot created debugging config file";
+open DEBUGNAMES, "> debug.names" or die "cannot created debugging config file";
+foreach my $name (keys %debugnames) {
+  print DEBUG "DEBUG_OPEN($name)\n";
+  print DEBUGNAMES "FILE * _debug_$name = NULL;\n";
+}
+close DEBUG;
+close DEBUGNAMES;

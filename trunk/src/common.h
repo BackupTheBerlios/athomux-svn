@@ -14,6 +14,7 @@
 // compiling mode dependent things
 
 #ifdef DEBUG
+void open_debug();
 extern int call_level;
 extern char blanks[32];
 #endif

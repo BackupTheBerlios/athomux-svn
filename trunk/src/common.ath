@@ -10,6 +10,19 @@
 
 ///////////////////////////////////////////////////////////////////////////
 
+// debugging
+
+@.define @.trace(name, str...)
+{
+#ifdef DEBUG
+  extern FILE * _debug_@@name;
+  fprintf(_debug_@@name, str...);
+  fflush(_debug_@@name);
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////
+
 // These routines can _only_ be used in an ordinary operation, but
 // not in static_init or the like!
 

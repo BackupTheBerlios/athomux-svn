@@ -4142,6 +4142,56 @@ define export TYPE
  Thus type-safety is enforced.
 \layout Section
 
+Debugging
+\layout Standard
+
+During the debugging phase, you often need to write traces to some log files.
+ In order to that in a 
+\emph on 
+portable
+\emph default 
+ way for different Athomux build environments, you should use the following
+ macros:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.trace(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\emph on 
+"
+\family default 
+printf
+\emph default 
+-
+\emph on 
+string
+\family typewriter 
+"
+\emph default 
+, 
+\family default 
+\emph on 
+args
+\family typewriter 
+\emph default 
+...)
+\layout Standard
+
+The 
+\emph on 
+name
+\emph default 
+ denotes a freely chosen name of a debug output file (or channel).
+ The build system automatically retrieves all names occurring in all *.ath
+ source files and maintains to open all the channels for you.
+\layout Section
+
 Commodity Library Routines
 \layout Standard
 
