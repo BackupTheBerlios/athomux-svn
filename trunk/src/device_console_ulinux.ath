@@ -36,7 +36,7 @@ static_header {
 	#include <fcntl.h>
 
 	// An executable communicating with the calling brick via stdin/stdout.
-	#define DEFAULT_CHILD_PROGRAM "/home/nieserd/coding/athomux/trunk/src/ulinux/ulinux/graph_console"
+	#define DEFAULT_CHILD_PROGRAM "ulinux/ulinux/graph_console"
 	// Indices into file descriptor arrays holding the pipes to the child prog.
 	#define READ 0
 	#define WRITE 1
