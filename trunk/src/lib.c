@@ -334,7 +334,7 @@ void missing_putpadr(const union connector * on, struct args * args, const char 
     return;
   }
   args->success = FALSE;
-  args->reader = TRUE;
+  args->reader = FALSE;
   args->op_code = opcode_padr;
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
