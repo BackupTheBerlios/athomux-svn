@@ -15,17 +15,19 @@ use Digest::MD5 qw(md5),qw(md5_hex);
 
 # first, get all the relevant file names
 
-my @targetfiles = `ls target.* | grep -v "~"`;
-map chomp, @targetfiles;
-my @targets = @targetfiles;
+my @target_files = `ls target.* | grep -v "~"`;
+map chomp, @target_files;
+my @targets = @target_files;
 map { s/target\.// } @targets;
 
-my @pconfs = `ls pconf.* | grep -v "~"`;
-map chomp, @pconfs;
+my @pconf_files = `ls pconf.* | grep -v "~"`;
+map chomp, @pconf_files;
+my @pconfs = @pconf_files;
 map { s/pconf\.// } @pconfs;
 
-my @cconfs = `ls cconf.* | grep -v "~"`;
-map chomp, @cconfs;
+my @cconf_files = `ls cconf.* | grep -v "~"`;
+map chomp, @cconf_files;
+my @cconfs = @cconf_files;
 map { s/cconf\.// } @cconfs;
 
 my @sources = `ls *.ath | grep -v common`;
@@ -35,14 +37,14 @@ map chomp, @sources;
 
 my %contexts = ();
 
-foreach my $source (@sources, @targetfiles) {
-  $contexts{$source} = `grep -e '^#*context' $source`;
+foreach my $source (@sources, @target_files, @pconf_files, @cconf_files) {
+  $contexts{$source} = `grep -e '^# *context' $source`;
 }
 
 sub check_context {
-return 1;
   my ($src, $type, $forwhat) = @_;
-  my $context = $contexts{$src} or return 1;
+  my $context = $contexts{$src};
+  die "internal error: source '$src' not indexed" unless defined($context);
   if($context =~ m/^#?\s*context\s+$type(?:\s*:)?\s+(.+)\n/m) {
     my $found = $1;
     my @list = split /\s*,\s*/, $found;
