@@ -1,0 +1,1099 @@
+./applets/applets.o: ./applets/applets.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/applets.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/applets.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/suid.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/suid/config.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/suid/config/quiet.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/file.h)
+./applets/busybox.o: ./applets/busybox.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/installer.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/init.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/autowidth.h)
+./applets/usage.o: ./applets/usage.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/usage.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/usage.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/applets.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/applets.h)
+./archival/libunarchive/archive_xread_all.o: ./archival/libunarchive/archive_xread_all.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/archive_xread_all_eof.o: ./archival/libunarchive/archive_xread_all_eof.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/check_header_gzip.o: ./archival/libunarchive/check_header_gzip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/data_align.o: ./archival/libunarchive/data_align.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/data_extract_all.o: ./archival/libunarchive/data_extract_all.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/data_extract_to_buffer.o: ./archival/libunarchive/data_extract_to_buffer.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/data_extract_to_stdout.o: ./archival/libunarchive/data_extract_to_stdout.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/data_skip.o: ./archival/libunarchive/data_skip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/decompress_bunzip2.o: ./archival/libunarchive/decompress_bunzip2.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/filter_accept_all.o: ./archival/libunarchive/filter_accept_all.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/filter_accept_list.o: ./archival/libunarchive/filter_accept_list.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/filter_accept_list_reassign.o: ./archival/libunarchive/filter_accept_list_reassign.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/gz.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/bz2.h)
+./archival/libunarchive/filter_accept_reject_list.o: ./archival/libunarchive/filter_accept_reject_list.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/find_list_entry.o: ./archival/libunarchive/find_list_entry.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/get_header_ar.o: ./archival/libunarchive/get_header_ar.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ar/long/filenames.h)
+./archival/libunarchive/get_header_cpio.o: ./archival/libunarchive/get_header_cpio.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/get_header_tar.o: ./archival/libunarchive/get_header_tar.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/gnu/extensions.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/oldgnu/compatability.h)
+./archival/libunarchive/get_header_tar_bz2.o: ./archival/libunarchive/get_header_tar_bz2.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/get_header_tar_gz.o: ./archival/libunarchive/get_header_tar_gz.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/header_list.o: ./archival/libunarchive/header_list.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/header_skip.o: ./archival/libunarchive/header_skip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/header_verbose_list.o: ./archival/libunarchive/header_verbose_list.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/init_handle.o: ./archival/libunarchive/init_handle.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/libunarchive/open_transformer.o: ./archival/libunarchive/open_transformer.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/seek_by_char.o: ./archival/libunarchive/seek_by_char.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./archival/libunarchive/seek_by_jump.o: ./archival/libunarchive/seek_by_jump.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/unarchive/tape.h)
+./archival/libunarchive/uncompress.o: ./archival/libunarchive/uncompress.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/config.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/config.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./archival/libunarchive/unpack_ar_archive.o: ./archival/libunarchive/unpack_ar_archive.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./archival/libunarchive/unzip.o: ./archival/libunarchive/unzip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/config.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/config.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/ar.o: ./archival/ar.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./archival/bunzip2.o: ./archival/bunzip2.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/cpio.o: ./archival/cpio.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./archival/dpkg.o: ./archival/dpkg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/gz.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/bz2.h)
+./archival/dpkg_deb.o: ./archival/dpkg_deb.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/gz.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/deb/tar/bz2.h)
+./archival/gunzip.o: ./archival/gunzip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/gunzip/uncompress.h)
+./archival/gzip.o: ./archival/gzip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/gunzip.h)
+./archival/rpm.o: ./archival/rpm.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/rpm2cpio.o: ./archival/rpm2cpio.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/tar.o: ./archival/tar.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/create.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/from.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/gzip.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/compress.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/bzip2.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tar/long/options.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./archival/uncompress.o: ./archival/uncompress.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h)
+./archival/unzip.o: ./archival/unzip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/chvt.o: ./console-tools/chvt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/clear.o: ./console-tools/clear.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/deallocvt.o: ./console-tools/deallocvt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/dumpkmap.o: ./console-tools/dumpkmap.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/loadfont.o: ./console-tools/loadfont.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/loadkmap.o: ./console-tools/loadkmap.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/openvt.o: ./console-tools/openvt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/reset.o: ./console-tools/reset.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./console-tools/setkeycodes.o: ./console-tools/setkeycodes.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/libcoreutils/cp_mv_stat.o: ./coreutils/libcoreutils/cp_mv_stat.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./coreutils/libcoreutils/getopt_mk_fifo_nod.o: ./coreutils/libcoreutils/getopt_mk_fifo_nod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./coreutils/libcoreutils/xgetoptfile_sort_uniq.o: ./coreutils/libcoreutils/xgetoptfile_sort_uniq.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./coreutils/basename.o: ./coreutils/basename.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/cal.o: ./coreutils/cal.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h)
+./coreutils/cat.o: ./coreutils/cat.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/chgrp.o: ./coreutils/chgrp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/chmod.o: ./coreutils/chmod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/chown.o: ./coreutils/chown.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/chroot.o: ./coreutils/chroot.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/cmp.o: ./coreutils/cmp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/cp.o: ./coreutils/cp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/cut.o: ./coreutils/cut.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/date.o: ./coreutils/date.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/date/isofmt.h)
+./coreutils/dd.o: ./coreutils/dd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/df.o: ./coreutils/df.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/human/readable.h)
+./coreutils/dirname.o: ./coreutils/dirname.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/dos2unix.o: ./coreutils/dos2unix.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/du.o: ./coreutils/du.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/human/readable.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/du/defalt/blocksize/1k.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./coreutils/echo.o: ./coreutils/echo.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/echo.h)
+./coreutils/env.o: ./coreutils/env.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/expr.o: ./coreutils/expr.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/false.o: ./coreutils/false.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/fold.o: ./coreutils/fold.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/head.o: ./coreutils/head.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/head.h)
+./coreutils/hostid.o: ./coreutils/hostid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/id.o: ./coreutils/id.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./coreutils/install.o: ./coreutils/install.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/length.o: ./coreutils/length.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/ln.o: ./coreutils/ln.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/logname.o: ./coreutils/logname.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/ls.o: ./coreutils/ls.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/timestamps.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/sortfiles.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/followlinks.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/human/readable.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/filetypes.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/color.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/autowidth.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/recursive.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ls/username.h)
+./coreutils/md5_sha1_sum.o: ./coreutils/md5_sha1_sum.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/md5/sha1/sum/check.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/md5sum.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/sha1sum.h)
+./coreutils/mkdir.o: ./coreutils/mkdir.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/mkfifo.o: ./coreutils/mkfifo.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/mknod.o: ./coreutils/mknod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/mv.o: ./coreutils/mv.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/od.o: ./coreutils/od.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h)
+./coreutils/printf.o: ./coreutils/printf.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/pwd.o: ./coreutils/pwd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/realpath.o: ./coreutils/realpath.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./coreutils/rm.o: ./coreutils/rm.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/rmdir.o: ./coreutils/rmdir.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/seq.o: ./coreutils/seq.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/sleep.o: ./coreutils/sleep.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/sleep.h)
+./coreutils/sort.o: ./coreutils/sort.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/stty.o: ./coreutils/stty.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/sync.o: ./coreutils/sync.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/tail.o: ./coreutils/tail.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/tail.h)
+./coreutils/tee.o: ./coreutils/tee.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tee/use/block/io.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./coreutils/test.o: ./coreutils/test.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/touch.o: ./coreutils/touch.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/tr.o: ./coreutils/tr.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/true.o: ./coreutils/true.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/tty.o: ./coreutils/tty.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/uname.o: ./coreutils/uname.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/uniq.o: ./coreutils/uniq.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/usleep.o: ./coreutils/usleep.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/uudecode.o: ./coreutils/uudecode.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./coreutils/uuencode.o: ./coreutils/uuencode.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/watch.o: ./coreutils/watch.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/wc.o: ./coreutils/wc.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h)
+./coreutils/who.o: ./coreutils/who.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/whoami.o: ./coreutils/whoami.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./coreutils/yes.o: ./coreutils/yes.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./debianutils/mktemp.o: ./debianutils/mktemp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./debianutils/pipe_progress.o: ./debianutils/pipe_progress.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./debianutils/readlink.o: ./debianutils/readlink.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./debianutils/run_parts.o: ./debianutils/run_parts.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./debianutils/start_stop_daemon.o: ./debianutils/start_stop_daemon.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./debianutils/which.o: ./debianutils/which.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./editors/awk.o: ./editors/awk.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/awk/math.h)
+./editors/patch.o: ./editors/patch.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./editors/sed.o: ./editors/sed.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./editors/vi.o: ./editors/vi.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/optimize/cursor.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/use/signals.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/crashme.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/dot/cmd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/yankmark.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/readonly.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/search.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/colon.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/win/resize.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/setopts.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/vi/set.h)
+./findutils/find.o: ./findutils/find.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/type.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/perm.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/mtime.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/xdev.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/newer.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/find/inum.h)
+./findutils/grep.o: ./findutils/grep.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/grep/context.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/grep/egrep/alias.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./findutils/xargs.o: ./findutils/xargs.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/xargs/support/confirmation.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/xargs/support/quotes.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/xargs/support/termopt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/xargs/support/zero/term.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./init/halt.o: ./init/halt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/init.h)
+./init/init.o: ./init/init.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/syslogd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/init/coredumps.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/extra/quiet.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/use/inittab.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/initrd.h)
+./init/init_shared.o: ./init/init_shared.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/initrd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/init.h)
+./init/mesg.o: ./init/mesg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./init/minit.o: ./init/minit.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./init/msvc.o: ./init/msvc.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./init/pidfilehack.o: ./init/pidfilehack.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./init/poweroff.o: ./init/poweroff.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/init.h)
+./init/reboot.o: ./init/reboot.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/init.h)
+./libbb/ask_confirmation.o: ./libbb/ask_confirmation.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/bb_asprintf.o: ./libbb/bb_asprintf.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/change_identity.o: ./libbb/change_identity.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/chomp.o: ./libbb/chomp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/concat_path_file.o: ./libbb/concat_path_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/concat_subpath_file.o: ./libbb/concat_subpath_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/copy_file.o: ./libbb/copy_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/preserve/hardlinks.h)
+./libbb/copyfd.o: ./libbb/copyfd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./libbb/correct_password.o: ./libbb/correct_password.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./libbb/create_icmp6_socket.o: ./libbb/create_icmp6_socket.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./libbb/create_icmp_socket.o: ./libbb/create_icmp_socket.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/default_error_retval.o: ./libbb/default_error_retval.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/device_open.o: ./libbb/device_open.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/dump.o: ./libbb/dump.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h)
+./libbb/error_msg.o: ./libbb/error_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/error_msg_and_die.o: ./libbb/error_msg_and_die.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/fclose_nonstdin.o: ./libbb/fclose_nonstdin.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/fflush_stdout_and_exit.o: ./libbb/fflush_stdout_and_exit.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/fgets_str.o: ./libbb/fgets_str.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/find_mount_point.o: ./libbb/find_mount_point.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/find_pid_by_name.o: ./libbb/find_pid_by_name.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./libbb/find_root_device.o: ./libbb/find_root_device.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/full_read.o: ./libbb/full_read.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/full_write.o: ./libbb/full_write.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/get_console.o: ./libbb/get_console.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/get_line_from_file.o: ./libbb/get_line_from_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/get_terminal_width_height.o: ./libbb/get_terminal_width_height.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/autowidth.h)
+./libbb/getopt_ulflags.o: ./libbb/getopt_ulflags.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/hash_fd.o: ./libbb/hash_fd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/sha1sum.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/md5sum.h)
+./libbb/herror_msg.o: ./libbb/herror_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/herror_msg_and_die.o: ./libbb/herror_msg_and_die.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/human_readable.o: ./libbb/human_readable.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/inet_common.o: ./libbb/inet_common.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./libbb/inode_hash.o: ./libbb/inode_hash.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./libbb/interface.o: ./libbb/interface.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./libbb/isdirectory.o: ./libbb/isdirectory.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/kernel_version.o: ./libbb/kernel_version.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/last_char_is.o: ./libbb/last_char_is.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/llist_add_to.o: ./libbb/llist_add_to.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/unarchive.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/login.o: ./libbb/login.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/loop.o: ./libbb/loop.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/make_directory.o: ./libbb/make_directory.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/messages.o: ./libbb/messages.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/module_syscalls.o: ./libbb/module_syscalls.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/mtab.o: ./libbb/mtab.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/mtab_file.o: ./libbb/mtab_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mtab/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mtab/filename.h)
+./libbb/my_getgrgid.o: ./libbb/my_getgrgid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libbb/my_getgrnam.o: ./libbb/my_getgrnam.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libbb/my_getpwnam.o: ./libbb/my_getpwnam.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libbb/my_getpwnamegid.o: ./libbb/my_getpwnamegid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libbb/my_getpwuid.o: ./libbb/my_getpwuid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libbb/obscure.o: ./libbb/obscure.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/parse_mode.o: ./libbb/parse_mode.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/parse_number.o: ./libbb/parse_number.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/perror_msg.o: ./libbb/perror_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/perror_msg_and_die.o: ./libbb/perror_msg_and_die.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/perror_nomsg.o: ./libbb/perror_nomsg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/perror_nomsg_and_die.o: ./libbb/perror_nomsg_and_die.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/print_file.o: ./libbb/print_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/printf.o: ./libbb/printf.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/process_escape_sequence.o: ./libbb/process_escape_sequence.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/procps.o: ./libbb/procps.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./libbb/pw_encrypt.o: ./libbb/pw_encrypt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sha1/passwords.h)
+./libbb/pwd2spwd.o: ./libbb/pwd2spwd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/shadow_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/shadow_.h)
+./libbb/qmodule.o: ./libbb/qmodule.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/read_package_field.o: ./libbb/read_package_field.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/recursive_action.o: ./libbb/recursive_action.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/remove_file.o: ./libbb/remove_file.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/restricted_shell.o: ./libbb/restricted_shell.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/run_parts.o: ./libbb/run_parts.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/run_shell.o: ./libbb/run_shell.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./libbb/safe_read.o: ./libbb/safe_read.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/safe_strncpy.o: ./libbb/safe_strncpy.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/safe_write.o: ./libbb/safe_write.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/setup_environment.o: ./libbb/setup_environment.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/simplify_path.o: ./libbb/simplify_path.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/skip_whitespace.o: ./libbb/skip_whitespace.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/speed_table.o: ./libbb/speed_table.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/syscalls.o: ./libbb/syscalls.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/syslog_msg_with_name.o: ./libbb/syslog_msg_with_name.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/trim.o: ./libbb/trim.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/vdprintf.o: ./libbb/vdprintf.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/verror_msg.o: ./libbb/verror_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/vfork_daemon_rexec.o: ./libbb/vfork_daemon_rexec.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/vherror_msg.o: ./libbb/vherror_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/vperror_msg.o: ./libbb/vperror_msg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/warn_ignoring_args.o: ./libbb/warn_ignoring_args.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/wfopen.o: ./libbb/wfopen.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/wfopen_input.o: ./libbb/wfopen_input.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xconnect.o: ./libbb/xconnect.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xfuncs.o: ./libbb/xfuncs.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xgetcwd.o: ./libbb/xgetcwd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xgethostbyname.o: ./libbb/xgethostbyname.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xgethostbyname2.o: ./libbb/xgethostbyname2.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./libbb/xgetlarg.o: ./libbb/xgetlarg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./libbb/xgetularg.o: ./libbb/xgetularg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xreadlink.o: ./libbb/xreadlink.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libbb/xregcomp.o: ./libbb/xregcomp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./libpwdgrp/__getgrent.o: ./libpwdgrp/__getgrent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/__getpwent.o: ./libpwdgrp/__getpwent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./libpwdgrp/fgetgrent.o: ./libpwdgrp/fgetgrent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/fgetpwent.o: ./libpwdgrp/fgetpwent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/getgrgid.o: ./libpwdgrp/getgrgid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/getgrnam.o: ./libpwdgrp/getgrnam.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/getpw.o: ./libpwdgrp/getpw.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/getpwnam.o: ./libpwdgrp/getpwnam.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/getpwuid.o: ./libpwdgrp/getpwuid.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/grent.o: ./libpwdgrp/grent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/initgroups.o: ./libpwdgrp/initgroups.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/putpwent.o: ./libpwdgrp/putpwent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/pwent.o: ./libpwdgrp/pwent.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h)
+./libpwdgrp/setgroups.o: ./libpwdgrp/setgroups.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h)
+./libpwdgrp/shadow.o: ./libpwdgrp/shadow.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/shadow_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/shadow_.h)
+./loginutils/addgroup.o: ./loginutils/addgroup.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/grp_.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/adduser.h)
+./loginutils/adduser.o: ./loginutils/adduser.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/addgroup.h)
+./loginutils/delgroup.o: ./loginutils/delgroup.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/deluser.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./loginutils/delline.o: ./loginutils/delline.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./loginutils/deluser.o: ./loginutils/deluser.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./loginutils/getty.o: ./loginutils/getty.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/syslogd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/u/w/tmp.h)
+./loginutils/login.o: ./loginutils/login.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/u/w/tmp.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/securetty.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/wheel/group.h)
+./loginutils/passwd.o: ./loginutils/passwd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./loginutils/su.o: ./loginutils/su.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/u/w/tmp.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./loginutils/sulogin.o: ./loginutils/sulogin.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./loginutils/vlock.o: ./loginutils/vlock.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/shadowpasswds.h)
+./miscutils/adjtimex.o: ./miscutils/adjtimex.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/crond.o: ./miscutils/crond.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/crond/call/sendmail.h)
+./miscutils/crontab.o: ./miscutils/crontab.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/dc.o: ./miscutils/dc.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/devfsd.o: ./miscutils/devfsd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/devfsd/modload.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/devfsd/verbose.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/debug.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/devfsd/fg/np.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/file.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/modules/devfs.h)
+./miscutils/hdparm.o: ./miscutils/hdparm.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/get/identity.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/hdio/getset/dma.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/hdio/unregister/hwif.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/hdio/scan/hwif.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/hdio/tristate/hwif.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hdparm/hdio/drive/reset.h)
+./miscutils/last.o: ./miscutils/last.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/makedevs.o: ./miscutils/makedevs.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/mt.o: ./miscutils/mt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/rx.o: ./miscutils/rx.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/strings.o: ./miscutils/strings.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/time.o: ./miscutils/time.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./miscutils/watchdog.o: ./miscutils/watchdog.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./modutils/insmod.o: ./modutils/insmod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/2/4/modules.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/2/2/modules.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/2/6/modules.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/insmod/loadinkmem.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/insmod/version/checking.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/use/list.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/list/archtype.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/use/single.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/use/plt/entries.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/use/got/entries.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/use/plt/list.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/got/entry/size.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/plt/entry/size.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/check/tainted/module.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/insmod/ksymoops/symbols.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/insmod/load/map.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/insmod/load/map/full.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./modutils/lsmod.o: ./modutils/lsmod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/check/tainted/module.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/query/module/interface.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./modutils/modprobe.o: ./modutils/modprobe.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/2/6/modules.h)
+./modutils/rmmod.o: ./modutils/rmmod.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./networking/libiproute/ip_parse_common_args.o: ./networking/libiproute/ip_parse_common_args.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/libiproute/ipaddress.o: ./networking/libiproute/ipaddress.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/iplink.o: ./networking/libiproute/iplink.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/iproute.o: ./networking/libiproute/iproute.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/iptunnel.o: ./networking/libiproute/iptunnel.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/libnetlink.o: ./networking/libiproute/libnetlink.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/ll_addr.o: ./networking/libiproute/ll_addr.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/libiproute/utils.o: ./networking/libiproute/utils.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h)
+./networking/arping.o: ./networking/arping.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/ftpgetput.o: ./networking/ftpgetput.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ftpget.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ftpput.h)
+./networking/hostname.o: ./networking/hostname.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./networking/httpd.o: ./networking/httpd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/lfs.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/usage/from/inetd/only.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/basic/auth.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/cgi.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/config/with/mime/types.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/encode/url/str.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/set/remote/port/to/env.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/auth/md5.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/reload/config/sighup.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/httpd/setuid.h)
+./networking/ifconfig.o: ./networking/ifconfig.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifconfig/slip.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifconfig/broadcast/plus.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifconfig/hw.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifconfig/memstart/ioaddr/irq.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifconfig/status.h)
+./networking/ifupdown.o: ./networking/ifupdown.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/libbb.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifupdown/mapping.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifupdown/ip.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifupdown/ipx.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifupdown/ipv6.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ifupdown/ipv4.h)
+./networking/inetd.o: ./networking/inetd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/inetd/support/biltin/echo.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/inetd/support/biltin/discard.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/inetd/support/biltin/time.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/inetd/support/biltin/daytime.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/inetd/support/biltin/chargen.h)
+./networking/ip.o: ./networking/ip.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ip/address.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ip/route.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ip/link.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ip/tunnel.h)
+./networking/ipaddr.o: ./networking/ipaddr.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/ipcalc.o: ./networking/ipcalc.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipcalc/fancy.h)
+./networking/iplink.o: ./networking/iplink.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/iproute.o: ./networking/iproute.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/iptunnel.o: ./networking/iptunnel.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/nameif.o: ./networking/nameif.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./networking/nc.o: ./networking/nc.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/netstat.o: ./networking/netstat.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/route.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./networking/nslookup.o: ./networking/nslookup.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/ping.o: ./networking/ping.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/ping.h)
+./networking/ping6.o: ./networking/ping6.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/ping6.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fancy/ping.h)
+./networking/route.o: ./networking/route.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipv6.h)
+./networking/telnet.o: ./networking/telnet.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/telnet/ttype.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/autowidth.h)
+./networking/telnetd.o: ./networking/telnetd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/login.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/telnetd/inetd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/devpts.h)
+./networking/tftp.o: ./networking/tftp.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tftp/blocksize.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tftp/debug.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tftp/get.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/tftp/put.h)
+./networking/traceroute.o: ./networking/traceroute.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/inet_common.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/traceroute/verbose.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/traceroute.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/traceroute/so/debug.h)
+./networking/vconfig.o: ./networking/vconfig.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./networking/wget.o: ./networking/wget.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/wget/statusbar.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/wget/authentication.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/wget/ip6/literal.h)
+./procps/free.o: ./procps/free.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./procps/kill.o: ./procps/kill.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/killall.h)
+./procps/pidof.o: ./procps/pidof.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./procps/ps.o: ./procps/ps.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./procps/renice.o: ./procps/renice.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./procps/sysctl.o: ./procps/sysctl.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./procps/top.o: ./procps/top.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/use/termios.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/selinux.h)
+./procps/uptime.o: ./procps/uptime.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./shell/ash.o: ./shell/ash.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/job/control.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/alias.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/optimize/for/size.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/math/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/cmdcmd.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/getopts.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/extra/quiet.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash/mail.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/savehistory.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/standalone/shell.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/tab/completion.h)
+./shell/cmdedit.o: ./shell/cmdedit.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/../shell/cmdedit.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/../shell/cmdedit.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/tab/completion.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/username/completion.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/getusername/and/homedir.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/pwd_.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/history.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/nonprintable/inverse/put.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/ash.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/savehistory.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./shell/hush.o: ./shell/hush.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/standalone/shell.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/applets/always/win.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/extra/quiet.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./shell/lash.o: ./shell/lash.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/extra/quiet.h)
+./shell/msh.o: ./shell/msh.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/extra/quiet.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/standalone/shell.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/applets/always/win.h)
+./shell/lashold.o: ./shell/lashold.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/locale/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/fancy/prompt.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/command/editing.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/standalone/shell.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/applets/always/win.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sh/extra/quiet.h)
+./sysklogd/klogd.o: ./sysklogd/klogd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./sysklogd/logger.o: ./sysklogd/logger.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/syslogd.h)
+./sysklogd/logread.o: ./sysklogd/logread.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/logread/reduced/locking.h)
+./sysklogd/syslogd.o: ./sysklogd/syslogd.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/rotate/logfile.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/remote/log.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipc/syslog.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/ipc/syslog/buffer/size.h)
+./util-linux/dmesg.o: ./util-linux/dmesg.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/fbset.o: ./util-linux/fbset.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fbset/fancy.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fbset/readmode.h)
+./util-linux/fdflush.o: ./util-linux/fdflush.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/fdformat.o: ./util-linux/fdformat.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/fdisk.o: ./util-linux/fdisk.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/lfs.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sun/label.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/sgi/label.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/aix/label.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/osf/label.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fdisk/writable.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fdisk/advanced.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/weird/partition/types.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/fdisk/blksize.h)
+./util-linux/freeramdisk.o: ./util-linux/freeramdisk.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/fsck_minix.o: ./util-linux/fsck_minix.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/minix2.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/getopt.o: ./util-linux/getopt.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/hexdump.o: ./util-linux/hexdump.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/dump.h)
+./util-linux/hwclock.o: ./util-linux/hwclock.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/hwclock/longoptions.h)
+./util-linux/losetup.o: ./util-linux/losetup.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/mkfs_minix.o: ./util-linux/mkfs_minix.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/minix2.h)
+./util-linux/mkswap.o: ./util-linux/mkswap.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/more.o: ./util-linux/more.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/use/termios.h)
+./util-linux/mount.o: ./util-linux/mount.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/nfsmount.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mount/loop.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mtab/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)
+./util-linux/nfsmount.o: ./util-linux/nfsmount.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/pivot_root.o: ./util-linux/pivot_root.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/rdate.o: ./util-linux/rdate.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/swaponoff.o: ./util-linux/swaponoff.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h)
+./util-linux/umount.o: ./util-linux/umount.c \
+ /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h $(dep_/eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/include/busybox.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mount/force.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mount/loop.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/mtab/support.h) \
+   $(wildcard /eiche/nieblifn/athomux/trunk/src/env/ulinux/busybox/config/feature/clean/up.h)

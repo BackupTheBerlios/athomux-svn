@@ -1,0 +1,70 @@
+chvt.o: chvt.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+clear.o: clear.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+deallocvt.o: deallocvt.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+dumpkmap.o: dumpkmap.c \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+loadfont.o: loadfont.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/memory.h $(dep_/home/flo/root/usr/include/memory.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/dirent.h $(dep_/home/flo/root/usr/include/dirent.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/sys/kd.h $(dep_/home/flo/root/usr/include/sys/kd.h) \
+ /home/flo/root/usr/include/endian.h $(dep_/home/flo/root/usr/include/endian.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+loadkmap.o: loadkmap.c \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+openvt.o: openvt.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+reset.o: reset.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+setkeycodes.o: setkeycodes.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)

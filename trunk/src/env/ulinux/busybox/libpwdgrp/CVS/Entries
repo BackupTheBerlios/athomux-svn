@@ -1,0 +1,19 @@
+/Makefile/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/Makefile.in/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/__getgrent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/__getpwent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/fgetgrent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/fgetpwent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/getgrgid.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/getgrnam.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/getpw.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/getpwnam.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/getpwuid.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/grent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/initgroups.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/putpwent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/pwent.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/setgroups.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/shadow.c/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/.depend/1.6/Fri Aug 20 17:45:17 2004//
+D

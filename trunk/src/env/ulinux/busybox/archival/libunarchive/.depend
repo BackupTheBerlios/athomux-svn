@@ -1,0 +1,171 @@
+archive_xread_all.o: archive_xread_all.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+archive_xread_all_eof.o: archive_xread_all_eof.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+check_header_gzip.o: check_header_gzip.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+data_align.o: data_align.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+data_extract_all.o: data_extract_all.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/utime.h $(dep_/home/flo/root/usr/include/utime.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+data_extract_to_buffer.o: data_extract_to_buffer.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+data_extract_to_stdout.o: data_extract_to_stdout.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+data_skip.o: data_skip.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+decompress_bunzip2.o: decompress_bunzip2.c \
+ /home/flo/root/usr/include/setjmp.h $(dep_/home/flo/root/usr/include/setjmp.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/limits.h $(dep_/home/flo/root/usr/include/limits.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+filter_accept_all.o: filter_accept_all.c \
+ /home/flo/root/usr/include/fnmatch.h $(dep_/home/flo/root/usr/include/fnmatch.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+filter_accept_list.o: filter_accept_list.c \
+ /home/flo/root/usr/include/fnmatch.h $(dep_/home/flo/root/usr/include/fnmatch.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+filter_accept_list_reassign.o: filter_accept_list_reassign.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/deb/tar/gz.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/deb/tar/bz2.h)
+filter_accept_reject_list.o: filter_accept_reject_list.c \
+ /home/flo/root/usr/include/fnmatch.h $(dep_/home/flo/root/usr/include/fnmatch.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+find_list_entry.o: find_list_entry.c \
+ /home/flo/root/usr/include/fnmatch.h $(dep_/home/flo/root/usr/include/fnmatch.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+get_header_ar.o: get_header_ar.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/ar/long/filenames.h)
+get_header_cpio.o: get_header_cpio.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+get_header_tar.o: get_header_tar.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/tar/gnu/extensions.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/tar/oldgnu/compatability.h)
+get_header_tar_bz2.o: get_header_tar_bz2.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+get_header_tar_gz.o: get_header_tar_gz.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+header_list.o: header_list.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+header_skip.o: header_skip.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+header_verbose_list.o: header_verbose_list.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+init_handle.o: init_handle.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)
+open_transformer.o: open_transformer.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+seek_by_char.o: seek_by_char.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+seek_by_jump.o: seek_by_jump.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/unarchive/tape.h)
+uncompress.o: uncompress.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/config.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/config.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h)
+unpack_ar_archive.o: unpack_ar_archive.c \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+unzip.o: unzip.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/config.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/config.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/unarchive.h)

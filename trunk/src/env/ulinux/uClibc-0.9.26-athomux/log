@@ -1,0 +1,705 @@
+Current kernel version is 2.4.21-pre2-erik
+
+
+Using kernel headers from 2.4.21-pre2-erik for architecture 'athomux-linux'
+	provided in directory /eiche/nieblifn/projects/diplomarbeit/linux-headers
+
+
+make -C libc/sysdeps/linux/common headers
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/common'
+ln -fs ../libc/sysdeps/linux/common/fpu_control.h ../../../..//include/
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/common'
+make -C libc/sysdeps/linux/athomux-linux headers
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/athomux-linux'
+ln -fs ../libc/sysdeps/linux/i386/fpu_control.h ../../../..//include/
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/athomux-linux'
+make -C  ldso
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso'
+ln -fs ../../include/elf.h include/
+ln -fs ../ldso/athomux-linux/boot1_arch.h include/
+ln -fs ../ldso/athomux-linux/ld_syscalls.h include/
+ln -fs ../ldso/athomux-linux/ld_sysdep.h include/
+make -C ldso;
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso/ldso'
+ld  -shared --warn-common --export-dynamic --sort-common -z combreloc --discard-locals --discard-all -s -e _dl_boot -soname=ld-uClibc.so.0 \
+-o ld-uClibc-0.9.26.so athomux-linux/resolve.o ldso.o /usr/lib/gcc-lib/i586-suse-linux/3.3.3/libgcc.a;
+install -d ../../lib
+install -m 755 ld-uClibc-0.9.26.so ../../lib
+ln -sf ld-uClibc-0.9.26.so ../../lib/ld-uClibc.so.0
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso/ldso'
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso'
+make -C  libc
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc'
+make -C  misc
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc'
+make -C  assert
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/assert'
+ar r ../../../libc/libc.a __assert.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/assert'
+make -C  ctype
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ctype'
+ar r ../../../libc/libc.a isalnum.o isalpha.o isascii.o iscntrl.o isdigit.o isgraph.o islower.o isprint.o ispunct.o isspace.o isupper.o isxdigit.o toascii.o tolower.o toupper.o isblank.o isxlower.o isxupper.o __C_ctype_b.o __C_ctype_tolower.o __C_ctype_toupper.o __ctype_b_loc.o __ctype_tolower_loc.o __ctype_toupper_loc.o __ctype_assert.o isctype.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ctype'
+make -C  dirent
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/dirent'
+ar r ../../../libc/libc.a alphasort.o closedir.o dirfd.o opendir.o readdir.o rewinddir.o scandir.o seekdir.o telldir.o readdir64.o alphasort64.o scandir64.o readdir_r.o readdir64_r.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/dirent'
+make -C  file
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/file'
+ar r ../../../libc/libc.a lockf.o lockf64.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/file'
+make -C  fnmatch
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/fnmatch'
+ar r ../../../libc/libc.a fnmatch.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/fnmatch'
+make -C  internals
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/internals'
+ar r ../../../libc/libc.a __uClibc_main.o tempname.o errno.o __errno_location.o __h_errno_location.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/internals'
+make -C  mntent
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/mntent'
+ar r ../../../libc/libc.a mntent.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/mntent'
+make -C  syslog
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/syslog'
+ar r ../../../libc/libc.a syslog.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/syslog'
+make -C  time
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/time'
+ar r ../../../libc/libc.a adjtime.o ftime.o clock_gettime.o asctime.o asctime_r.o clock.o ctime.o ctime_r.o gmtime.o gmtime_r.o localtime.o localtime_r.o mktime.o strftime.o strptime.o tzset.o _time_t2tm.o __time_tm.o _time_mktime.o dysize.o timegm.o difftime.o  
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/time'
+make -C  utmp
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/utmp'
+ar r ../../../libc/libc.a utent.o wtent.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/utmp'
+make -C  sysvipc
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/sysvipc'
+ar r ../../../libc/libc.a semget.o semctl.o semop.o shmat.o shmctl.o shmdt.o shmget.o msgctl.o msgget.o msgrcv.o msgsnd.o ftok.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/sysvipc'
+make -C  statfs
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/statfs'
+ar r ../../../libc/libc.a fstatfs64.o statfs64.o statvfs.o statvfs64.o fstatvfs.o fstatvfs64.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/statfs'
+make -C  error
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/error'
+ar r ../../../libc/libc.a error.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/error'
+make -C  ttyent
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ttyent'
+ar r ../../../libc/libc.a getttyent.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ttyent'
+make -C  gnu
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/gnu'
+ar r ../../../libc/libc.a obstack.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/gnu'
+make -C  search
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/search'
+ar r ../../../libc/libc.a hsearch.o tsearch.o tfind.o tdelete.o twalk.o tdestroy.o lfind.o lsearch.o insque.o remque.o hcreate_r.o hdestroy_r.o hsearch_r.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/search'
+make -C  locale
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/locale'
+ar r ../../../libc/libc.a setlocale.o localeconv.o _locale_init.o nl_langinfo.o  
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/locale'
+make -C  regex
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/regex'
+ar r ../../../libc/libc.a regex.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/regex'
+make -C  pthread
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/pthread'
+ar r ../../../libc/libc.a no-tsd.o weaks.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/pthread'
+make -C  wctype
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/wctype'
+ar r ../../../libc/libc.a iswalnum.o iswalpha.o iswcntrl.o iswdigit.o iswgraph.o iswlower.o iswprint.o iswpunct.o iswspace.o iswupper.o iswxdigit.o iswblank.o wctrans.o towctrans.o wctype.o iswctype.o towlower.o towupper.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/wctype'
+make -C  wchar
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/wchar'
+ar r ../../../libc/libc.a btowc.o wctob.o mbsinit.o mbrlen.o mbrtowc.o wcrtomb.o mbsrtowcs.o wcsrtombs.o _wchar_utf8sntowcs.o _wchar_wcsntoutf8s.o __mbsnrtowcs.o __wcsnrtombs.o wcwidth.o wcswidth.o fwide.o fgetwc.o getwchar.o fgetws.o fputwc.o putwchar.o fputws.o ungetwc.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/wchar'
+make -C  ftw
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ftw'
+ar r ../../../libc/libc.a ftw.o ftw64.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/ftw'
+make -C  glob
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/glob'
+ar r ../../../libc/libc.a glob.o glob64.o glob-hooks.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc/glob'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/misc'
+make -C  pwd_grp
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/pwd_grp'
+ar r ../../libc/libc.a fgetpwent_r.o fgetgrent_r.o fgetpwent.o fgetgrent.o getpwnam_r.o getgrnam_r.o getpwuid_r.o getgrgid_r.o getpwuid.o getgrgid.o getpwnam.o getgrnam.o getpw.o getpwent_r.o getgrent_r.o getpwent.o getgrent.o initgroups.o putpwent.o putgrent.o __parsepwent.o __parsegrent.o __pgsreader.o fgetspent_r.o fgetspent.o sgetspent_r.o getspnam_r.o getspnam.o getspent_r.o getspent.o sgetspent.o putspent.o __parsespent.o  lckpwdf.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/pwd_grp'
+make -C  stdio
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdio'
+ar r ../../libc/libc.a fclose.o fflush.o fopen.o freopen.o perror.o remove.o setbuf.o setvbuf.o fgetc.o fgets.o fputc.o fputs.o getc.o getchar.o gets.o putc.o putchar.o puts.o ungetc.o fread.o fwrite.o fgetpos.o fseek.o fsetpos.o ftell.o rewind.o clearerr.o feof.o ferror.o fileno.o fdopen.o getw.o putw.o setbuffer.o setlinebuf.o fcloseall.o fopen64.o freopen64.o ftello64.o fseeko64.o fsetpos64.o fgetpos64.o __fbufsize.o __freading.o __fwriting.o __freadable.o __fwritable.o __flbf.o __fpurge.o __fpending.o _flushlbf.o fopencookie.o fmemopen.o open_memstream.o __fsetlocking.o flockfile.o ftrylockfile.o funlockfile.o _stdio_fopen.o _stdio_fread.o _stdio_fwrite.o _stdio_adjpos.o _stdio_lseek.o _stdio_init.o _stdio_fsfopen.o _stdio_fdout.o _uintmaxtostr.o _stdio_strerror_r.o getdelim.o getline.o ctermid.o _wstdio_fwrite.o vsnprintf.o vdprintf.o vasprintf.o vprintf.o vsprintf.o fprintf.o  snprintf.o  dprintf.o  asprintf.o  printf.o  sprintf.o _store_inttype.o _load_inttype.o fwprintf.o wprintf.o swprintf.o vwprintf.o vswprintf.o vfwprintf.o _ppfs_init.o _ppfs_prepargs.o _ppfs_setargs.o _ppfs_parsespec.o vfprintf.o register_printf_function.o parse_printf_format.o _fpmaxtostr.o scanf.o sscanf.o fscanf.o vscanf.o vsscanf.o vfscanf.o __scan_cookie.o __psfs_parse_spec.o __psfs_do_numeric.o wscanf.o swscanf.o fwscanf.o vwscanf.o vswscanf.o vfwscanf.o popen.o tmpfile.o tmpnam.o tmpnam_r.o tempnam.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdio'
+make -C  string
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/string'
+ar r ../../libc/libc.a basename.o bcopy.o bzero.o dirname.o ffs.o memccpy.o memchr.o memcmp.o memcpy.o memmove.o mempcpy.o memrchr.o 	memset.o rawmemchr.o stpcpy.o stpncpy.o strcasecmp.o strcasestr.o strcat.o strchrnul.o strchr.o strcmp.o strcpy.o strcspn.o strdup.o strlen.o strncasecmp.o strncat.o strncmp.o strncpy.o strndup.o strnlen.o strpbrk.o strrchr.o strsep.o strspn.o strstr.o strtok.o strtok_r.o strerror.o _susv3_strerror_r.o _string_syserrmsgs.o _glibc_strerror_r.o _string_syssigmsgs.o sys_siglist.o strsignal.o psignal.o __xpg_basename.o strlcat.o strlcpy.o sys_errlist.o memmem.o  wcscasecmp.o wcscat.o wcschrnul.o wcschr.o wcscmp.o wcscpy.o wcscspn.o wcsdup.o wcslen.o wcsncasecmp.o wcsncat.o wcsncmp.o wcsncpy.o wcsnlen.o wcspbrk.o wcsrchr.o wcsspn.o wcsstr.o wcstok.o wmemchr.o wmemcmp.o wmemcpy.o wmemmove.o wmempcpy.o wmemset.o wcpcpy.o wcpncpy.o __wcslcpy.o wcsxfrm.o strxfrm.o  
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/string'
+make -C  termios
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/termios'
+ar r ../../libc/libc.a tcdrain.o tcflow.o tcflush.o tcsendbreak.o tcsetpgrp.o tcgetpgrp.o isatty.o cfgetospeed.o cfgetispeed.o cfsetospeed.o cfsetispeed.o cfmakeraw.o cfsetspeed.o tcgetattr.o tcgetsid.o tcsetattr.o ttyname.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/termios'
+make -C  inet
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/inet'
+ar r ../../libc/libc.a inet_aton.o inet_addr.o inet_ntoa.o inet_makeaddr.o inet_lnaof.o inet_netof.o encodeh.o decodeh.o encoded.o decoded.o lengthd.o encodeq.o decodeq.o lengthq.o encodea.o decodea.o encodep.o decodep.o formquery.o dnslookup.o resolveaddress.o opennameservers.o closenameservers.o resolvename.o gethostbyname.o res_init.o res_query.o gethostbyaddr.o read_etc_hosts_r.o get_hosts_byname_r.o get_hosts_byaddr_r.o gethostbyname2.o getnameinfo.o gethostent.o gethostbyname_r.o gethostbyname2_r.o gethostbyaddr_r.o res_comp.o ns_name.o accept.o bind.o connect.o getpeername.o getsockname.o getsockopt.o listen.o recv.o recvfrom.o recvmsg.o send.o sendmsg.o sendto.o setsockopt.o shutdown.o socket.o socketpair.o  getservice.o getproto.o hostid.o getnetent.o getnetbynm.o getnetbyad.o inet_net.o ntop.o herror.o if_nametoindex.o gai_strerror.o getaddrinfo.o in6_addr.o ether_addr.o ntohl.o
+make -C  rpc
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/inet/rpc'
+ar r ../../../libc/libc.a create_xid.o pmap_clnt.o pmap_getmaps.o pmap_getport.o pmap_prot.o pmap_prot2.o clnt_simple.o clnt_perror.o clnt_tcp.o clnt_udp.o bindresvport.o authunix_prot.o auth_none.o auth_unix.o xdr.o xdr_array.o xdr_rec.o xdr_reference.o xdr_mem.o svc.o svc_auth.o svc_auth_unix.o rpc_callmsg.o rpc_prot.o rpc_dtablesize.o rpc_commondata.o rpc_thread.o rcmd.o rexec.o sa_len.o ruserpass.o rtime.o getrpcent.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/inet/rpc'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/inet'
+make -C  signal
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/signal'
+ar r ../../libc/libc.a allocrtsig.o killpg.o raise.o sigaction.o sigaddset.o sigandset.o sigblock.o sigdelset.o sigempty.o sigfillset.o siggetmask.o sighold.o sigignore.o sigintr.o sigisempty.o sigismem.o sigjmp.o signal.o sigorset.o sigpause.o sigrelse.o sigset.o sigsetmask.o sigsetops.o sysv_signal.o sigwait.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/signal'
+make -C  stdlib
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdlib'
+ar r ../../libc/libc.a abs.o labs.o atoi.o atol.o strtol.o strtoul.o _stdlib_strto_l.o qsort.o bsearch.o llabs.o atoll.o strtoll.o strtoull.o _stdlib_strto_ll.o atof.o mblen.o mbtowc.o wctomb.o mbstowcs.o wcstombs.o _stdlib_mb_cur_max.o _stdlib_wcsto_l.o _stdlib_wcsto_ll.o wcstol.o wcstoul.o wcstoll.o wcstoull.o   strtod.o strtof.o strtold.o __strtofpmax.o __fp_range_check.o wcstod.o wcstof.o wcstold.o __wcstofpmax.o  atexit.o on_exit.o __exit_handler.o exit.o abort.o getenv.o mkdtemp.o mktemp.o realpath.o mkstemp.o mkstemp64.o rand.o random.o random_r.o setenv.o system.o div.o ldiv.o getpt.o ptsname.o grantpt.o unlockpt.o gcvt.o drand48-iter.o jrand48.o jrand48_r.o lrand48.o lrand48_r.o mrand48.o mrand48_r.o nrand48.o nrand48_r.o rand_r.o srand48.o srand48_r.o seed48.o seed48_r.o valloc.o drand48.o drand48_r.o erand48.o erand48_r.o
+make -C  malloc
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdlib/malloc'
+ar r ../../../libc/libc.a malloc.o calloc.o free.o realloc.o memalign.o heap_alloc.o heap_alloc_at.o heap_free.o
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdlib/malloc'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/stdlib'
+make -C  sysdeps
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps'
+make -C  linux
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux'
+make -C common
+make[4]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/common'
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_exit ../athomux-linux/syscalls_athomux.c -c -o __syscall_exit.o
+strip -x -R .note -R .comment __syscall_exit.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fork ../athomux-linux/syscalls_athomux.c -c -o __syscall_fork.o
+strip -x -R .note -R .comment __syscall_fork.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_read ../athomux-linux/syscalls_athomux.c -c -o __syscall_read.o
+strip -x -R .note -R .comment __syscall_read.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_write ../athomux-linux/syscalls_athomux.c -c -o __syscall_write.o
+strip -x -R .note -R .comment __syscall_write.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_open ../athomux-linux/syscalls_athomux.c -c -o __syscall_open.o
+strip -x -R .note -R .comment __syscall_open.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_close ../athomux-linux/syscalls_athomux.c -c -o __libc_close.o
+strip -x -R .note -R .comment __libc_close.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_link ../athomux-linux/syscalls_athomux.c -c -o link.o
+strip -x -R .note -R .comment link.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_unlink ../athomux-linux/syscalls_athomux.c -c -o unlink.o
+strip -x -R .note -R .comment unlink.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_unlink ../athomux-linux/syscalls_athomux.c -c -o __syscall_unlink.o
+strip -x -R .note -R .comment __syscall_unlink.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_execve ../athomux-linux/syscalls_athomux.c -c -o __syscall_execve.o
+strip -x -R .note -R .comment __syscall_execve.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_chdir ../athomux-linux/syscalls_athomux.c -c -o __syscall_chdir.o
+strip -x -R .note -R .comment __syscall_chdir.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_time ../athomux-linux/syscalls_athomux.c -c -o time.o
+strip -x -R .note -R .comment time.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_mknod ../athomux-linux/syscalls_athomux.c -c -o __syscall_mknod.o
+strip -x -R .note -R .comment __syscall_mknod.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_chmod ../athomux-linux/syscalls_athomux.c -c -o __syscall_chmod.o
+strip -x -R .note -R .comment __syscall_chmod.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_lchown ../athomux-linux/syscalls_athomux.c -c -o __syscall_lchown.o
+strip -x -R .note -R .comment __syscall_lchown.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_lseek ../athomux-linux/syscalls_athomux.c -c -o __libc_lseek.o
+strip -x -R .note -R .comment __libc_lseek.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_getpid ../athomux-linux/syscalls_athomux.c -c -o __libc_getpid.o
+strip -x -R .note -R .comment __libc_getpid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_mount ../athomux-linux/syscalls_athomux.c -c -o mount.o
+strip -x -R .note -R .comment mount.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_umount ../athomux-linux/syscalls_athomux.c -c -o umount.o
+strip -x -R .note -R .comment umount.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setuid.o
+strip -x -R .note -R .comment __syscall_setuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getuid.o
+strip -x -R .note -R .comment __syscall_getuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_stime ../athomux-linux/syscalls_athomux.c -c -o stime.o
+strip -x -R .note -R .comment stime.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_alarm ../athomux-linux/syscalls_athomux.c -c -o alarm.o
+strip -x -R .note -R .comment alarm.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_pause ../athomux-linux/syscalls_athomux.c -c -o __libc_pause.o
+strip -x -R .note -R .comment __libc_pause.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_utime ../athomux-linux/syscalls_athomux.c -c -o utime.o
+strip -x -R .note -R .comment utime.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_utime ../athomux-linux/syscalls_athomux.c -c -o __syscall_utime.o
+strip -x -R .note -R .comment __syscall_utime.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_utimes ../athomux-linux/syscalls_athomux.c -c -o utimes.o
+strip -x -R .note -R .comment utimes.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_access ../athomux-linux/syscalls_athomux.c -c -o access.o
+strip -x -R .note -R .comment access.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_access ../athomux-linux/syscalls_athomux.c -c -o __syscall_access.o
+strip -x -R .note -R .comment __syscall_access.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_nice ../athomux-linux/syscalls_athomux.c -c -o nice.o
+strip -x -R .note -R .comment nice.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_kill ../athomux-linux/syscalls_athomux.c -c -o __syscall_kill.o
+strip -x -R .note -R .comment __syscall_kill.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_rename ../athomux-linux/syscalls_athomux.c -c -o __syscall_rename.o
+strip -x -R .note -R .comment __syscall_rename.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_mkdir ../athomux-linux/syscalls_athomux.c -c -o __syscall_mkdir.o
+strip -x -R .note -R .comment __syscall_mkdir.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_rmdir ../athomux-linux/syscalls_athomux.c -c -o rmdir.o
+strip -x -R .note -R .comment rmdir.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_dup ../athomux-linux/syscalls_athomux.c -c -o dup.o
+strip -x -R .note -R .comment dup.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_pipe ../athomux-linux/syscalls_athomux.c -c -o __syscall_pipe.o
+strip -x -R .note -R .comment __syscall_pipe.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_times ../athomux-linux/syscalls_athomux.c -c -o times.o
+strip -x -R .note -R .comment times.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setgid.o
+strip -x -R .note -R .comment __syscall_setgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getgid.o
+strip -x -R .note -R .comment __syscall_getgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_geteuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_geteuid.o
+strip -x -R .note -R .comment __syscall_geteuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getegid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getegid.o
+strip -x -R .note -R .comment __syscall_getegid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_acct ../athomux-linux/syscalls_athomux.c -c -o acct.o
+strip -x -R .note -R .comment acct.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_umount2 ../athomux-linux/syscalls_athomux.c -c -o umount2.o
+strip -x -R .note -R .comment umount2.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_ioctl ../athomux-linux/syscalls_athomux.c -c -o __syscall_ioctl.o
+strip -x -R .note -R .comment __syscall_ioctl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fcntl ../athomux-linux/syscalls_athomux.c -c -o __syscall_fcntl.o
+strip -x -R .note -R .comment __syscall_fcntl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setpgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setpgid.o
+strip -x -R .note -R .comment __syscall_setpgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_umask ../athomux-linux/syscalls_athomux.c -c -o __syscall_umask.o
+strip -x -R .note -R .comment __syscall_umask.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_chroot ../athomux-linux/syscalls_athomux.c -c -o __syscall_chroot.o
+strip -x -R .note -R .comment __syscall_chroot.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_ustat ../athomux-linux/syscalls_athomux.c -c -o __syscall_ustat.o
+strip -x -R .note -R .comment __syscall_ustat.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_dup2 ../athomux-linux/syscalls_athomux.c -c -o dup2.o
+strip -x -R .note -R .comment dup2.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_getppid ../athomux-linux/syscalls_athomux.c -c -o getppid.o
+strip -x -R .note -R .comment getppid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_getpgrp ../athomux-linux/syscalls_athomux.c -c -o getpgrp.o
+strip -x -R .note -R .comment getpgrp.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_setsid ../athomux-linux/syscalls_athomux.c -c -o setsid.o
+strip -x -R .note -R .comment setsid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sigaction ../athomux-linux/syscalls_athomux.c -c -o __syscall_sigaction.o
+strip -x -R .note -R .comment __syscall_sigaction.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setreuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setreuid.o
+strip -x -R .note -R .comment __syscall_setreuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setregid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setregid.o
+strip -x -R .note -R .comment __syscall_setregid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___sigsuspend ../athomux-linux/syscalls_athomux.c -c -o __sigsuspend.o
+strip -x -R .note -R .comment __sigsuspend.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sigpending ../athomux-linux/syscalls_athomux.c -c -o sigpending.o
+strip -x -R .note -R .comment sigpending.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sethostname ../athomux-linux/syscalls_athomux.c -c -o sethostname.o
+strip -x -R .note -R .comment sethostname.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___setrlimit ../athomux-linux/syscalls_athomux.c -c -o __setrlimit.o
+strip -x -R .note -R .comment __setrlimit.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_setrlimit ../athomux-linux/syscalls_athomux.c -c -o setrlimit.o
+strip -x -R .note -R .comment setrlimit.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___getrlimit ../athomux-linux/syscalls_athomux.c -c -o __getrlimit.o
+strip -x -R .note -R .comment __getrlimit.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_getrusage ../athomux-linux/syscalls_athomux.c -c -o getrusage.o
+strip -x -R .note -R .comment getrusage.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_gettimeofday ../athomux-linux/syscalls_athomux.c -c -o __syscall_gettimeofday.o
+strip -x -R .note -R .comment __syscall_gettimeofday.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_settimeofday ../athomux-linux/syscalls_athomux.c -c -o settimeofday.o
+strip -x -R .note -R .comment settimeofday.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getgroups ../athomux-linux/syscalls_athomux.c -c -o __syscall_getgroups.o
+strip -x -R .note -R .comment __syscall_getgroups.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setgroups ../athomux-linux/syscalls_athomux.c -c -o __syscall_setgroups.o
+strip -x -R .note -R .comment __syscall_setgroups.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_select ../athomux-linux/syscalls_athomux.c -c -o select.o
+strip -x -R .note -R .comment select.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_symlink ../athomux-linux/syscalls_athomux.c -c -o symlink.o
+strip -x -R .note -R .comment symlink.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_readlink ../athomux-linux/syscalls_athomux.c -c -o readlink.o
+strip -x -R .note -R .comment readlink.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_uselib ../athomux-linux/syscalls_athomux.c -c -o uselib.o
+strip -x -R .note -R .comment uselib.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_swapon ../athomux-linux/syscalls_athomux.c -c -o swapon.o
+strip -x -R .note -R .comment swapon.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL__reboot ../athomux-linux/syscalls_athomux.c -c -o _reboot.o
+strip -x -R .note -R .comment _reboot.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL__mmap ../athomux-linux/syscalls_athomux.c -c -o _mmap.o
+strip -x -R .note -R .comment _mmap.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_munmap ../athomux-linux/syscalls_athomux.c -c -o munmap.o
+strip -x -R .note -R .comment munmap.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_truncate ../athomux-linux/syscalls_athomux.c -c -o truncate.o
+strip -x -R .note -R .comment truncate.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_ftruncate ../athomux-linux/syscalls_athomux.c -c -o ftruncate.o
+strip -x -R .note -R .comment ftruncate.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fchmod ../athomux-linux/syscalls_athomux.c -c -o __syscall_fchmod.o
+strip -x -R .note -R .comment __syscall_fchmod.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fchown ../athomux-linux/syscalls_athomux.c -c -o __syscall_fchown.o
+strip -x -R .note -R .comment __syscall_fchown.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getpriority ../athomux-linux/syscalls_athomux.c -c -o __syscall_getpriority.o
+strip -x -R .note -R .comment __syscall_getpriority.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_setpriority ../athomux-linux/syscalls_athomux.c -c -o setpriority.o
+strip -x -R .note -R .comment setpriority.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_statfs ../athomux-linux/syscalls_athomux.c -c -o __syscall_statfs.o
+strip -x -R .note -R .comment __syscall_statfs.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_fstatfs ../athomux-linux/syscalls_athomux.c -c -o fstatfs.o
+strip -x -R .note -R .comment fstatfs.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_ioperm ../athomux-linux/syscalls_athomux.c -c -o ioperm.o
+strip -x -R .note -R .comment ioperm.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___socketcall ../athomux-linux/syscalls_athomux.c -c -o __socketcall.o
+strip -x -R .note -R .comment __socketcall.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL__syslog ../athomux-linux/syscalls_athomux.c -c -o _syslog.o
+strip -x -R .note -R .comment _syslog.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_setitimer ../athomux-linux/syscalls_athomux.c -c -o setitimer.o
+strip -x -R .note -R .comment setitimer.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_getitimer ../athomux-linux/syscalls_athomux.c -c -o getitimer.o
+strip -x -R .note -R .comment getitimer.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_stat ../athomux-linux/syscalls_athomux.c -c -o __syscall_stat.o
+strip -x -R .note -R .comment __syscall_stat.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_lstat ../athomux-linux/syscalls_athomux.c -c -o __syscall_lstat.o
+strip -x -R .note -R .comment __syscall_lstat.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fstat ../athomux-linux/syscalls_athomux.c -c -o __syscall_fstat.o
+strip -x -R .note -R .comment __syscall_fstat.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_iopl ../athomux-linux/syscalls_athomux.c -c -o iopl.o
+strip -x -R .note -R .comment iopl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_vhangup ../athomux-linux/syscalls_athomux.c -c -o vhangup.o
+strip -x -R .note -R .comment vhangup.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_wait4 ../athomux-linux/syscalls_athomux.c -c -o __syscall_wait4.o
+strip -x -R .note -R .comment __syscall_wait4.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_swapoff ../athomux-linux/syscalls_athomux.c -c -o swapoff.o
+strip -x -R .note -R .comment swapoff.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sysinfo ../athomux-linux/syscalls_athomux.c -c -o sysinfo.o
+strip -x -R .note -R .comment sysinfo.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___ipc ../athomux-linux/syscalls_athomux.c -c -o __ipc.o
+strip -x -R .note -R .comment __ipc.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_fsync ../athomux-linux/syscalls_athomux.c -c -o __libc_fsync.o
+strip -x -R .note -R .comment __libc_fsync.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_setdomainname ../athomux-linux/syscalls_athomux.c -c -o setdomainname.o
+strip -x -R .note -R .comment setdomainname.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_uname ../athomux-linux/syscalls_athomux.c -c -o uname.o
+strip -x -R .note -R .comment uname.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_uname ../athomux-linux/syscalls_athomux.c -c -o __syscall_uname.o
+strip -x -R .note -R .comment __syscall_uname.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_modify_ldt ../athomux-linux/syscalls_athomux.c -c -o modify_ldt.o
+strip -x -R .note -R .comment modify_ldt.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_adjtimex ../athomux-linux/syscalls_athomux.c -c -o adjtimex.o
+strip -x -R .note -R .comment adjtimex.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_mprotect ../athomux-linux/syscalls_athomux.c -c -o mprotect.o
+strip -x -R .note -R .comment mprotect.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sigprocmask ../athomux-linux/syscalls_athomux.c -c -o __syscall_sigprocmask.o
+strip -x -R .note -R .comment __syscall_sigprocmask.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_init_module ../athomux-linux/syscalls_athomux.c -c -o init_module.o
+strip -x -R .note -R .comment init_module.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_delete_module ../athomux-linux/syscalls_athomux.c -c -o delete_module.o
+strip -x -R .note -R .comment delete_module.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_get_kernel_syms ../athomux-linux/syscalls_athomux.c -c -o get_kernel_syms.o
+strip -x -R .note -R .comment get_kernel_syms.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_quotactl ../athomux-linux/syscalls_athomux.c -c -o quotactl.o
+strip -x -R .note -R .comment quotactl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getpgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getpgid.o
+strip -x -R .note -R .comment __syscall_getpgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_fchdir ../athomux-linux/syscalls_athomux.c -c -o fchdir.o
+strip -x -R .note -R .comment fchdir.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_bdflush ../athomux-linux/syscalls_athomux.c -c -o bdflush.o
+strip -x -R .note -R .comment bdflush.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sysfs ../athomux-linux/syscalls_athomux.c -c -o sysfs.o
+strip -x -R .note -R .comment sysfs.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_personality ../athomux-linux/syscalls_athomux.c -c -o personality.o
+strip -x -R .note -R .comment personality.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setfsuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setfsuid.o
+strip -x -R .note -R .comment __syscall_setfsuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setfsgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setfsgid.o
+strip -x -R .note -R .comment __syscall_setfsgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getdents ../athomux-linux/syscalls_athomux.c -c -o __syscall_getdents.o
+strip -x -R .note -R .comment __syscall_getdents.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL__newselect ../athomux-linux/syscalls_athomux.c -c -o _newselect.o
+strip -x -R .note -R .comment _newselect.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_flock ../athomux-linux/syscalls_athomux.c -c -o __syscall_flock.o
+strip -x -R .note -R .comment __syscall_flock.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_msync ../athomux-linux/syscalls_athomux.c -c -o __libc_msync.o
+strip -x -R .note -R .comment __libc_msync.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_readv ../athomux-linux/syscalls_athomux.c -c -o readv.o
+strip -x -R .note -R .comment readv.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_writev ../athomux-linux/syscalls_athomux.c -c -o writev.o
+strip -x -R .note -R .comment writev.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getsid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getsid.o
+strip -x -R .note -R .comment __syscall_getsid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_fdatasync ../athomux-linux/syscalls_athomux.c -c -o fdatasync.o
+strip -x -R .note -R .comment fdatasync.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL__sysctl ../athomux-linux/syscalls_athomux.c -c -o _sysctl.o
+strip -x -R .note -R .comment _sysctl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_mlock ../athomux-linux/syscalls_athomux.c -c -o mlock.o
+strip -x -R .note -R .comment mlock.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_munlock ../athomux-linux/syscalls_athomux.c -c -o munlock.o
+strip -x -R .note -R .comment munlock.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_mlockall ../athomux-linux/syscalls_athomux.c -c -o mlockall.o
+strip -x -R .note -R .comment mlockall.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_munlockall ../athomux-linux/syscalls_athomux.c -c -o munlockall.o
+strip -x -R .note -R .comment munlockall.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sched_setparam ../athomux-linux/syscalls_athomux.c -c -o __syscall_sched_setparam.o
+strip -x -R .note -R .comment __syscall_sched_setparam.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sched_getparam ../athomux-linux/syscalls_athomux.c -c -o __syscall_sched_getparam.o
+strip -x -R .note -R .comment __syscall_sched_getparam.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sched_setscheduler ../athomux-linux/syscalls_athomux.c -c -o __syscall_sched_setscheduler.o
+strip -x -R .note -R .comment __syscall_sched_setscheduler.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sched_getscheduler ../athomux-linux/syscalls_athomux.c -c -o __syscall_sched_getscheduler.o
+strip -x -R .note -R .comment __syscall_sched_getscheduler.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sched_yield ../athomux-linux/syscalls_athomux.c -c -o sched_yield.o
+strip -x -R .note -R .comment sched_yield.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sched_get_priority_max ../athomux-linux/syscalls_athomux.c -c -o sched_get_priority_max.o
+strip -x -R .note -R .comment sched_get_priority_max.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sched_get_priority_min ../athomux-linux/syscalls_athomux.c -c -o sched_get_priority_min.o
+strip -x -R .note -R .comment sched_get_priority_min.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_sched_rr_get_interval ../athomux-linux/syscalls_athomux.c -c -o __syscall_sched_rr_get_interval.o
+strip -x -R .note -R .comment __syscall_sched_rr_get_interval.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_nanosleep ../athomux-linux/syscalls_athomux.c -c -o __syscall_nanosleep.o
+strip -x -R .note -R .comment __syscall_nanosleep.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_mremap ../athomux-linux/syscalls_athomux.c -c -o mremap.o
+strip -x -R .note -R .comment mremap.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setresuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setresuid.o
+strip -x -R .note -R .comment __syscall_setresuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getresuid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getresuid.o
+strip -x -R .note -R .comment __syscall_getresuid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_query_module ../athomux-linux/syscalls_athomux.c -c -o query_module.o
+strip -x -R .note -R .comment query_module.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_poll ../athomux-linux/syscalls_athomux.c -c -o poll.o
+strip -x -R .note -R .comment poll.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_setresgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_setresgid.o
+strip -x -R .note -R .comment __syscall_setresgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_getresgid ../athomux-linux/syscalls_athomux.c -c -o __syscall_getresgid.o
+strip -x -R .note -R .comment __syscall_getresgid.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_prctl ../athomux-linux/syscalls_athomux.c -c -o prctl.o
+strip -x -R .note -R .comment prctl.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_rt_sigaction ../athomux-linux/syscalls_athomux.c -c -o __syscall_rt_sigaction.o
+strip -x -R .note -R .comment __syscall_rt_sigaction.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___rt_sigprocmask ../athomux-linux/syscalls_athomux.c -c -o __rt_sigprocmask.o
+strip -x -R .note -R .comment __rt_sigprocmask.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___rt_sigpending ../athomux-linux/syscalls_athomux.c -c -o __rt_sigpending.o
+strip -x -R .note -R .comment __rt_sigpending.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___rt_sigtimedwait ../athomux-linux/syscalls_athomux.c -c -o __rt_sigtimedwait.o
+strip -x -R .note -R .comment __rt_sigtimedwait.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___rt_sigsuspend ../athomux-linux/syscalls_athomux.c -c -o __rt_sigsuspend.o
+strip -x -R .note -R .comment __rt_sigsuspend.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_chown ../athomux-linux/syscalls_athomux.c -c -o __syscall_chown.o
+strip -x -R .note -R .comment __syscall_chown.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___libc_getcwd ../athomux-linux/syscalls_athomux.c -c -o __libc_getcwd.o
+strip -x -R .note -R .comment __libc_getcwd.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_capget ../athomux-linux/syscalls_athomux.c -c -o capget.o
+strip -x -R .note -R .comment capget.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_capset ../athomux-linux/syscalls_athomux.c -c -o capset.o
+strip -x -R .note -R .comment capset.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sigaltstack ../athomux-linux/syscalls_athomux.c -c -o sigaltstack.o
+strip -x -R .note -R .comment sigaltstack.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_sendfile ../athomux-linux/syscalls_athomux.c -c -o sendfile.o
+strip -x -R .note -R .comment sendfile.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_vfork ../athomux-linux/syscalls_athomux.c -c -o __syscall_vfork.o
+strip -x -R .note -R .comment __syscall_vfork.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___ugetrlimit ../athomux-linux/syscalls_athomux.c -c -o __ugetrlimit.o
+strip -x -R .note -R .comment __ugetrlimit.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_stat64 ../athomux-linux/syscalls_athomux.c -c -o __syscall_stat64.o
+strip -x -R .note -R .comment __syscall_stat64.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_lstat64 ../athomux-linux/syscalls_athomux.c -c -o __syscall_lstat64.o
+strip -x -R .note -R .comment __syscall_lstat64.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fstat64 ../athomux-linux/syscalls_athomux.c -c -o __syscall_fstat64.o
+strip -x -R .note -R .comment __syscall_fstat64.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_pivot_root ../athomux-linux/syscalls_athomux.c -c -o pivot_root.o
+strip -x -R .note -R .comment pivot_root.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL_madvise ../athomux-linux/syscalls_athomux.c -c -o madvise.o
+strip -x -R .note -R .comment madvise.o
+gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -Os     -fno-builtin -nostdinc -D_LIBC -I../../../../include -I. -I/usr/lib/gcc-lib/i586-suse-linux/3.3.3/include -DNDEBUG -fPIC -DL___syscall_fcntl64 ../athomux-linux/syscalls_athomux.c -c -o __syscall_fcntl64.o
+strip -x -R .note -R .comment __syscall_fcntl64.o
+ar r ../../../../libc/libc.a waitpid.o getdnnm.o gethstnm.o ptrace.o mkfifo.o setegid.o wait.o getpagesize.o seteuid.o wait3.o setpgrp.o getdtablesize.o create_module.o cmsg_nxthdr.o longjmp.o open64.o ftruncate64.o mmap64.o truncate64.o getrlimit64.o setrlimit64.o creat64.o llseek.o pread_write.o sync.o getdirname.o sendfile64.o xstatconv.o getdents64.o vfork.o ulimit.o ntp_gettime.o sbrk.o  __syscall_exit.o  __syscall_fork.o  __syscall_read.o  __syscall_write.o  __syscall_open.o  __libc_close.o  link.o  unlink.o  __syscall_unlink.o  __syscall_execve.o  __syscall_chdir.o  time.o  __syscall_mknod.o  __syscall_chmod.o  __syscall_lchown.o  __libc_lseek.o  __libc_getpid.o  mount.o  umount.o  __syscall_setuid.o  __syscall_getuid.o  stime.o  alarm.o  __libc_pause.o  utime.o  __syscall_utime.o  utimes.o  access.o  __syscall_access.o  nice.o  __syscall_kill.o  __syscall_rename.o  __syscall_mkdir.o  rmdir.o  dup.o  __syscall_pipe.o  times.o  __syscall_setgid.o  __syscall_getgid.o  __syscall_geteuid.o  __syscall_getegid.o  acct.o  umount2.o  __syscall_ioctl.o  __syscall_fcntl.o  __syscall_setpgid.o  __syscall_umask.o  __syscall_chroot.o  __syscall_ustat.o  dup2.o  getppid.o  getpgrp.o  setsid.o  __syscall_sigaction.o  __syscall_setreuid.o  __syscall_setregid.o  __sigsuspend.o  sigpending.o  sethostname.o  __setrlimit.o  setrlimit.o  __getrlimit.o  getrusage.o  __syscall_gettimeofday.o  settimeofday.o  __syscall_getgroups.o  __syscall_setgroups.o  select.o  symlink.o  readlink.o  uselib.o  swapon.o  _reboot.o  _mmap.o  munmap.o  truncate.o  ftruncate.o  __syscall_fchmod.o  __syscall_fchown.o  __syscall_getpriority.o  setpriority.o  __syscall_statfs.o  fstatfs.o  ioperm.o  __socketcall.o  _syslog.o  setitimer.o  getitimer.o  __syscall_stat.o  __syscall_lstat.o  __syscall_fstat.o  iopl.o  vhangup.o  __syscall_wait4.o  swapoff.o  sysinfo.o  __ipc.o  __libc_fsync.o  setdomainname.o  uname.o  __syscall_uname.o  modify_ldt.o  adjtimex.o  mprotect.o  __syscall_sigprocmask.o  init_module.o  delete_module.o  get_kernel_syms.o  quotactl.o  __syscall_getpgid.o  fchdir.o  bdflush.o  sysfs.o  personality.o  __syscall_setfsuid.o  __syscall_setfsgid.o  __syscall_getdents.o  _newselect.o  __syscall_flock.o  __libc_msync.o  readv.o  writev.o  __syscall_getsid.o  fdatasync.o  _sysctl.o  mlock.o  munlock.o  mlockall.o  munlockall.o  __syscall_sched_setparam.o  __syscall_sched_getparam.o  __syscall_sched_setscheduler.o  __syscall_sched_getscheduler.o  sched_yield.o  sched_get_priority_max.o  sched_get_priority_min.o  __syscall_sched_rr_get_interval.o  __syscall_nanosleep.o  mremap.o  __syscall_setresuid.o  __syscall_getresuid.o  query_module.o  poll.o  __syscall_setresgid.o  __syscall_getresgid.o  prctl.o  __syscall_rt_sigaction.o  __rt_sigprocmask.o  __rt_sigpending.o  __rt_sigtimedwait.o  __rt_sigsuspend.o  __syscall_chown.o  __libc_getcwd.o  capget.o  capset.o  sigaltstack.o sendfile.o  __syscall_vfork.o  __ugetrlimit.o  __syscall_stat64.o  __syscall_lstat64.o  __syscall_fstat64.o  pivot_root.o  madvise.o  __syscall_fcntl64.o
+make[4]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/common'
+make -C athomux-linux
+make[4]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/athomux-linux'
+ar r ../../../../libc/libc.a __longjmp.o clone.o setjmp.o bsd-setjmp.o bsd-_setjmp.o syscall.o mmap64.o brk.o sigaction.o communication.o
+cp crt0.o crt1.o gcrt1.o Scrt0.o Scrt1.o ../../../../lib/
+rm -f ../../../../lib/Scrt0.o
+make[4]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux/athomux-linux'
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps/linux'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/sysdeps'
+make -C  unistd
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/unistd'
+ar r ../../libc/libc.a sleep.o usleep.o getpass.o sysconf.o getlogin.o fpathconf.o confstr.o pathconf.o swab.o usershell.o getsubopt.o daemon.o getopt.o execl.o execv.o execle.o execlp.o execvp.o __exec_alloc.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc/unistd'
+ranlib libc.a
+install -d ../lib
+rm -f ../lib/libc.a
+install -m 644 libc.a ../lib
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc'
+make -C  libcrypt
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libcrypt'
+ar r libcrypt.a crypt.o des.o md5.o
+install -d ../lib
+rm -f ../lib/libcrypt.a
+install -m 644 libcrypt.a ../lib
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libcrypt'
+make -C  libresolv
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libresolv'
+ar r libresolv.a resolv.o
+install -d ../lib
+rm -f ../lib/libresolv.a
+install -m 644 libresolv.a ../lib
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libresolv'
+make -C  libnsl
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libnsl'
+ar r libnsl.a nsl.o
+install -d ../lib
+rm -f ../lib/libnsl.a
+install -m 644 libnsl.a ../lib
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libnsl'
+make -C  libutil
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libutil'
+ar r libutil.a login.o login_tty.o logout.o logwtmp.o openpty.o forkpty.o
+install -d ../lib
+rm -f ../lib/libutil.a
+install -m 644 libutil.a ../lib/
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libutil'
+make -C  libm
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libm'
+ar r libm.a e_acos.o e_acosh.o e_asin.o e_atan2.o e_atanh.o e_cosh.o e_exp.o e_fmod.o e_gamma.o e_gamma_r.o e_hypot.o e_j0.o e_j1.o e_jn.o e_lgamma.o e_lgamma_r.o e_log.o e_log10.o e_pow.o e_remainder.o e_rem_pio2.o e_scalb.o e_sinh.o e_sqrt.o k_cos.o k_rem_pio2.o k_sin.o k_standard.o k_tan.o s_asinh.o s_atan.o s_cbrt.o s_ceil.o s_copysign.o s_cos.o s_erf.o s_expm1.o s_fabs.o s_finite.o s_floor.o s_frexp.o s_ilogb.o s_ldexp.o s_lib_version.o s_log1p.o s_logb.o s_matherr.o s_modf.o s_nextafter.o s_rint.o s_scalbn.o s_signgam.o s_significand.o s_sin.o s_tan.o s_tanh.o w_acos.o w_acosh.o w_asin.o w_atan2.o w_atanh.o w_cabs.o w_cosh.o w_drem.o w_exp.o w_fmod.o w_gamma.o w_gamma_r.o w_hypot.o w_j0.o w_j1.o w_jn.o w_lgamma.o w_lgamma_r.o w_log.o w_log10.o w_pow.o w_remainder.o w_scalb.o w_sinh.o w_sqrt.o w_sqrtf.o fpmacros.o nan.o s_ceilf.o s_floorf.o
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libm'
+make -C  libpthread
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread'
+make -C  linuxthreads
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads'
+ar r ../libpthread.a attr.o cancel.o condvar.o errno.o events.o join.o lockfile.o manager.o mutex.o oldsemaphore.o pt-machine.o ptfork.o pthread.o ptlongjmp.o rwlock.o semaphore.o signals.o specific.o spinlock.o wrapsyscall.o
+make -C  sysdeps
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads/sysdeps'
+make[3]: Nothing to be done for `all'.
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads/sysdeps'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads'
+make -C  linuxthreads_db
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads_db'
+ar r ../libthread_db.a td_init.o td_log.o td_ta_delete.o td_ta_get_nthreads.o td_ta_get_ph.o td_ta_map_id2thr.o td_ta_map_lwp2thr.o td_ta_new.o td_ta_thr_iter.o td_ta_tsd_iter.o td_thr_get_info.o td_thr_getfpregs.o td_thr_getgregs.o td_thr_getxregs.o td_thr_getxregsize.o td_thr_setfpregs.o td_thr_setgregs.o td_thr_setprio.o td_thr_setsigpending.o td_thr_setxregs.o td_thr_sigsetmask.o td_thr_tsd.o td_thr_validate.o td_thr_dbsuspend.o td_thr_dbresume.o td_ta_setconcurrency.o td_ta_enable_stats.o td_ta_reset_stats.o td_ta_get_stats.o td_ta_event_addr.o td_thr_event_enable.o td_thr_set_event.o td_thr_clear_event.o td_thr_event_getmsg.o td_ta_set_event.o td_ta_event_getmsg.o td_ta_clear_event.o td_symbol_list.o td_thr_tls_get_addr.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads_db'
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc'
+ld  -s -shared --warn-common --warn-once -z combreloc  -soname=libc.so.0 -o libuClibc-0.9.26.so \
+	--whole-archive libc.a \
+	../libc/misc/internals/interp.o --no-whole-archive \
+	-init __uClibc_init
+install -d ../lib
+rm -f ../lib/libuClibc-0.9.26.so
+install -m 644 libuClibc-0.9.26.so ../lib
+ln -sf libuClibc-0.9.26.so ../lib/libc.so
+ln -sf libuClibc-0.9.26.so ../lib/libc.so.0
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libc'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso'
+make -C libdl;
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso/libdl'
+ar r libdl.a ../ldso/athomux-linux/resolve.o dlib.o
+ar r libdl_pic.a dlib_pic.o
+install -d ../../lib
+rm -f ../../lib/libdl.a
+install -m 644 libdl.a ../../lib
+ld  -s -shared --warn-common --warn-once -z combreloc -soname=libdl.so.0 \
+-o libdl-0.9.26.so --whole-archive libdl_pic.a \
+--no-whole-archive ../..//libc/misc/internals/interp.o \
+-L../..//lib -lc;
+install -d ../../lib
+rm -f ../../lib/libdl-0.9.26.so ../../lib/libdl.so.0
+install -m 644 libdl-0.9.26.so ../../lib
+ln -sf libdl-0.9.26.so ../../lib/libdl.so
+ln -sf libdl-0.9.26.so ../../lib/libdl.so.0
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso/libdl'
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/ldso'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libcrypt'
+ar r libcrypt.a crypt.o des.o md5.o
+install -d ../lib
+rm -f ../lib/libcrypt.a
+install -m 644 libcrypt.a ../lib
+ld  -s -shared --warn-common --warn-once -z combreloc -soname=libcrypt.so.0 \
+-o libcrypt-0.9.26.so --whole-archive libcrypt.a \
+--no-whole-archive ../libc/misc/internals/interp.o \
+-L../lib -lc;
+install -d ../lib
+rm -f ../lib/libcrypt-0.9.26.so ../lib/libcrypt.so.0
+install -m 644 libcrypt-0.9.26.so ../lib;
+ln -sf libcrypt-0.9.26.so ../lib/libcrypt.so
+ln -sf libcrypt-0.9.26.so ../lib/libcrypt.so.0
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libcrypt'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libresolv'
+ar r libresolv.a resolv.o
+install -d ../lib
+rm -f ../lib/libresolv.a
+install -m 644 libresolv.a ../lib
+ld  -s -shared --warn-common --warn-once -z combreloc -soname=libresolv.so.0 \
+-o libresolv-0.9.26.so --whole-archive libresolv.a \
+--no-whole-archive ../libc/misc/internals/interp.o \
+-L../lib -lc;
+install -d ../lib
+rm -f ../lib/libresolv-0.9.26.so ../lib/libresolv.so.0
+install -m 644 libresolv-0.9.26.so ../lib
+ln -sf libresolv-0.9.26.so ../lib/libresolv.so
+ln -sf libresolv-0.9.26.so ../lib/libresolv.so.0
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libresolv'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libnsl'
+ar r libnsl.a nsl.o
+install -d ../lib
+rm -f ../lib/libnsl.a
+install -m 644 libnsl.a ../lib
+ld  -s -shared --warn-common --warn-once -z combreloc -soname=libnsl.so.0 \
+-o libnsl-0.9.26.so --whole-archive libnsl.a \
+--no-whole-archive ../libc/misc/internals/interp.o \
+-L../lib -lc;
+install -d ../lib
+rm -f ../lib/libnsl-0.9.26.so ../lib/libnsl.so.0
+install -m 644 libnsl-0.9.26.so ../lib
+ln -sf libnsl-0.9.26.so ../lib/libnsl.so
+ln -sf libnsl-0.9.26.so ../lib/libnsl.so.0
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libnsl'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libutil'
+ar r libutil.a login.o login_tty.o logout.o logwtmp.o openpty.o forkpty.o
+install -d ../lib
+rm -f ../lib/libutil.a
+install -m 644 libutil.a ../lib/
+ld  -s -shared --warn-common --warn-once -z combreloc -soname=libutil.so.0 \
+-o libutil-0.9.26.so --whole-archive libutil.a \
+--no-whole-archive ../libc/misc/internals/interp.o \
+-L../lib -lc;
+install -d ../lib
+rm -f ../lib/libutil-0.9.26.so ../lib/libutil.so.0
+install -m 644 libutil-0.9.26.so ../lib
+ln -sf libutil-0.9.26.so ../lib/libutil.so
+ln -sf libutil-0.9.26.so ../lib/libutil.so.0
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libutil'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libm'
+ar r libm.a e_acos.o e_acosh.o e_asin.o e_atan2.o e_atanh.o e_cosh.o e_exp.o e_fmod.o e_gamma.o e_gamma_r.o e_hypot.o e_j0.o e_j1.o e_jn.o e_lgamma.o e_lgamma_r.o e_log.o e_log10.o e_pow.o e_remainder.o e_rem_pio2.o e_scalb.o e_sinh.o e_sqrt.o k_cos.o k_rem_pio2.o k_sin.o k_standard.o k_tan.o s_asinh.o s_atan.o s_cbrt.o s_ceil.o s_copysign.o s_cos.o s_erf.o s_expm1.o s_fabs.o s_finite.o s_floor.o s_frexp.o s_ilogb.o s_ldexp.o s_lib_version.o s_log1p.o s_logb.o s_matherr.o s_modf.o s_nextafter.o s_rint.o s_scalbn.o s_signgam.o s_significand.o s_sin.o s_tan.o s_tanh.o w_acos.o w_acosh.o w_asin.o w_atan2.o w_atanh.o w_cabs.o w_cosh.o w_drem.o w_exp.o w_fmod.o w_gamma.o w_gamma_r.o w_hypot.o w_j0.o w_j1.o w_jn.o w_lgamma.o w_lgamma_r.o w_log.o w_log10.o w_pow.o w_remainder.o w_scalb.o w_sinh.o w_sqrt.o w_sqrtf.o fpmacros.o nan.o s_ceilf.o s_floorf.o
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libm'
+make[1]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread'
+make -C  linuxthreads
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads'
+ar r ../libpthread.a attr.o cancel.o condvar.o errno.o events.o join.o lockfile.o manager.o mutex.o oldsemaphore.o pt-machine.o ptfork.o pthread.o ptlongjmp.o rwlock.o semaphore.o signals.o specific.o spinlock.o wrapsyscall.o
+make -C  sysdeps
+make[3]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads/sysdeps'
+make[3]: Nothing to be done for `all'.
+make[3]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads/sysdeps'
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads'
+make -C  linuxthreads_db
+make[2]: Entering directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads_db'
+ar r ../libthread_db.a td_init.o td_log.o td_ta_delete.o td_ta_get_nthreads.o td_ta_get_ph.o td_ta_map_id2thr.o td_ta_map_lwp2thr.o td_ta_new.o td_ta_thr_iter.o td_ta_tsd_iter.o td_thr_get_info.o td_thr_getfpregs.o td_thr_getgregs.o td_thr_getxregs.o td_thr_getxregsize.o td_thr_setfpregs.o td_thr_setgregs.o td_thr_setprio.o td_thr_setsigpending.o td_thr_setxregs.o td_thr_sigsetmask.o td_thr_tsd.o td_thr_validate.o td_thr_dbsuspend.o td_thr_dbresume.o td_ta_setconcurrency.o td_ta_enable_stats.o td_ta_reset_stats.o td_ta_get_stats.o td_ta_event_addr.o td_thr_event_enable.o td_thr_set_event.o td_thr_clear_event.o td_thr_event_getmsg.o td_ta_set_event.o td_ta_event_getmsg.o td_ta_clear_event.o td_symbol_list.o td_thr_tls_get_addr.o
+make[2]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread/linuxthreads_db'
+if [ -f libpthread.a ] ; then \
+	set -e; \
+	ld  -shared --warn-common --warn-once -z combreloc -soname=libpthread.so.0 \
+		-o libpthread-0.9.26.so ../lib/crti.o    /usr/lib/gcc-lib/i586-suse-linux/3.3.3/crtbeginS.o --whole-archive libpthread.a \
+		--no-whole-archive ../libc/misc/internals/interp.o \
+		-L../lib -lc /usr/lib/gcc-lib/i586-suse-linux/3.3.3/crtendS.o ../lib/crtn.o; \
+	install -d ../lib; \
+	rm -f ../lib/libpthread-0.9.26.so \
+		../lib/libpthread.so.0; \
+	install -m 644 libpthread-0.9.26.so ../lib; \
+	ln -sf libpthread-0.9.26.so \
+		../lib/libpthread.so; \
+	ln -sf libpthread-0.9.26.so \
+		../lib/libpthread.so.0; \
+fi;
+if [ -f libthread_db.a ] ; then \
+	set -e; \
+	ld  -s -shared --warn-common --warn-once -z combreloc -soname=libthread_db.so.1 \
+		-o libthread_db-0.9.26.so ../lib/crti.o    /usr/lib/gcc-lib/i586-suse-linux/3.3.3/crtbeginS.o --whole-archive libthread_db.a \
+		--no-whole-archive ../libc/misc/internals/interp.o \
+		-L../lib -lc /usr/lib/gcc-lib/i586-suse-linux/3.3.3/crtendS.o ../lib/crtn.o; \
+	install -d ../lib; \
+	rm -f ../lib/libthread_db-0.9.26.so \
+		../lib/libthread_db.so.0; \
+	install -m 644 libthread_db-0.9.26.so ../lib; \
+	ln -sf libthread_db-0.9.26.so \
+		../lib/libthread_db.so; \
+	ln -sf libthread_db-0.9.26.so \
+		../lib/libthread_db.so.1; \
+fi;
+make[1]: Leaving directory `/eiche/nieblifn/projects/diplomarbeit/uClibc-0.9.26-athomux/libpthread'
+
+Finally finished compiling...
+

@@ -1,0 +1,16 @@
+cp_mv_stat.o: cp_mv_stat.c \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/sys/stat.h $(dep_/home/flo/root/usr/include/sys/stat.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ coreutils.h $(dep_coreutils.h)
+getopt_mk_fifo_nod.o: getopt_mk_fifo_nod.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/stat.h $(dep_/home/flo/root/usr/include/sys/stat.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ coreutils.h $(dep_coreutils.h)
+xgetoptfile_sort_uniq.o: xgetoptfile_sort_uniq.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h) \
+ coreutils.h $(dep_coreutils.h)

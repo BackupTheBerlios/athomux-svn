@@ -1,0 +1,93 @@
+__getgrent.o: __getgrent.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+__getpwent.o: __getpwent.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+fgetgrent.o: fgetgrent.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+fgetpwent.o: fgetpwent.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+getgrgid.o: getgrgid.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+getgrnam.o: getgrnam.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+getpw.o: getpw.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+getpwnam.o: getpwnam.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+getpwuid.o: getpwuid.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+grent.o: grent.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+initgroups.o: initgroups.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+putpwent.o: putpwent.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+pwent.o: pwent.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/pwd_.h)
+setgroups.o: setgroups.c \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/features.h $(dep_/home/flo/root/usr/include/features.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/syscall.h $(dep_/home/flo/root/usr/include/sys/syscall.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/grp_.h)
+shadow.o: shadow.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/shadow_.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/shadow_.h)

@@ -1,0 +1,62 @@
+awk.o: awk.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/math.h $(dep_/home/flo/root/usr/include/math.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/regex.h $(dep_/home/flo/root/usr/include/regex.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/awk/math.h)
+patch.o: patch.c \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+sed.o: sed.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/regex.h $(dep_/home/flo/root/usr/include/regex.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/clean/up.h)
+vi.o: vi.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/termios.h $(dep_/home/flo/root/usr/include/termios.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/sys/time.h $(dep_/home/flo/root/usr/include/sys/time.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/stat.h $(dep_/home/flo/root/usr/include/sys/stat.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/setjmp.h $(dep_/home/flo/root/usr/include/setjmp.h) \
+ /home/flo/root/usr/include/regex.h $(dep_/home/flo/root/usr/include/regex.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/assert.h $(dep_/home/flo/root/usr/include/assert.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h $(dep_/usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/locale/support.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/optimize/cursor.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/use/signals.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/crashme.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/dot/cmd.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/yankmark.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/readonly.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/search.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/colon.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/win/resize.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/setopts.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/vi/set.h)

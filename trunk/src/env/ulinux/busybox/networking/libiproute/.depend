@@ -1,0 +1,122 @@
+ip_parse_common_args.o: ip_parse_common_args.c \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ utils.h $(dep_utils.h) \
+ ip_common.h $(dep_ip_common.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+ipaddress.o: ipaddress.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/fnmatch.h $(dep_/home/flo/root/usr/include/fnmatch.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/net/if_arp.h $(dep_/home/flo/root/usr/include/net/if_arp.h) \
+ rt_names.h $(dep_rt_names.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+iplink.o: iplink.c \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/linux/version.h $(dep_/home/flo/root/usr/include/linux/version.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/net/if_packet.h $(dep_/home/flo/root/usr/include/net/if_packet.h) \
+ /home/flo/root/usr/include/netpacket/packet.h $(dep_/home/flo/root/usr/include/netpacket/packet.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h) \
+ rt_names.h $(dep_rt_names.h) \
+ utils.h $(dep_utils.h) \
+ ip_common.h $(dep_ip_common.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+iproute.o: iproute.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ rt_names.h $(dep_rt_names.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+iptunnel.o: iptunnel.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/netinet/ip.h $(dep_/home/flo/root/usr/include/netinet/ip.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/net/if_arp.h $(dep_/home/flo/root/usr/include/net/if_arp.h) \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/if_tunnel.h $(dep_/home/flo/root/usr/include/linux/if_tunnel.h) \
+ rt_names.h $(dep_rt_names.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+libnetlink.o: libnetlink.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/uio.h $(dep_/home/flo/root/usr/include/sys/uio.h) \
+ libnetlink.h $(dep_libnetlink.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+dep_libnetlink.h += \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/netlink.h $(dep_/home/flo/root/usr/include/linux/netlink.h) \
+ /home/flo/root/usr/include/linux/rtnetlink.h $(dep_/home/flo/root/usr/include/linux/rtnetlink.h)
+ll_addr.o: ll_addr.c \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/net/if_arp.h $(dep_/home/flo/root/usr/include/net/if_arp.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+ll_map.o: ll_map.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ libnetlink.h $(dep_libnetlink.h)
+ll_proto.o: ll_proto.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h)
+ll_types.o: ll_types.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/linux/if_arp.h $(dep_/home/flo/root/usr/include/linux/if_arp.h)
+rt_names.o: rt_names.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdint.h $(dep_/home/flo/root/usr/include/stdint.h)
+dep_rt_names.h += \
+ /home/flo/root/usr/include/stdint.h $(dep_/home/flo/root/usr/include/stdint.h)
+rtm_map.o: rtm_map.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ rt_names.h $(dep_rt_names.h) \
+ utils.h $(dep_utils.h)
+utils.o: utils.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ utils.h $(dep_utils.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+dep_utils.h += \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/resolv.h $(dep_/home/flo/root/usr/include/resolv.h) \
+ libnetlink.h $(dep_libnetlink.h) \
+ ll_map.h $(dep_ll_map.h) \
+ rtm_map.h $(dep_rtm_map.h)

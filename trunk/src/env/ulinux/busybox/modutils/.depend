@@ -1,0 +1,76 @@
+insmod.o: insmod.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/linux/stddef.h $(dep_/home/flo/root/usr/include/linux/stddef.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/dirent.h $(dep_/home/flo/root/usr/include/dirent.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/assert.h $(dep_/home/flo/root/usr/include/assert.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/sys/utsname.h $(dep_/home/flo/root/usr/include/sys/utsname.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/2/4/modules.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/2/2/modules.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/2/6/modules.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/insmod/loadinkmem.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/elf.h $(dep_/home/flo/root/usr/include/elf.h) \
+ /home/flo/root/usr/include/endian.h $(dep_/home/flo/root/usr/include/endian.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/insmod/version/checking.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/use/list.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/list/archtype.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/use/single.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/use/plt/entries.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/use/got/entries.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/use/plt/list.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/got/entry/size.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/plt/entry/size.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/check/tainted/module.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/insmod/ksymoops/symbols.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/insmod/load/map.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/insmod/load/map/full.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/clean/up.h) \
+ /home/flo/root/usr/include/sys/mman.h $(dep_/home/flo/root/usr/include/sys/mman.h) \
+ /home/flo/root/usr/include/asm/unistd.h $(dep_/home/flo/root/usr/include/asm/unistd.h) \
+ /home/flo/root/usr/include/sys/syscall.h $(dep_/home/flo/root/usr/include/sys/syscall.h)
+lsmod.o: lsmod.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/linux/stddef.h $(dep_/home/flo/root/usr/include/linux/stddef.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/dirent.h $(dep_/home/flo/root/usr/include/dirent.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/assert.h $(dep_/home/flo/root/usr/include/assert.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/sys/utsname.h $(dep_/home/flo/root/usr/include/sys/utsname.h) \
+ /home/flo/root/usr/include/sys/file.h $(dep_/home/flo/root/usr/include/sys/file.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/check/tainted/module.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/query/module/interface.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/clean/up.h)
+modprobe.o: modprobe.c \
+ /home/flo/root/usr/include/sys/utsname.h $(dep_/home/flo/root/usr/include/sys/utsname.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/syslog.h $(dep_/home/flo/root/usr/include/syslog.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/2/6/modules.h)
+rmmod.o: rmmod.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/sys/syscall.h $(dep_/home/flo/root/usr/include/sys/syscall.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/clean/up.h)

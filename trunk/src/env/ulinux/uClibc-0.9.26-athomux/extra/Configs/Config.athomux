@@ -1,0 +1,24 @@
+#
+# For a description of the syntax of this configuration file,
+# see extra/config/Kconfig-language.txt
+#
+
+config HAVE_ELF
+	bool
+	select ARCH_LITTLE_ENDIAN
+	select UCLIBC_HAS_MMU
+	default y
+
+config TARGET_ARCH
+	string
+	default "athomux-linux"
+
+config ARCH_CFLAGS
+	string
+
+config ARCH_LDFLAGS
+	string
+
+config LIBGCC_CFLAGS
+	string
+

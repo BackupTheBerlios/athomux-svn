@@ -1,0 +1,201 @@
+---------------------
+PatchSet 3914 
+Date: 2004/01/31 05:44:07
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Update docs for release
+
+Members: 
+	Changelog:1.286->1.287 
+	docs/busybox.net/news.html:1.5->1.6 
+	docs/busybox.net/shame.html:1.6->1.7 
+
+---------------------
+PatchSet 3915 
+Date: 2004/01/31 06:11:39
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Mention changes to the daily snapshots
+
+Members: 
+	docs/busybox.net/news.html:1.6->1.7 
+
+---------------------
+PatchSet 3916 
+Date: 2004/01/31 08:08:57
+Author: bug1
+Branch: HEAD
+Tag: busybox_1_00_pre6 **FUNKY**
+Log:
+Fix http proxy use, bytes were swapped
+
+Members: 
+	networking/wget.c:1.67->1.68 
+
+---------------------
+PatchSet 3917 
+Date: 2004/02/01 07:34:28
+Author: mjn3
+Branch: HEAD
+Tag: (none) 
+Log:
+Use bb_xstrdup() instead of strdup().
+
+Members: 
+	coreutils/expr.c:1.15->1.16 
+
+---------------------
+PatchSet 3918 
+Date: 2004/02/01 10:03:05
+Author: mjn3
+Branch: HEAD
+Tag: (none) 
+Log:
+Rewrite parse_config_file().  Among the old version's problems:
+  No checking for lines that were too long.
+  No checking that fgets returning NULL was actually due to EOF.
+  Various whitespace handling inconsistencies.
+  Bloat (switches and multiple identical function calls).
+  Failure to check for trailing characters in some cases.
+  Dynamicly allocated memory was not free()d on error.
+Given that this controls suid/sgid behavior, the sloppy coding was
+really inexcusable.  :-(
+
+Members: 
+	applets/applets.c:1.20->1.21 
+
+---------------------
+PatchSet 3919 
+Date: 2004/02/04 08:24:39
+Author: bug1
+Branch: HEAD
+Tag: (none) 
+Log:
+Vodz last_patch_125_2, this patch have:
+- synced with dash 0.4.21
+- better handle trap "cmds..." SIGINT (strange, i make bad hack for ash 
+  and cmdedit, but this work only with this...)
+- may be haven`t problem with Ctrl-D
+
+Members: 
+	shell/ash.c:1.87->1.88 
+	shell/cmdedit.c:1.87->1.88 
+
+---------------------
+PatchSet 3920 
+Date: 2004/02/04 08:27:57
+Author: bug1
+Branch: HEAD
+Tag: (none) 
+Log:
+Bug fix from Tito.
+
+Members: 
+	miscutils/devfsd.c:1.6->1.7 
+
+---------------------
+PatchSet 3921 
+Date: 2004/02/04 10:48:37
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+The variable 'complementaly' used to be allocated with calloc, which zeroed it
+out during the allocation process.  When vodz changed it to be allocated on the
+stack, he forgot to explicitly zero it, leaving its value filled with whatever
+used to be sitting on the stack.  It would garbage values, depending on the
+garbage that happened to be sitting on the stack when the function was called.
+The result was that applets using bb_getopt_ulflags() were showing
+unpredictable behavior (such as segfaults), which naturally broke many things.
+
+Members: 
+	libbb/getopt_ulflags.c:1.6->1.7 
+
+---------------------
+PatchSet 3922 
+Date: 2004/02/04 10:57:46
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Rob Landley writes:
+
+While building glibc with busybox as part of the development environment, I
+found a bug in glibc's regexec can throw sed into an endless loop.  This
+fixes it.  Should I put an #ifdef around it or something?  (Note, this patch
+also contains the "this is not gnu sed 4.0" hack I posted earlier, which is
+also needed to build glibc...)
+
+Members: 
+	editors/sed.c:1.158->1.159 
+
+---------------------
+PatchSet 3923 
+Date: 2004/02/04 11:01:19
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Jean Wolter writes:
+
+Hello,
+
+when calling seq with
+
+    seq 1 1
+
+it generates an "endless" list of numbers until the counter wraps and
+reaches 1 again. The follwoing small patch should introduce the
+expected behavior (output of 1 and termination):
+
+regards,
+Jean
+
+Members: 
+	coreutils/seq.c:1.1->1.2 
+
+---------------------
+PatchSet 3924 
+Date: 2004/02/04 11:10:28
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Joe.C writes:
+
+Hi,
+
+   When httpd connection is closed, bosybox httpd will
+not stop reading from CGI program. This patch fix this
+problem. It check the return value of bb_full_write and
+stop reading from CGI if the connection is closed.
+Please apply this patch.
+
+Joe.C
+
+Members: 
+	networking/httpd.c:1.21->1.22 
+
+---------------------
+PatchSet 3925 
+Date: 2004/02/04 11:19:44
+Author: andersen
+Branch: HEAD
+Tag: (none) 
+Log:
+Richard Kojedzinszky writes:
+
+Hi,
+
+I've noticed the bug also, and here is another patch for it. I hope it'll
+not introduce more bugs. Not too nice, but works for me.
+
+Here it is for busybox-1.00-pre6
+
+Members: 
+	editors/vi.c:1.31->1.32 
+

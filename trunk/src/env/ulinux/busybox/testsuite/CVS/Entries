@@ -1,0 +1,34 @@
+/README/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/TODO/1.1.1.1/Wed Feb 18 18:02:26 2004//
+/runtest/1.1.1.1/Wed Feb 18 18:02:26 2004//
+D/basename////
+D/bunzip2////
+D/cat////
+D/cmp////
+D/cp////
+D/cut////
+D/dd////
+D/dirname////
+D/echo////
+D/false////
+D/find////
+D/grep////
+D/gunzip////
+D/gzip////
+D/md5sum////
+D/mkdir////
+D/msh////
+D/mv////
+D/pwd////
+D/rm////
+D/rmdir////
+D/sed////
+D/strings////
+D/tar////
+D/tee////
+D/touch////
+D/true////
+D/uuencode////
+D/wc////
+D/wget////
+D/which////

@@ -1,0 +1,104 @@
+halt.o: halt.c \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ init_shared.h $(dep_init_shared.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/init.h)
+init.o: init.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/paths.h $(dep_/home/flo/root/usr/include/paths.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h $(dep_/usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/termios.h $(dep_/home/flo/root/usr/include/termios.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/limits.h $(dep_/home/flo/root/usr/include/limits.h) \
+ /home/flo/root/usr/include/sys/fcntl.h $(dep_/home/flo/root/usr/include/sys/fcntl.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/sys/mount.h $(dep_/home/flo/root/usr/include/sys/mount.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ init_shared.h $(dep_init_shared.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/syslogd.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/init/coredumps.h) \
+ /home/flo/root/usr/include/sys/resource.h $(dep_/home/flo/root/usr/include/sys/resource.h) \
+ /home/flo/root/usr/include/sys/time.h $(dep_/home/flo/root/usr/include/sys/time.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/extra/quiet.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/use/inittab.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/initrd.h)
+init_shared.o: init_shared.c \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ init_shared.h $(dep_init_shared.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/initrd.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/init.h)
+mesg.o: mesg.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/libbb.h)
+minit.o: minit.c \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/limits.h $(dep_/home/flo/root/usr/include/limits.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/sys/fcntl.h $(dep_/home/flo/root/usr/include/sys/fcntl.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/sys/poll.h $(dep_/home/flo/root/usr/include/sys/poll.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/un.h $(dep_/home/flo/root/usr/include/sys/un.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/linux/kd.h $(dep_/home/flo/root/usr/include/linux/kd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+msvc.o: msvc.c \
+ /home/flo/root/usr/include/sys/fcntl.h $(dep_/home/flo/root/usr/include/sys/fcntl.h) \
+ /home/flo/root/usr/include/sys/file.h $(dep_/home/flo/root/usr/include/sys/file.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+pidfilehack.o: pidfilehack.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/sys/fcntl.h $(dep_/home/flo/root/usr/include/sys/fcntl.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+poweroff.o: poweroff.c \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ init_shared.h $(dep_init_shared.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/init.h)
+reboot.o: reboot.c \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/sys/reboot.h $(dep_/home/flo/root/usr/include/sys/reboot.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ init_shared.h $(dep_init_shared.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/init.h)

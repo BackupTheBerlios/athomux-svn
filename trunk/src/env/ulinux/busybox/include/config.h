@@ -1,0 +1,415 @@
+/*
+ * Automatically generated header file: don't edit
+ */
+
+#define AUTOCONF_INCLUDED
+
+/* Version Number */
+#define BB_VER "1.00-pre7"
+#define BB_BT "2004.12.01-13:51+0000"
+
+#define HAVE_DOT_CONFIG 1
+
+/*
+ * General Configuration
+ */
+#undef CONFIG_FEATURE_BUFFERS_USE_MALLOC
+#define CONFIG_FEATURE_BUFFERS_GO_ON_STACK 1
+#undef CONFIG_FEATURE_BUFFERS_GO_IN_BSS
+#undef CONFIG_FEATURE_VERBOSE_USAGE
+#undef CONFIG_FEATURE_INSTALLER
+#undef CONFIG_LOCALE_SUPPORT
+#undef CONFIG_FEATURE_DEVFS
+#undef CONFIG_FEATURE_DEVPTS
+#undef CONFIG_FEATURE_CLEAN_UP
+#undef CONFIG_FEATURE_SUID
+#undef CONFIG_SELINUX
+
+/*
+ * Build Options
+ */
+#define CONFIG_STATIC 1
+#undef CONFIG_LFS
+#undef USING_CROSS_COMPILER
+#define EXTRA_CFLAGS_OPTIONS "-nostdinc -I$(ATHOMUX_ULINUX_ROOT)/usr/include -I`gcc -print-libgcc-file-name | sed -e 's/libgcc.a/include/'`"
+
+/*
+ * Installation Options
+ */
+#define CONFIG_INSTALL_NO_USR 1
+#define PREFIX "$(ATHOMUX_ULINUX_ROOT)/usr"
+
+/*
+ * Archival Utilities
+ */
+#undef CONFIG_AR
+#define CONFIG_BUNZIP2 1
+#undef CONFIG_CPIO
+#undef CONFIG_DPKG
+#undef CONFIG_DPKG_DEB
+#define CONFIG_GUNZIP 1
+#undef CONFIG_FEATURE_GUNZIP_UNCOMPRESS
+#undef CONFIG_GZIP
+#undef CONFIG_RPM2CPIO
+#undef CONFIG_RPM
+#define CONFIG_TAR 1
+#define CONFIG_FEATURE_TAR_CREATE 1
+#undef CONFIG_FEATURE_TAR_BZIP2
+#undef CONFIG_FEATURE_TAR_FROM
+#define CONFIG_FEATURE_TAR_GZIP 1
+#undef CONFIG_FEATURE_TAR_COMPRESS
+#undef CONFIG_FEATURE_TAR_OLDGNU_COMPATABILITY
+#define CONFIG_FEATURE_TAR_GNU_EXTENSIONS 1
+#undef CONFIG_FEATURE_TAR_LONG_OPTIONS
+#undef CONFIG_UNCOMPRESS
+#undef CONFIG_UNZIP
+
+/*
+ * Common options for cpio and tar
+ */
+#undef CONFIG_FEATURE_UNARCHIVE_TAPE
+
+/*
+ * Coreutils
+ */
+#define CONFIG_BASENAME 1
+#undef CONFIG_CAL
+#define CONFIG_CAT 1
+#define CONFIG_CHGRP 1
+#define CONFIG_CHMOD 1
+#define CONFIG_CHOWN 1
+#undef CONFIG_CHROOT
+#undef CONFIG_CMP
+#define CONFIG_CP 1
+#undef CONFIG_CUT
+#define CONFIG_DATE 1
+
+/*
+ * date (forced enabled for use with watch)
+ */
+#define CONFIG_FEATURE_DATE_ISOFMT 1
+#define CONFIG_DD 1
+#define CONFIG_DF 1
+#define CONFIG_DIRNAME 1
+#undef CONFIG_DOS2UNIX
+#define CONFIG_DU 1
+#define CONFIG_FEATURE_DU_DEFALT_BLOCKSIZE_1K 1
+#define CONFIG_ECHO 1
+#define CONFIG_FEATURE_FANCY_ECHO 1
+#undef CONFIG_ENV
+#define CONFIG_EXPR 1
+#define CONFIG_FALSE 1
+
+/*
+ * false (forced enabled for use with shell)
+ */
+#undef CONFIG_FOLD
+#define CONFIG_HEAD 1
+#undef CONFIG_FEATURE_FANCY_HEAD
+#undef CONFIG_HOSTID
+#define CONFIG_ID 1
+#define CONFIG_INSTALL 1
+#undef CONFIG_LENGTH
+#define CONFIG_LN 1
+#undef CONFIG_LOGNAME
+#define CONFIG_LS 1
+#undef CONFIG_FEATURE_LS_FILETYPES
+#undef CONFIG_FEATURE_LS_FOLLOWLINKS
+#define CONFIG_FEATURE_LS_RECURSIVE 1
+#undef CONFIG_FEATURE_LS_SORTFILES
+#undef CONFIG_FEATURE_LS_TIMESTAMPS
+#undef CONFIG_FEATURE_LS_USERNAME
+#undef CONFIG_FEATURE_LS_COLOR
+#undef CONFIG_MD5SUM
+#define CONFIG_MKDIR 1
+#define CONFIG_MKFIFO 1
+#undef CONFIG_MKNOD
+#define CONFIG_MV 1
+#undef CONFIG_OD
+#define CONFIG_PRINTF 1
+#define CONFIG_PWD 1
+#undef CONFIG_REALPATH
+#define CONFIG_RM 1
+#define CONFIG_RMDIR 1
+#define CONFIG_SEQ 1
+#undef CONFIG_SHA1SUM
+#define CONFIG_SLEEP 1
+#undef CONFIG_FEATURE_FANCY_SLEEP
+#define CONFIG_SORT 1
+#undef CONFIG_STTY
+#undef CONFIG_SYNC
+#define CONFIG_TAIL 1
+#define CONFIG_FEATURE_FANCY_TAIL 1
+#define CONFIG_TEE 1
+#undef CONFIG_FEATURE_TEE_USE_BLOCK_IO
+#define CONFIG_TEST 1
+
+/*
+ * test (forced enabled for use with shell)
+ */
+#define CONFIG_TOUCH 1
+#define CONFIG_TR 1
+#define CONFIG_TRUE 1
+
+/*
+ * true (forced enabled for use with shell)
+ */
+#undef CONFIG_TTY
+#define CONFIG_UNAME 1
+#define CONFIG_UNIQ 1
+#define CONFIG_USLEEP 1
+#undef CONFIG_UUDECODE
+#undef CONFIG_UUENCODE
+#define CONFIG_WATCH 1
+#define CONFIG_WC 1
+#define CONFIG_WHO 1
+#define CONFIG_WHOAMI 1
+#define CONFIG_YES 1
+
+/*
+ * Common options for cp and mv
+ */
+#undef CONFIG_FEATURE_PRESERVE_HARDLINKS
+
+/*
+ * Common options for ls and more
+ */
+#undef CONFIG_FEATURE_AUTOWIDTH
+
+/*
+ * Common options for df, du, ls
+ */
+#define CONFIG_FEATURE_HUMAN_READABLE 1
+
+/*
+ * Console Utilities
+ */
+#undef CONFIG_CHVT
+#define CONFIG_CLEAR 1
+#undef CONFIG_DEALLOCVT
+#undef CONFIG_DUMPKMAP
+#undef CONFIG_LOADFONT
+#undef CONFIG_LOADKMAP
+#undef CONFIG_OPENVT
+#define CONFIG_RESET 1
+#undef CONFIG_SETKEYCODES
+
+/*
+ * Debian Utilities
+ */
+#undef CONFIG_MKTEMP
+#undef CONFIG_PIPE_PROGRESS
+#undef CONFIG_READLINK
+#undef CONFIG_RUN_PARTS
+#undef CONFIG_START_STOP_DAEMON
+#undef CONFIG_WHICH
+
+/*
+ * Editors
+ */
+#undef CONFIG_AWK
+#define CONFIG_PATCH 1
+#define CONFIG_SED 1
+#define CONFIG_VI 1
+#define CONFIG_FEATURE_VI_COLON 1
+#define CONFIG_FEATURE_VI_YANKMARK 1
+#define CONFIG_FEATURE_VI_SEARCH 1
+#define CONFIG_FEATURE_VI_USE_SIGNALS 1
+#define CONFIG_FEATURE_VI_DOT_CMD 1
+#define CONFIG_FEATURE_VI_READONLY 1
+#define CONFIG_FEATURE_VI_SETOPTS 1
+#define CONFIG_FEATURE_VI_SET 1
+#define CONFIG_FEATURE_VI_WIN_RESIZE 1
+#define CONFIG_FEATURE_VI_OPTIMIZE_CURSOR 1
+
+/*
+ * Finding Utilities
+ */
+#define CONFIG_FIND 1
+#define CONFIG_FEATURE_FIND_MTIME 1
+#define CONFIG_FEATURE_FIND_PERM 1
+#define CONFIG_FEATURE_FIND_TYPE 1
+#define CONFIG_FEATURE_FIND_XDEV 1
+#define CONFIG_FEATURE_FIND_NEWER 1
+#define CONFIG_FEATURE_FIND_INUM 1
+#define CONFIG_GREP 1
+#define CONFIG_FEATURE_GREP_EGREP_ALIAS 1
+#define CONFIG_FEATURE_GREP_FGREP_ALIAS 1
+#define CONFIG_FEATURE_GREP_CONTEXT 1
+#define CONFIG_XARGS 1
+#undef CONFIG_FEATURE_XARGS_SUPPORT_CONFIRMATION
+#undef CONFIG_FEATURE_XARGS_SUPPORT_QUOTES
+#undef CONFIG_FEATURE_XARGS_SUPPORT_TERMOPT
+#undef CONFIG_FEATURE_XARGS_SUPPORT_ZERO_TERM
+
+/*
+ * Init Utilities
+ */
+#undef CONFIG_INIT
+#undef CONFIG_HALT
+#undef CONFIG_POWEROFF
+#undef CONFIG_REBOOT
+#undef CONFIG_MINIT
+#undef CONFIG_MESG
+
+/*
+ * Login/Password Management Utilities
+ */
+#undef CONFIG_USE_BB_PWD_GRP
+#undef CONFIG_ADDGROUP
+#undef CONFIG_DELGROUP
+#undef CONFIG_ADDUSER
+#undef CONFIG_DELUSER
+#undef CONFIG_GETTY
+#undef CONFIG_LOGIN
+#undef CONFIG_PASSWD
+#undef CONFIG_SU
+#undef CONFIG_SULOGIN
+#undef CONFIG_VLOCK
+
+/*
+ * Miscellaneous Utilities
+ */
+#undef CONFIG_ADJTIMEX
+#undef CONFIG_CROND
+#undef CONFIG_CRONTAB
+#undef CONFIG_DC
+#undef CONFIG_DEVFSD
+#undef CONFIG_LAST
+#undef CONFIG_HDPARM
+#undef CONFIG_MAKEDEVS
+#undef CONFIG_MT
+#undef CONFIG_RX
+#undef CONFIG_STRINGS
+#undef CONFIG_TIME
+#undef CONFIG_WATCHDOG
+
+/*
+ * Linux Module Utilities
+ */
+#undef CONFIG_INSMOD
+#undef CONFIG_LSMOD
+#undef CONFIG_MODPROBE
+#undef CONFIG_RMMOD
+
+/*
+ * Networking Utilities
+ */
+#undef CONFIG_FEATURE_IPV6
+#undef CONFIG_ARPING
+#undef CONFIG_FTPGET
+#undef CONFIG_FTPPUT
+#undef CONFIG_HOSTNAME
+#undef CONFIG_HTTPD
+#undef CONFIG_IFCONFIG
+#undef CONFIG_IFUPDOWN
+#undef CONFIG_INETD
+#undef CONFIG_IP
+#undef CONFIG_IPCALC
+#undef CONFIG_IPADDR
+#undef CONFIG_IPLINK
+#undef CONFIG_IPROUTE
+#undef CONFIG_IPTUNNEL
+#undef CONFIG_NAMEIF
+#undef CONFIG_NC
+#undef CONFIG_NETSTAT
+#undef CONFIG_NSLOOKUP
+#undef CONFIG_PING
+#undef CONFIG_ROUTE
+#undef CONFIG_TELNET
+#undef CONFIG_TELNETD
+#undef CONFIG_TFTP
+#undef CONFIG_TRACEROUTE
+#undef CONFIG_VCONFIG
+#undef CONFIG_WGET
+
+/*
+ * udhcp Server/Client
+ */
+#undef CONFIG_UDHCPD
+#undef CONFIG_UDHCPC
+
+/*
+ * Process Utilities
+ */
+#undef CONFIG_FREE
+#define CONFIG_KILL 1
+#undef CONFIG_KILLALL
+#undef CONFIG_PIDOF
+#undef CONFIG_PS
+#undef CONFIG_RENICE
+#undef CONFIG_TOP
+#undef CONFIG_UPTIME
+#undef CONFIG_SYSCTL
+
+/*
+ * Another Bourne-like Shell
+ */
+#undef CONFIG_FEATURE_SH_IS_ASH
+#undef CONFIG_FEATURE_SH_IS_HUSH
+#undef CONFIG_FEATURE_SH_IS_LASH
+#undef CONFIG_FEATURE_SH_IS_MSH
+#define CONFIG_FEATURE_SH_IS_NONE 1
+#define CONFIG_ASH 1
+
+/*
+ * Ash Shell Options
+ */
+#define CONFIG_ASH_JOB_CONTROL 1
+#define CONFIG_ASH_ALIAS 1
+#undef CONFIG_ASH_MATH_SUPPORT
+#define CONFIG_ASH_GETOPTS 1
+#undef CONFIG_ASH_CMDCMD
+#undef CONFIG_ASH_MAIL
+#define CONFIG_ASH_OPTIMIZE_FOR_SIZE 1
+#define CONFIG_HUSH 1
+#define CONFIG_LASH 1
+#define CONFIG_MSH 1
+
+/*
+ * Bourne Shell Options
+ */
+#define CONFIG_FEATURE_SH_EXTRA_QUIET 1
+#define CONFIG_FEATURE_SH_STANDALONE_SHELL 1
+#undef CONFIG_FEATURE_SH_APPLETS_ALWAYS_WIN
+#define CONFIG_FEATURE_COMMAND_EDITING 1
+#define CONFIG_FEATURE_COMMAND_HISTORY 15
+#undef CONFIG_FEATURE_COMMAND_SAVEHISTORY
+#define CONFIG_FEATURE_COMMAND_TAB_COMPLETION 1
+#define CONFIG_FEATURE_COMMAND_USERNAME_COMPLETION 1
+#define CONFIG_FEATURE_SH_FANCY_PROMPT 1
+
+/*
+ * System Logging Utilities
+ */
+#undef CONFIG_SYSLOGD
+#undef CONFIG_LOGGER
+
+/*
+ * Linux System Utilities
+ */
+#undef CONFIG_DMESG
+#undef CONFIG_FBSET
+#undef CONFIG_FDFLUSH
+#undef CONFIG_FDFORMAT
+#undef CONFIG_FDISK
+#undef CONFIG_FREERAMDISK
+#undef CONFIG_FSCK_MINIX
+#undef CONFIG_MKFS_MINIX
+#undef CONFIG_GETOPT
+#undef CONFIG_HEXDUMP
+#undef CONFIG_HWCLOCK
+#undef CONFIG_LOSETUP
+#undef CONFIG_MKSWAP
+#define CONFIG_MORE 1
+#define CONFIG_FEATURE_USE_TERMIOS 1
+#undef CONFIG_PIVOT_ROOT
+#undef CONFIG_RDATE
+#undef CONFIG_SWAPONOFF
+#undef CONFIG_MOUNT
+#undef CONFIG_UMOUNT
+
+/*
+ * Debugging Options
+ */
+#undef CONFIG_DEBUG

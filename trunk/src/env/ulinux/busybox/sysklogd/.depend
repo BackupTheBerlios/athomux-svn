@@ -1,0 +1,64 @@
+klogd.o: klogd.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h) \
+ /home/flo/root/usr/include/sys/klog.h $(dep_/home/flo/root/usr/include/sys/klog.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h)
+logger.o: logger.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/syslogd.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h)
+logread.o: logread.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/sys/ipc.h $(dep_/home/flo/root/usr/include/sys/ipc.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/sem.h $(dep_/home/flo/root/usr/include/sys/sem.h) \
+ /home/flo/root/usr/include/sys/shm.h $(dep_/home/flo/root/usr/include/sys/shm.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/setjmp.h $(dep_/home/flo/root/usr/include/setjmp.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/logread/reduced/locking.h)
+syslogd.o: syslogd.c \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/netdb.h $(dep_/home/flo/root/usr/include/netdb.h) \
+ /home/flo/root/usr/include/paths.h $(dep_/home/flo/root/usr/include/paths.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h $(dep_/usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/un.h $(dep_/home/flo/root/usr/include/sys/un.h) \
+ /home/flo/root/usr/include/sys/param.h $(dep_/home/flo/root/usr/include/sys/param.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+ /home/flo/root/usr/include/sys/syslog.h $(dep_/home/flo/root/usr/include/sys/syslog.h) \
+ /home/flo/root/usr/include/sys/uio.h $(dep_/home/flo/root/usr/include/sys/uio.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/rotate/logfile.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/remote/log.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/ipc/syslog.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/ipc/syslog/buffer/size.h) \
+ /home/flo/root/usr/include/sys/ipc.h $(dep_/home/flo/root/usr/include/sys/ipc.h) \
+ /home/flo/root/usr/include/sys/sem.h $(dep_/home/flo/root/usr/include/sys/sem.h) \
+ /home/flo/root/usr/include/sys/shm.h $(dep_/home/flo/root/usr/include/sys/shm.h)

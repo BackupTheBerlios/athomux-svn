@@ -1,0 +1,265 @@
+arpping.o: arpping.c \
+ /home/flo/root/usr/include/sys/time.h $(dep_/home/flo/root/usr/include/sys/time.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/netinet/if_ether.h $(dep_/home/flo/root/usr/include/netinet/if_ether.h) \
+ /home/flo/root/usr/include/net/if_arp.h $(dep_/home/flo/root/usr/include/net/if_arp.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ arpping.h $(dep_arpping.h) \
+ common.h $(dep_common.h)
+dep_arpping.h += \
+ /home/flo/root/usr/include/netinet/if_ether.h $(dep_/home/flo/root/usr/include/netinet/if_ether.h) \
+ /home/flo/root/usr/include/net/if_arp.h $(dep_/home/flo/root/usr/include/net/if_arp.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h)
+clientpacket.o: clientpacket.c \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/features.h $(dep_/home/flo/root/usr/include/features.h) \
+ /home/flo/root/usr/include/netpacket/packet.h $(dep_/home/flo/root/usr/include/netpacket/packet.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/if_packet.h $(dep_/home/flo/root/usr/include/linux/if_packet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ clientpacket.h $(dep_clientpacket.h) \
+ options.h $(dep_options.h) \
+ dhcpc.h $(dep_dhcpc.h) \
+ common.h $(dep_common.h)
+dep_clientpacket.h += \
+ packet.h $(dep_packet.h)
+clientsocket.o: clientsocket.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/features.h $(dep_/home/flo/root/usr/include/features.h) \
+ /home/flo/root/usr/include/netpacket/packet.h $(dep_/home/flo/root/usr/include/netpacket/packet.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/if_packet.h $(dep_/home/flo/root/usr/include/linux/if_packet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h) \
+ clientsocket.h $(dep_clientsocket.h) \
+ common.h $(dep_common.h)
+common.o: common.c \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/paths.h $(dep_/home/flo/root/usr/include/paths.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h $(dep_/usr/lib/gcc-lib/i586-mandrake-linux-gnu/3.3.2/include/stdarg.h) \
+ common.h $(dep_common.h) \
+ pidfile.h $(dep_pidfile.h)
+dep_common.h += \
+ version.h $(dep_version.h) \
+ libbb_udhcp.h $(dep_libbb_udhcp.h) \
+ /home/flo/root/usr/include/syslog.h $(dep_/home/flo/root/usr/include/syslog.h)
+dhcpc.o: dhcpc.c \
+ /home/flo/root/usr/include/sys/time.h $(dep_/home/flo/root/usr/include/sys/time.h) \
+ /home/flo/root/usr/include/sys/file.h $(dep_/home/flo/root/usr/include/sys/file.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ dhcpc.h $(dep_dhcpc.h) \
+ options.h $(dep_options.h) \
+ clientpacket.h $(dep_clientpacket.h) \
+ clientsocket.h $(dep_clientsocket.h) \
+ script.h $(dep_script.h) \
+ socket.h $(dep_socket.h) \
+ common.h $(dep_common.h) \
+ signalpipe.h $(dep_signalpipe.h)
+dep_dhcpc.h += \
+ libbb_udhcp.h $(dep_libbb_udhcp.h)
+dhcpd.o: dhcpd.c \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/netdb.h $(dep_/home/flo/root/usr/include/netdb.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/sys/time.h $(dep_/home/flo/root/usr/include/sys/time.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ arpping.h $(dep_arpping.h) \
+ socket.h $(dep_socket.h) \
+ options.h $(dep_options.h) \
+ files.h $(dep_files.h) \
+ serverpacket.h $(dep_serverpacket.h) \
+ common.h $(dep_common.h) \
+ signalpipe.h $(dep_signalpipe.h)
+dep_dhcpd.h += \
+ /home/flo/root/usr/include/netinet/ip.h $(dep_/home/flo/root/usr/include/netinet/ip.h) \
+ /home/flo/root/usr/include/netinet/udp.h $(dep_/home/flo/root/usr/include/netinet/udp.h) \
+ libbb_udhcp.h $(dep_libbb_udhcp.h) \
+ leases.h $(dep_leases.h) \
+ version.h $(dep_version.h)
+dumpleases.o: dumpleases.c \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/netdb.h $(dep_/home/flo/root/usr/include/netdb.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/getopt.h $(dep_/home/flo/root/usr/include/getopt.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ leases.h $(dep_leases.h) \
+ libbb_udhcp.h $(dep_libbb_udhcp.h)
+files.o: files.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/ctype.h $(dep_/home/flo/root/usr/include/ctype.h) \
+ /home/flo/root/usr/include/netdb.h $(dep_/home/flo/root/usr/include/netdb.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ files.h $(dep_files.h) \
+ options.h $(dep_options.h) \
+ common.h $(dep_common.h)
+frontend.o: frontend.c \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h)
+leases.o: leases.c \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ files.h $(dep_files.h) \
+ options.h $(dep_options.h) \
+ leases.h $(dep_leases.h) \
+ arpping.h $(dep_arpping.h) \
+ common.h $(dep_common.h)
+dep_libbb_udhcp.h += \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/install/no/usr.h) \
+ /home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h $(dep_/home/flo/code/cvs/diplomarbeit/busybox/include/busybox.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/udhcp/syslog.h) \
+   $(wildcard /home/flo/code/cvs/diplomarbeit/busybox/config/feature/udhcp/debug.h) \
+ version.h $(dep_version.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h)
+options.o: options.c \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ files.h $(dep_files.h) \
+ options.h $(dep_options.h) \
+ common.h $(dep_common.h)
+dep_options.h += \
+ packet.h $(dep_packet.h)
+packet.o: packet.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/features.h $(dep_/home/flo/root/usr/include/features.h) \
+ /home/flo/root/usr/include/netpacket/packet.h $(dep_/home/flo/root/usr/include/netpacket/packet.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/if_packet.h $(dep_/home/flo/root/usr/include/linux/if_packet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ packet.h $(dep_packet.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ options.h $(dep_options.h) \
+ common.h $(dep_common.h)
+dep_packet.h += \
+ /home/flo/root/usr/include/netinet/udp.h $(dep_/home/flo/root/usr/include/netinet/udp.h) \
+ /home/flo/root/usr/include/netinet/ip.h $(dep_/home/flo/root/usr/include/netinet/ip.h)
+pidfile.o: pidfile.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/stat.h $(dep_/home/flo/root/usr/include/sys/stat.h) \
+ /home/flo/root/usr/include/fcntl.h $(dep_/home/flo/root/usr/include/fcntl.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ pidfile.h $(dep_pidfile.h) \
+ common.h $(dep_common.h)
+script.o: script.c \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/stdio.h $(dep_/home/flo/root/usr/include/stdio.h) \
+ /home/flo/root/usr/include/stdlib.h $(dep_/home/flo/root/usr/include/stdlib.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/wait.h $(dep_/home/flo/root/usr/include/sys/wait.h) \
+ options.h $(dep_options.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ dhcpc.h $(dep_dhcpc.h) \
+ common.h $(dep_common.h)
+serverpacket.o: serverpacket.c \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/time.h $(dep_/home/flo/root/usr/include/time.h) \
+ serverpacket.h $(dep_serverpacket.h) \
+ dhcpd.h $(dep_dhcpd.h) \
+ options.h $(dep_options.h) \
+ common.h $(dep_common.h)
+dep_serverpacket.h += \
+ packet.h $(dep_packet.h)
+signalpipe.o: signalpipe.c \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/signal.h $(dep_/home/flo/root/usr/include/signal.h) \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/select.h $(dep_/home/flo/root/usr/include/sys/select.h) \
+ signalpipe.h $(dep_signalpipe.h) \
+ common.h $(dep_common.h)
+socket.o: socket.c \
+ /home/flo/root/usr/include/sys/types.h $(dep_/home/flo/root/usr/include/sys/types.h) \
+ /home/flo/root/usr/include/sys/socket.h $(dep_/home/flo/root/usr/include/sys/socket.h) \
+ /home/flo/root/usr/include/sys/ioctl.h $(dep_/home/flo/root/usr/include/sys/ioctl.h) \
+ /home/flo/root/usr/include/netinet/in.h $(dep_/home/flo/root/usr/include/netinet/in.h) \
+ /home/flo/root/usr/include/unistd.h $(dep_/home/flo/root/usr/include/unistd.h) \
+ /home/flo/root/usr/include/string.h $(dep_/home/flo/root/usr/include/string.h) \
+ /home/flo/root/usr/include/arpa/inet.h $(dep_/home/flo/root/usr/include/arpa/inet.h) \
+ /home/flo/root/usr/include/net/if.h $(dep_/home/flo/root/usr/include/net/if.h) \
+ /home/flo/root/usr/include/errno.h $(dep_/home/flo/root/usr/include/errno.h) \
+ /home/flo/root/usr/include/features.h $(dep_/home/flo/root/usr/include/features.h) \
+ /home/flo/root/usr/include/netpacket/packet.h $(dep_/home/flo/root/usr/include/netpacket/packet.h) \
+ /home/flo/root/usr/include/net/ethernet.h $(dep_/home/flo/root/usr/include/net/ethernet.h) \
+ /home/flo/root/usr/include/asm/types.h $(dep_/home/flo/root/usr/include/asm/types.h) \
+ /home/flo/root/usr/include/linux/if_packet.h $(dep_/home/flo/root/usr/include/linux/if_packet.h) \
+ /home/flo/root/usr/include/linux/if_ether.h $(dep_/home/flo/root/usr/include/linux/if_ether.h) \
+ socket.h $(dep_socket.h) \
+ common.h $(dep_common.h)
