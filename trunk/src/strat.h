@@ -64,9 +64,9 @@ typedef enum {
   scod_max
 } strat_codes;
 
-const char * strat_keywords[scod_max];
+extern const char * strat_keywords[scod_max];
 
-const int strat_keylens[scod_max];
+extern const int strat_keylens[scod_max];
 
 /* After skipping leading blanks, scan over the characters specified
  * by table[], return start position in *res, length of found string as
@@ -86,12 +86,12 @@ int scan_not_table_copy(const char ** str, const bool table[], char * res, int r
 
 /* Some predefined character scan tables
  */
-const bool id_table[256];    // identifiers
-const bool num_table[256];   // decimals
-const bool hex_table[256];   // hex numbers in C syntax
-const bool ws_table[256];    // whitespace including newline
-const bool nl_table[256];    // only newline
-const bool bl_table[256];    // whitespace other than newline
+extern const bool id_table[256];    // identifiers
+extern const bool num_table[256];   // decimals
+extern const bool hex_table[256];   // hex numbers in C syntax
+extern const bool ws_table[256];    // whitespace including newline
+extern const bool nl_table[256];    // only newline
+extern const bool bl_table[256];    // whitespace other than newline
 
 /* A trivial parser for ':=', "/=" and '=='
  */

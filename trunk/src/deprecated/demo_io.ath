@@ -16,7 +16,7 @@ static_data {
 
 
 instance #io_demo_file as demo;
-wire #.demo:>out as :<bdev;
+wire ##demo:>out as :<bdev;
 
 local input :<bdev
 

@@ -18,8 +18,8 @@ static_data {
 
 instance #lrpc_linux_client as dbk;
 instance #adapt_complete as acomp;
-wire #.dbk:>out as #.acomp:<in;
-wire #.acomp:>out as :<bdev;
+wire ##dbk:>out as ##acomp:<in;
+wire ##acomp:>out as :<bdev;
 
 local input :<bdev
 
@@ -63,8 +63,8 @@ operation $output_init
     printf("Starting "BASEFILE"\n");
   }
   @param = "1";
-  @=call #.dbk:>out$output_init @args;
-  @=call #.acomp:>out$output_init @args;
+  @=call ##dbk:>out$output_init @args;
+  @=call ##acomp:>out$output_init @args;
   if(@constr) {
     if(@success) {
       printf("init ok\n");

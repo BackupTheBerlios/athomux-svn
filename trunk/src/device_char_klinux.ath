@@ -43,13 +43,13 @@ output :>out
 operation $output_init
 {
   if(@destr) {
-    if(!IS_ERR(@#cdev)) {
-      filp_close(@#cdev, current->files);
+    if(!IS_ERR(@#.cdev)) {
+      filp_close(@#.cdev, current->files);
     }
   }
   if(@constr) {
-    @#cdev = filp_open(@param, O_RDWR, S_IRUSR|S_IWUSR);
-    @.check(IS_ERR(@#cdev), "filp_open failed");
+    @#.cdev = filp_open(@param, O_RDWR, S_IRUSR|S_IWUSR);
+    @.check(IS_ERR(@#.cdev), "filp_open failed");
   }
   @success = TRUE;
 }
@@ -60,12 +60,12 @@ operation $transfer,$tr
   ssize_t result;
   mm_segment_t old_fs;
 
-  @.check(!@#cdev->f_op, "missing device operations");
+  @.check(!@#.cdev->f_op, "missing device operations");
   @.check(@direction == direct_stop, "transfer: direct_stop not implemented");
 
-  if(@log_addr != @#cdev->f_pos) {
-    if((llseek = @#cdev->f_op->llseek)) { // assignment!
-      llseek(@#cdev, @log_addr, 0);
+  if(@log_addr != @#.cdev->f_pos) {
+    if((llseek = @#.cdev->f_op->llseek)) { // assignment!
+      llseek(@#.cdev, @log_addr, 0);
     }
   }
 
@@ -74,17 +74,17 @@ operation $transfer,$tr
   set_fs(get_ds());
 
   if(@direction == direct_read) {
-    while(@log_addr < @#cdev->f_pos) {
-      size_t readlen = @log_addr - @#cdev->f_pos;
+    while(@log_addr < @#.cdev->f_pos) {
+      size_t readlen = @log_addr - @#.cdev->f_pos;
       if (readlen > @log_len)
 	readlen = @log_len;
-      ssize_t readone = vfs_read(@#cdev, MAKE_PTR(@phys_addr), readlen, &@#cdev->f_pos);
+      ssize_t readone = vfs_read(@#.cdev, MAKE_PTR(@phys_addr), readlen, &@#.cdev->f_pos);
       if (readone <= 0)
 	break;
     }
-    result = vfs_read(@#cdev, MAKE_PTR(@phys_addr), @log_len, &@#cdev->f_pos);
+    result = vfs_read(@#.cdev, MAKE_PTR(@phys_addr), @log_len, &@#.cdev->f_pos);
   } else { // @direction == direct_write
-    result = vfs_write(@#cdev, MAKE_PTR(@phys_addr), @log_len, &@#cdev->f_pos);
+    result = vfs_write(@#.cdev, MAKE_PTR(@phys_addr), @log_len, &@#.cdev->f_pos);
   }
   if(result >= 0) {
     @phys_len = result;

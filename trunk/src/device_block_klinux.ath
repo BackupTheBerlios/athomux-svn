@@ -100,7 +100,7 @@ static int device_block_klinux_endio(struct bio *bio,
 	 (bio_flagged(bio, BIO_UPTODATE)) ? "succeeded" : "failed");
 //if(!bio_flagged(bio, BIO_UPTODATE) && !bio_flagged(bio, BIO_EVALERR)) {
   if(!(bio->bi_flags & ((1 << BIO_UPTODATE)|(1 << BIO_EVALERR)))) {
-    // @#harderror_detected = TRUE;
+    // @#.harderror_detected = TRUE;
     BASE(on, struct brick_device_block_klinux, _conn_out)->harderror_detected = TRUE;
   }
 
@@ -159,9 +159,9 @@ output :>out
 @.func dbkreq_find (int start) => (int index)
 {
   for(index = start; index < DBK_RINGBUFFER_SIZE; index++) {
-    if((@#req[index].prio >= @prio) &&
-       ((@#req[index].addr <= @log_addr <= @#req[index].addr + @#req[index].bvec.bv_len) ||
-	(@#req[index].addr <= @log_addr + @log_len <= @#req[index].addr + @#req[index].bvec.bv_len))) {
+    if((@#.req[index].prio >= @prio) &&
+       ((@#.req[index].addr <= @log_addr <= @#.req[index].addr + @#.req[index].bvec.bv_len) ||
+	(@#.req[index].addr <= @log_addr + @log_len <= @#.req[index].addr + @#.req[index].bvec.bv_len))) {
       break;
     }
   }
@@ -171,7 +171,7 @@ output :>out
 {
 #ifdef DEBUG
   printf("[%i %s]: prio=%x, logaddr=%llx, len=%x, size=%x, flags=%lx\n",
-	 r-@#req, s,
+	 r-@#.req, s,
 	 r->prio, r->addr, r->bvec.bv_len, r->bio.bi_size,
 	 r->bio.bi_flags);
 #endif
@@ -183,7 +183,7 @@ output :>out
     wait_queue_head_t *q = &r->q;
     wait_event(*q, test_bit(BIO_COMPLETED, &r->bio.bi_flags));
     if(!bio_flagged(&r->bio, BIO_UPTODATE)) {
-      // @#harderror_detected = TRUE;
+      // @#.harderror_detected = TRUE;
       @success = FALSE;
     }
   }
@@ -196,32 +196,32 @@ operation $output_init
   struct dbk_request *current_req;
 
   if(@destr) {
-    if(!IS_ERR(@#bdev)) {
-      close_bdev_excl(@#bdev);
+    if(!IS_ERR(@#.bdev)) {
+      close_bdev_excl(@#.bdev);
     }
   }
   if(@constr) {
-    @#req_pos = DBK_RINGBUFFER_SIZE-1;
-    @#harderror_detected = FALSE;
-    wait_queue_head_t *q = &@#reqalloc_q;
+    @#.req_pos = DBK_RINGBUFFER_SIZE-1;
+    @#.harderror_detected = FALSE;
+    wait_queue_head_t *q = &@#.reqalloc_q;
     init_waitqueue_head(q);
-    if(IS_ERR(@#bdev = open_bdev_excl(@param, 0, (void *)on))) {
-      @#bdev = open_bdev_excl(@param, MS_RDONLY, (void *)on);
-      @#readonly = TRUE;
+    if(IS_ERR(@#.bdev = open_bdev_excl(@param, 0, (void *)on))) {
+      @#.bdev = open_bdev_excl(@param, MS_RDONLY, (void *)on);
+      @#.readonly = TRUE;
     } else {
-      @#readonly = FALSE;
+      @#.readonly = FALSE;
     }
-    @.check(IS_ERR(@#bdev), "open_bdev_excl failed");
+    @.check(IS_ERR(@#.bdev), "open_bdev_excl failed");
 
     for(i = 0; i < DBK_RINGBUFFER_SIZE; i++) {
-      current_req = &@#req[i];
+      current_req = &@#.req[i];
 
       bio_init(&current_req->bio);
       current_req->bio.bi_max_vecs = 1;
       current_req->bio.bi_io_vec = &current_req->bvec;
       current_req->bio.bi_destructor = device_block_klinux_biodestructor;
 
-      current_req->bio.bi_bdev = @#bdev;
+      current_req->bio.bi_bdev = @#.bdev;
       current_req->bio.bi_vcnt = 1;
       current_req->bio.bi_end_io = device_block_klinux_endio;
       current_req->bio.bi_private = (void *)current_req;
@@ -238,35 +238,35 @@ operation $transfer
   struct dbk_request *current_req;
   plen_t len = 0;
   
-  if(IS_ERR(@#bdev) || (@#bdev == 0)) {
+  if(IS_ERR(@#.bdev) || (@#.bdev == 0)) {
     @.err("$transfer called for invalid block device!");
   }
 
   switch(@direction) {
     case direct_write:
-      if(@#readonly) return;
+      if(@#.readonly) return;
     case direct_read:
-      if(@#harderror_detected) {
+      if(@#.harderror_detected) {
 	@.err("error state - no new requests are allowed");
       }
 
-      loff_t maxsize = @#bdev->bd_inode->i_size; // see ll_rw_blk.c:generic_make_request for linux 2.7 porting (bd_inode is deprecated)
+      loff_t maxsize = @#.bdev->bd_inode->i_size; // see ll_rw_blk.c:generic_make_request for linux 2.7 porting (bd_inode is deprecated)
       if (maxsize && (maxsize <= @log_addr)) {
 	return;
       }
 
       // try to allocate a req; block if not available yet
-      wait_queue_head_t *q = &@#reqalloc_q;
+      wait_queue_head_t *q = &@#.reqalloc_q;
       wait_event(*q, (current_req=dbkreq_alloc(on)));
       if (current_req) {
 #ifdef __i386__
 	// work around missing 64bit division instruction
 	uns8 sector = @log_addr;
-	do_div(sector, bdev_hardsect_size(@#bdev));
+	do_div(sector, bdev_hardsect_size(@#.bdev));
 	current_req->bio.bi_sector = sector;
 #else
 	// this is what we really want to to
-	current_req->bio.bi_sector = @log_addr / bdev_hardsect_size(@#bdev);
+	current_req->bio.bi_sector = @log_addr / bdev_hardsect_size(@#.bdev);
 #endif
 
 	current_req->addr = @log_addr;
@@ -277,7 +277,7 @@ operation $transfer
 #if 1
 	// ignore page boundaries;
 	// this is not intended by linux but will hopefully work
-	len = min(@log_len, get_maxlen(@#bdev));
+	len = min(@log_len, get_maxlen(@#.bdev));
 #else
 	// restrict request to specified page
 	len = min(@log_len, PAGE_SIZE - current_req->bvec.bv_offset);
@@ -360,7 +360,7 @@ operation $wait
       break;
     }
 
-    dbkreq_dump (&@#req[index], "wait");
-    dbkreq_waiton (&@#req[index]);
+    dbkreq_dump (&@#.req[index], "wait");
+    dbkreq_waiton (&@#.req[index]);
   } while(1);
 }

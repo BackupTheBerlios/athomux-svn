@@ -17,8 +17,8 @@ static_data {
 
 instance #device_block_klinux as dbk;
 instance #adapt_complete as acomp;
-wire #.dbk:>out as #.acomp:<in;
-wire #.acomp:>out as :<bdev;
+wire ##dbk:>out as ##acomp:<in;
+wire ##acomp:>out as :<bdev;
 
 local input :<bdev
 

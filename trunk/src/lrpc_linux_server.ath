@@ -260,9 +260,9 @@ init {
 }
 
 exit {
-  unsigned long id = DEREF(exi, struct brick_lrpc_linux_server, id);
+  unsigned long id = DEREF(ini, struct brick_lrpc_linux_server, id);
   instance[id] = NULL;
-  DEREF(exi, struct brick_lrpc_linux_server, id) = 0;
+  DEREF(ini, struct brick_lrpc_linux_server, id) = 0;
 }
 
 input :<in

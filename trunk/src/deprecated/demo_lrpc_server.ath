@@ -19,7 +19,7 @@ static_data {
 
 instance #device_block_klinux as dbk;
 instance #lrpc_linux_server as lrpc1;
-wire #.dbk:>out as #.lrpc1:<in;
+wire ##dbk:>out as ##lrpc1:<in;
 
 
 output :>program
@@ -33,7 +33,7 @@ operation $output_init
     printf("Starting "BASEFILE"\n");
   }
   @param = "/dev/ram0";
-  @=call #.dbk:>out$output_init @args;
+  @=call ##dbk:>out$output_init @args;
   if(@constr) {
     if(@success) {
       printf(BASEFILE" init ok\n");

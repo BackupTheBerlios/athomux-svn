@@ -33,7 +33,7 @@ static int device_block_klinux_simple_endio(struct bio *bio, unsigned int bytes_
   if (bio->bi_size)
     return 1;
 
-  // up(&@#sem);
+  // up(&@#.sem);
   up(&BASE(on, struct brick_device_block_klinux_simple, _conn_out)->sem);
 
   /*
@@ -58,14 +58,14 @@ output :>out
 operation $output_init
 {
   if(@destr) {
-    if(!IS_ERR(@#bdev)) {
-      close_bdev_excl(@#bdev);
+    if(!IS_ERR(@#.bdev)) {
+      close_bdev_excl(@#.bdev);
     }
   }
   if(@constr) {
-    sema_init(&@#sem, 0);
-    @#bdev = open_bdev_excl(@param, 0, (void *)on); // (@param, MS_RDONLY, (void *)on)
-    @.check(IS_ERR(@#bdev), "open_bdev_excl failed");
+    sema_init(&@#.sem, 0);
+    @#.bdev = open_bdev_excl(@param, 0, (void *)on); // (@param, MS_RDONLY, (void *)on)
+    @.check(IS_ERR(@#.bdev), "open_bdev_excl failed");
   }
   @success = TRUE;
 }
@@ -75,7 +75,7 @@ operation $transfer
   struct bio *bio;
   @phys_len = 0;
   
-  if(IS_ERR(@#bdev) || (@#bdev == 0)) {
+  if(IS_ERR(@#.bdev) || (@#.bdev == 0)) {
     @.err("$transfer called for invalid block device!");
   }
 
@@ -86,12 +86,12 @@ operation $transfer
       if (bio) {
 #if 1
 	uns8 sector = @log_addr;
-	do_div(sector, bdev_hardsect_size(@#bdev));
+	do_div(sector, bdev_hardsect_size(@#.bdev));
 	bio->bi_sector = sector;
 #else
-	bio->bi_sector = @log_addr / bdev_hardsect_size(@#bdev);
+	bio->bi_sector = @log_addr / bdev_hardsect_size(@#.bdev);
 #endif
-	bio->bi_bdev = @#bdev;
+	bio->bi_bdev = @#.bdev;
 	bio->bi_io_vec[0].bv_page = virt_to_page(MAKE_PTR(@phys_addr));
 	bio->bi_io_vec[0].bv_len = @log_len;
 	bio->bi_io_vec[0].bv_offset = @phys_addr & (PAGE_SIZE-1);
@@ -121,6 +121,6 @@ operation $transfer
 
 operation $wait
 {
-  down_interruptible(&@#sem);
+  down_interruptible(&@#.sem);
   @success = TRUE;
 }

@@ -12,10 +12,10 @@ enddesc
 
 
 instance #chargen as chargen;
-wire #.chargen:>out as :<src;
+wire ##chargen:>out as :<src;
 
 instance #device_dummy_linux as testfile;
-wire #.testfile:>out as :<dest;
+wire ##testfile:>out as :<dest;
 
 local input :<src
 
