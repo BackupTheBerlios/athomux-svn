@@ -78,11 +78,11 @@ operation $get
   @success = TRUE;
 }
 
-@.define do_reserve(lock_write, write_locked)
+@.define do_reserve(my_lock, my_pointer)
 {
-  @=call ##lock_write:>lock$lock (@#.write_locked, @log_len, lock_read, lock_none) => (@success);
-  @log_addr = @#.write_locked;
-  @#.write_locked += @log_len;
+  @=call ##my_lock:>lock$lock (@#.my_pointer, @log_len, lock_read, lock_none) => (@success);
+  @log_addr = @#.my_pointer;
+  @#.my_pointer += @log_len;
 }
 
 operation $getaddr
@@ -116,6 +116,6 @@ operation $putaddr
   if(!@where) { // writer
     @=call ##lock_read:>lock$unlock (@log_addr, @log_len) => (@success);
   } else { // reader
-    @=call ##lock_write:>lock$unlock (@log_addr, @log_len) => (@success);
+    @=call ##lock_write:>lock$unlock (@log_addr + BUF_LEN, @log_len) => (@success);
   }
 }
