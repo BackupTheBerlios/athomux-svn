@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>    // For current
 #include <linux/tty.h>      // For the tty declarations
+#include <linux/version.h>
 
 
 int athomux_printf(const char *fmt, ...)
@@ -13,8 +14,12 @@ int athomux_printf(const char *fmt, ...)
   static char printf_buf[512];
   struct tty_struct *my_tty = NULL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 6)
+  my_tty = current->tty;
+#else
   if(likely(current->signal))
     my_tty = current->signal->tty;
+#endif
 
   /* Emit the output into the temporary buffer */
   va_start(args, fmt);

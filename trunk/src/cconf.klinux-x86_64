@@ -4,7 +4,7 @@
 include cconf-include.klinux
 
 $(cconf)_LDEMULATION=elf_x86_64
-$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m64 -mcmodel=kernel -mno-red-zone -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -D__KERNEL__ -DMODULE
+$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m64 -mcmodel=kernel -mno-red-zone -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -U__i386__ -D__x86_64__ -D__KERNEL__ -DMODULE
 
 $(pconf)/$(cconf)/asm:
 	ln -s $($(cconf)_LINSRC)/include/asm-x86_64 $@

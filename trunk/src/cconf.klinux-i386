@@ -4,7 +4,7 @@
 include cconf-include.klinux
 
 $(cconf)_LDEMULATION=elf_i386
-$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m32 -march=i586 -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -I$($(cconf)_LINSRC)/arch/i386/mach-default -D__KERNEL__ -DMODULE
+$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS) -m32 -march=i586 -Wno-strict-aliasing -fno-common -Ienv/klinux -I$($(cconf)_LINSRC)/include -I$($(cconf)_LINSRC)/include/asm-i386/mach-default -D__i386__ -U__x86_64__ -D__KERNEL__ -DMODULE
 
 $(pconf)/$(cconf)/asm:
 	ln -s $($(cconf)_LINSRC)/include/asm-i386 $@
