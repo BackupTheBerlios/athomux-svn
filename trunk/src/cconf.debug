@@ -1,4 +1,4 @@
-$(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS)
+$(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG
 
 $(pconf)/$(cconf)/%.o : $(pconf)/%.c common.h strat.h Makefile
 	$(CC) -c $($(cconf)_CFLAGS) $< -o $@

@@ -1,0 +1,4953 @@
+#LyX 1.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 220
+\textclass article
+\language english
+\inputencoding auto
+\fontscheme times
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize a4paper
+\paperpackage a4wide
+\use_geometry 0
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+Programming in the ATHOMUX Environment
+\layout Author
+
+Thomas Schöbel-Theuer
+\layout Date
+
+Version 0.23, 18 September 2004
+\layout Standard
+
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset 
+
+
+\layout Section
+
+Foreword
+\layout Standard
+
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+
+\backslash 
+sloppy 
+\end_inset 
+
+To understand this document, you should have read some basic papers on the
+ architecture of ATHOMUX, and you should be familiar with C programming.
+ Currently the description is very brief; you can help yourself by reading
+ example code.
+ A lot of stuff is missing; this document may soon be outdated.
+\layout Standard
+
+Before reading this document, first read the Preprocessor User's Guide.
+\layout Section
+
+Basic Data Types
+\layout Standard
+
+For implementation of ordinary bricks, please don't 
+\family typewriter 
+#include
+\family default 
+ anything in the header section! If you have to share some 
+\emph on 
+internal
+\emph default 
+ data structures (and only if those structures are really truly 
+\emph on 
+internal!
+\emph default 
+) with other brick implementations, do so by including a common header in
+ the 
+\emph on 
+implementation
+\emph default 
+ preamble.
+\layout Standard
+
+Please use only the following portable basic data types, as defined in 
+\family typewriter 
+common.h
+\family default 
+:
+\layout Description
+
+
+\family typewriter 
+addr_t
+\family default 
+ An address in the logical address space of a nest.
+ It's probably larger than the size of a pointer of the target architecture,
+ i.e.
+ currently 64Bits for both i386 and x68_64.
+ However keep in mind that when ATHOMUX is ported to a PDP-11 or to another
+ 16Bit platform (e.g.
+ in the area of control applications), this type may be redefined to 32Bits
+ or even 16Bits.
+ Don't rely on a particular size of this type, but keep your code universally
+ generic ;-)
+\layout Description
+
+
+\family typewriter 
+len_t
+\family default 
+ A length or unsigned (positive) offset in the logical address space.
+ It is guaranteed to have the same size as 
+\family typewriter 
+addr_t
+\family default 
+, so you can typecast between them.
+\layout Description
+
+
+\family typewriter 
+off_t
+\family default 
+ A signed offset in the logical address space.
+ Guaranteed to have the same size as 
+\family typewriter 
+addr_t
+\family default 
+ and 
+\family typewriter 
+len_t
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+paddr_t
+\family default 
+ An address in the physical address space.
+ It has the same size as a pointer.
+ Nevertheless, when you have to access physical memory blocks, 
+\emph on 
+always
+\emph default 
+ use the macro 
+\family typewriter 
+MAKE_PTR()
+\family default 
+ to convert 
+\family typewriter 
+paddr_t
+\family default 
+ to an ordinary 
+\family typewriter 
+void*
+\family default 
+.
+ In some physical models, offsets may be transparently added by that macro.
+ Thus never type-cast by hand! 
+\layout Description
+
+
+\family typewriter 
+plen_t
+\family default 
+ A length or unsigned (positive) offset in the physical address space.
+ It is guaranteed to have the same size as 
+\family typewriter 
+paddr_t
+\family default 
+, so you can typecast between them.
+\layout Description
+
+
+\family typewriter 
+poff_t
+\family default 
+ A signed offset in the physical address space.
+ Guaranteed to have the same size as 
+\family typewriter 
+paddr_t
+\family default 
+ and 
+\family typewriter 
+plen_t
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+index_t
+\family default 
+ A signed integer capable of indexing small arrays; don't use this in portable
+ data structures.
+\layout Description
+
+
+\family typewriter 
+mand_t
+\family default 
+ Holds a mandate.
+ A mandate designates a partificiant at locking.
+ In generral, a brick instance may act on behalf of many mandates.
+\layout Description
+
+
+\family typewriter 
+bool
+\family default 
+ An enum with values 
+\family typewriter 
+FALSE
+\family default 
+ and 
+\family typewriter 
+TRUE
+\family default 
+, with obvious meaning.
+\layout Description
+
+
+\family typewriter 
+success_t
+\family default 
+ Currently an alias for 
+\family typewriter 
+bool
+\family default 
+, for consistent usage as return status of operations.
+ Later, this may be replaced by another definition with further values than
+ 
+\family typewriter 
+TRUE
+\family default 
+ and 
+\family typewriter 
+FALSE
+\family default 
+, e.g.
+ for discriminating fatal versus non-fatal errors.
+ Thus declare your own status variables always with 
+\family typewriter 
+success_t
+\family default 
+, never with 
+\family typewriter 
+bool
+\family default 
+!
+\layout Description
+
+
+\family typewriter 
+direction_t
+\family default 
+ Enum for the 
+\family typewriter 
+transfer
+\family default 
+ operation, has values 
+\family typewriter 
+direct_read
+\family default 
+, 
+\family typewriter 
+direct_write
+\family default 
+, and 
+\family typewriter 
+direct_stop
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+prio_t
+\family default 
+ Enum for the 
+\family typewriter 
+transfer
+\family default 
+ operation, has values 
+\family typewriter 
+prio_background
+\family default 
+, 
+\family typewriter 
+prio_normal
+\family default 
+, 
+\family typewriter 
+prio_urgent
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+version_t
+\family default 
+ Enum for telling the actuality status of a memory region.
+ Has values 
+\family typewriter 
+vers_undef
+\family default 
+, 
+\family typewriter 
+vers_old
+\family default 
+, and 
+\family typewriter 
+vers_newest
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+lock_t
+\family default 
+ Enum determining the type of 
+\family typewriter 
+lock
+\family default 
+ or 
+\family typewriter 
+unlock
+\family default 
+ operations.
+ Has values 
+\family typewriter 
+lock_none
+\family default 
+, 
+\family typewriter 
+lock_read
+\family default 
+, 
+\family typewriter 
+lock_write
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+action_t
+\family default 
+ Enum determining the behaviour of 
+\family typewriter 
+wait
+\family default 
+.
+ Has values 
+\family typewriter 
+action_ask
+\family default 
+, 
+\family typewriter 
+action_try
+\family default 
+, 
+\family typewriter 
+action_wait
+\family default 
+.
+\layout Description
+
+
+\family typewriter 
+name_t
+\family default 
+ Character string, currently of length 24, to hold names of bricks and inputs/ou
+tputs.
+ TODO: change this to length 16 (i.e.
+ 2*sizeof(addr_t)) and shorten some already established brick names.
+ Shorter strings may be kept in 
+\family typewriter 
+sname_t
+\family default 
+, longer ones in 
+\family typewriter 
+lname_t
+\family default 
+.
+\layout Standard
+
+In device drivers, you may use the following types for specifying hardware-depen
+dent data layouts.
+ 
+\emph on 
+Never
+\emph default 
+ use them in ordinary ATHOMUX bricks, because these will not scale with
+ the architectural model!
+\layout Description
+
+
+\family typewriter 
+uns1
+\family default 
+ and 
+\family typewriter 
+int1
+\family default 
+: one unsigned or signed byte.
+\layout Description
+
+
+\family typewriter 
+uns2
+\family default 
+ and 
+\family typewriter 
+int2
+\family default 
+: an unsigned or signed 16bit-halfword.
+\layout Description
+
+
+\family typewriter 
+uns4
+\family default 
+ and 
+\family typewriter 
+int4
+\family default 
+: an unsigned or signed 32bit-word.
+\layout Description
+
+
+\family typewriter 
+uns8
+\family default 
+ and 
+\family typewriter 
+int8
+\family default 
+: an unsigned or signed 64bit-longword.
+\layout Standard
+
+Further advice: be careful when using standard types 
+\family typewriter 
+int
+\family default 
+, 
+\family typewriter 
+unsigned
+\family default 
+, 
+\family typewriter 
+short
+\family default 
+, 
+\family typewriter 
+long
+\family default 
+, 
+\family typewriter 
+long long
+\family default 
+ and so on.
+ Their size is not constant, but may vary with the used compiler.
+ It may even vary independently from the ATHOMUX architecture model.
+ Use them only in system-specific bricks, but 
+\emph on 
+never
+\emph default 
+ in ordinary bricks.
+ In particular, 
+\emph on 
+never
+\emph default 
+ use them for data formats which could be read by other brick instance on
+ a 
+\emph on 
+heterogenous
+\emph default 
+ cluster in a network! These data types are non-portable, so please avoid
+ them as much as possible.
+ TODO: check their usage by the preprocessor and issue warnings.
+\layout Standard
+
+TODO: discriminate between LSB and MSB types, and add macros for their conversio
+n.
+ Ensure that 
+\emph on 
+migratable
+\emph default 
+ data formats (in difference to 
+\emph on 
+internal
+\emph default 
+ data formats) are solely built upon exact specs of their byte sex! Integrate
+ with meta-nest data descriptions, in order to allow automated sex conversions
+ by adaptor bricks.
+\layout Section
+
+The Nest Interface
+\layout Standard
+
+The syntax is described by an enrichment of the preprocessor syntax with
+ data type specs.
+ When an argument is followed by 
+\family typewriter 
+:= something
+\family default 
+, you may omit that parameter at a call, and 
+\family typewriter 
+something
+\family default 
+ is automatically used as the default value for that parameter.
+\layout Standard
+
+All operations have implicit parameters 
+\family typewriter 
+@args
+\family default 
+ of type 
+\family typewriter 
+struct args *
+\family default 
+ and 
+\family typewriter 
+@param
+\family default 
+ of type 
+\family typewriter 
+char *
+\family default 
+.
+ All further standard parameters are all fields of 
+\family typewriter 
+struct args
+\family default 
+ (see definition in 
+\family typewriter 
+common.h
+\family default 
+).
+ Writing 
+\family typewriter 
+@param_name
+\family default 
+ is equivalent to 
+\family typewriter 
+@args->param_name
+\family default 
+ (see preprocessor guide).
+ Via 
+\family typewriter 
+@param
+\family default 
+, a generic NULL-terminated string can be passed which must not contain
+ linefeeds.
+ Its interpretation is up to the implementation.
+ Currently it is used for passing of filenames and pathnames, but this is
+ provisionary.
+ DISCUSS: introduce a universally generic, but nevertheless easy parsable
+ URL syntax.
+\layout Standard
+
+All operations have at least one return value 
+\family typewriter 
+success_t success
+\family default 
+.
+ When the operation is called, 
+\family typewriter 
+@success
+\family default 
+ is guaranteed to be 
+\family typewriter 
+FALSE
+\family default 
+.
+ When your operation fails (due to some reason), you may just simply 
+\family typewriter 
+return
+\family default 
+ from it without changing 
+\family typewriter 
+@success
+\family default 
+ at all.
+ Conversely, if your operation was successful, do not forget to set 
+\family typewriter 
+@success = TRUE
+\family default 
+.
+ When you reuse the 
+\family typewriter 
+@args
+\family default 
+ parameter by low-level passing via short-form syntax (see preprocessor
+ guide), you have to ensure that the callee will find 
+\family typewriter 
+@success == FALSE
+\family default 
+, i.e.
+ don't forget to clear it before such an efficient shortcut call whenever
+ it 
+\emph on 
+could
+\emph default 
+ have been set in the meantime (e.g.
+ by a prior shortcut call).
+\layout Subsection
+
+Operations Defined on Outputs
+\layout Standard
+
+Normally, the operation control flow goes from inputs to outputs.
+ Thus operations are implemented at outputs.
+ Only in some rare cases (such as 
+\family typewriter 
+$retract
+\family default 
+, see section 
+\begin_inset LatexCommand \ref{sub:Operations-Defined-on}
+
+\end_inset 
+
+), the operation control flow goes in the opposite direction.
+\layout Subsubsection
+
+Initialization and Termination / Pseudo-Statelessness
+\layout Standard
+
+Besides the ordinary initialization of a brick instance, an additional operation
+ has been added which is called by the responsible 
+\family typewriter 
+control_*
+\family default 
+ each time a dynamic output is instantiated, or when a pseudo-stateless
+ instance is switched to a stateless state.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$output_init (bool destr, bool constr, bool clear := FALSE) => (success_t
+ success)
+\layout Standard
+
+When 
+\family typewriter 
+destr==TRUE
+\family default 
+, flush any state to the inputs and de-instantiate the output instance it
+ is called on.
+ When 
+\family typewriter 
+constr==TRUE
+\family default 
+, construct the output instance.
+ When both parameters are set, you may omit the destruction followed by
+ construction, but you have to flush any state (if some exists; otherwise
+ you may decide to do nothing at all).
+ When both are unset, just do nothing (but possibly some consistency checks).
+\layout Standard
+
+When 
+\family typewriter 
+clear==TRUE
+\family default 
+, the 
+\emph on 
+contents
+\emph default 
+ of output nest should be initialized / cleared in some defined way, leading
+ to a defined state.
+\layout Standard
+
+NOTICE: sometimes it makes sense to 
+\family typewriter 
+@=outputcall
+\family default 
+ this operation over wires (e.g.
+ for recursively switching to a stateless state), but in most cases it will
+ be called by the 
+\family typewriter 
+control_*
+\family default 
+ level, in particular by the 
+\family typewriter 
+$instconn
+\family default 
+ operation.
+\layout Standard
+
+ATTENTION! prior to 30 August 2004, there was only a single 
+\family typewriter 
+$init
+\family default 
+ instead of 
+\family typewriter 
+$output_init
+\family default 
+! Please update your sourcecode!
+\layout Subsubsection
+
+Physical IO
+\layout Standard
+
+
+\family typewriter 
+$transfer (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t
+ direction, prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
+\layout Standard
+
+Start or submit an IO request (
+\family typewriter 
+direct_read
+\family default 
+ or 
+\family typewriter 
+direct_write
+\family default 
+) or try to stop already started/submitted ones (
+\family typewriter 
+direct_stop
+\family default 
+) if they exist.
+ The logical address, length, and physical address are in 
+\family typewriter 
+log_addr
+\family default 
+, 
+\family typewriter 
+log_len
+\family default 
+, and 
+\family typewriter 
+phys_addr
+\family default 
+ respectively.
+ The 
+\family typewriter 
+prio
+\family default 
+ tells whether the IO request can wait arbitrarily (
+\family typewriter 
+prio_background
+\family default 
+), or has normal priority (
+\family typewriter 
+prio_normal
+\family default 
+) or is extremely urgent (
+\family typewriter 
+prio_urgent
+\family default 
+).
+ 
+\emph on 
+Inside
+\emph default 
+ each of these priority classes, starvation has to be avoided (e.g.
+ by a disk scheduler), but 
+\emph on 
+between
+\emph default 
+ these classes starvation may occur, e.g.
+ when the IO channel is overloaded.
+\layout Standard
+
+Return value: upon 
+\family typewriter 
+success==TRUE
+\family default 
+, the actual length of the submitted request is returned in 
+\family typewriter 
+phys_len
+\family default 
+.
+ It may be smaller than 
+\family typewriter 
+log_len
+\family default 
+, depending on the capabilities of the driver.
+ The caller must check and handle that case (e.g.
+ transfer the rest separately).
+\layout Standard
+\noindent 
+
+\family typewriter 
+$wait (addr_t log_addr, len_t log_len, prio_t prio := prio_normal, action_t
+ action := action_wait) => (success_t success)
+\layout Standard
+
+Test whether an uncompleted IO request of priority 
+\family typewriter 
+prio
+\family default 
+ or higher exists in the logical address range specified by 
+\family typewriter 
+log_addr
+\family default 
+ and 
+\family typewriter 
+log_len
+\family default 
+.
+ 
+\layout Standard
+
+When 
+\family typewriter 
+action == action_wait
+\family default 
+, wait until at least all IO requests which were present at the start of
+ the operation (i.e.
+ have not arrived during the wait) have completed or are in an error state
+ (e.g.
+ IO error), and return error-freeness in 
+\family typewriter 
+success
+\family default 
+.
+ Note that when no IO requests were present at all, no delay will occur.
+ It is thus possible to issue 
+\family typewriter 
+$wait
+\family default 
+ even on memory regions where never a 
+\family typewriter 
+$transfer
+\family default 
+ has been started.
+ It need no be used pairwise with 
+\family typewriter 
+$transfer
+\family default 
+.
+ It just ensures that everything is in sync.
+ 
+\layout Standard
+
+When 
+\family typewriter 
+action == action_try
+\family default 
+, return immediately telling whether no error has occured.
+ As a side effect, ensure that new 
+\family typewriter 
+$transfer
+\family default 
+ requests arriving after that will never be serviced before the old ones
+ have completed (transaction barrier).
+\layout Standard
+
+When 
+\family typewriter 
+action == action_ask
+\family default 
+, return immediately telling whether everything is currently in sync (status
+ poll).
+\layout Subsubsection
+
+Logical IO
+\layout Standard
+
+
+\family typewriter 
+$get (addr_t log_addr, len_t log_len, bool forwrite := FALSE) => (success_t
+ success, paddr_t phys_addr, plen_t phys_len, version_t version)
+\layout Standard
+
+Try to allocate a physicial buffer for the logical memory area specified
+ by 
+\family typewriter 
+log_addr
+\family default 
+ and 
+\family typewriter 
+log_len
+\family default 
+.
+ When 
+\family typewriter 
+forwrite == FALSE
+\family default 
+, the buffer must not be modified afterwards; in particular it may be concurrent
+ly used by many readers without locking.
+ Otherwise the data may be modified.
+\layout Standard
+
+Upon successful return, the physical address and length is returned in 
+\family typewriter 
+phys_addr
+\family default 
+ and 
+\family typewriter 
+phys_len
+\family default 
+.
+ When 
+\family typewriter 
+version == vers_newest
+\family default 
+, you need not issue a following 
+\family typewriter 
+$transfer
+\family default 
+ to update the buffer.
+ Otherwise, you cannot be sure that the buffer contents is up to date.
+ However, if you will overwrite the buffer anyway, you need not (and in
+ fact should not) issue an unnecessary IO operation for updating it.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$put (addr_t log_addr, len_t log_len, prio_t prio := prio_none) => (success_t
+ success)
+\layout Standard
+
+This operation 
+\emph on 
+must
+\emph default 
+ always be used pairwise with $get, because internal reference counting
+ may be used to determine which buffers are currently in use and which not.
+ You 
+\emph on 
+must
+\emph default 
+ supply the same 
+\family typewriter 
+log_addr
+\family default 
+ and 
+\family typewriter 
+log_len
+\family default 
+ as at the paired 
+\family typewriter 
+$get
+\family default 
+.
+ 
+\layout Standard
+
+The 
+\family typewriter 
+prio
+\family default 
+ parameter tells whether you have 
+\emph on 
+actually
+\emph default 
+ modified the data.
+ If you have modified it, you 
+\emph on 
+must
+\emph default 
+ set it to at least 
+\family typewriter 
+prio_background
+\family default 
+ or higher (it may be used in a later asynchronous writeback by a buffer
+ cache implementation).
+ Otherwise, you must set it to 
+\family typewriter 
+prio_none
+\family default 
+, even if you have 
+\emph on 
+intended
+\emph default 
+ a write at the former 
+\family typewriter 
+$get
+\family default 
+.
+ This tells in effect whether you have dirtyfied the buffer or not.
+\layout Standard
+
+Try to avoid unnecessary dirtifying of buffers wherever possible! This is
+ crucial for performance!
+\layout Subsubsection
+
+Locking
+\layout Standard
+\noindent 
+
+\family typewriter 
+$lock [mandate] (addr_t log_addr, len_t log_len, lock_t data_lock := lock_write,
+ lock_t addr_lock := lock_read, addr_t try_addr := log_addr, len_t try_len
+ := log_len, action_t action := action_wait) => (success_t success, addr_t
+ try_addr, len_t try_len)
+\layout Standard
+
+Issue a lock request und the mandate 
+\family typewriter 
+mandate
+\family default 
+ with an obligatory part specified by 
+\family typewriter 
+log_addr
+\family default 
+ and 
+\family typewriter 
+log_len
+\family default 
+, and an optional part specified by 
+\family typewriter 
+try_addr
+\family default 
+ and 
+\family typewriter 
+try_len
+\family default 
+.
+ The optional part must always be a superset of the obligatory part.
+ When omitting the optional locking parameters, classical locking is requested,
+ but optional locking may be transparently added behind the scenes by a
+ local lock manager; see my papers on optional locking for understanding
+ these concepts in more detail.
+ The parameters 
+\family typewriter 
+data_lock
+\family default 
+ and 
+\family typewriter 
+addr_lock
+\family default 
+ tell whether and how to lock the data area resp.
+ the address association of the nest (no lock / readlock / writelock).
+ Locking the address association must be used to protect against concurrent
+ 
+\family typewriter 
+$move
+\family default 
+, 
+\family typewriter 
+$create
+\family default 
+ and 
+\family typewriter 
+$delete
+\family default 
+ operations.
+ Locking of the data area has the usual semantics (protection against concurrent
+ data modifications).
+ The parameter 
+\family typewriter 
+action
+\family default 
+ requests either to wait until the lock can be granted or a deadlock has
+ occurred, or to try to get the lock immediately without waiting, or just
+ to ask whether locking would have been possible (but need not at the next
+ attempt due to possible races).
+\layout Standard
+
+When you try to lock some area once again under same 
+\family typewriter 
+mandate
+\family default 
+ (regardless of the instance issuing that lock), you will not block yourself,
+ but instead 
+\emph on 
+enlarge
+\emph default 
+ the locked area held under that mandate.
+ This is called 
+\emph on 
+merging
+\emph default 
+ of locked regions.
+ Thus you won't have to unlock your regions properly nested (i.e.
+ the locks are 
+\emph on 
+not recursive
+\emph default 
+, but rather 
+\emph on 
+accumulating
+\emph default 
+).
+ 
+\layout Standard
+
+When you specify a different 
+\family typewriter 
+data_lock
+\family default 
+ or 
+\family typewriter 
+addr_lock
+\family default 
+ type for an already held area, you will try to 
+\emph on 
+upgrade
+\emph default 
+ or 
+\emph on 
+downgrade
+\emph default 
+ the lock type.
+ Note that upgrading will not work in general, since deadlocks may occur.
+\layout Standard
+
+When the operation was successful, you can see the size of an optionally
+ granted area by the results in 
+\family typewriter 
+try_addr
+\family default 
+ and 
+\family typewriter 
+try_len
+\family default 
+.
+ These may be smaller than originally requested, but never smaller than
+ the obligatory part (see my papers on optional locking).
+ Note that truly optional parts may be concurrently retracted at any time
+ (i.e.
+ racing arainst you), so please don't use that areas for critical data.
+ However you may speculate that further obligatory locks in that area will
+ 
+\emph on 
+very likely
+\emph default 
+ not block and thus show extremely good performance in a distributed system.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$unlock [mandate] (addr_t log_addr, len_t log_len, addr_t try_addr := log_addr,
+ len_t try_len := log_len) => (success_t success, addr_t try_addr, len_t
+ try_len)
+\layout Standard
+
+Ensure that the specified areas are no longer locked under the specified
+ 
+\family typewriter 
+mandate
+\family default 
+.
+ The parameters have the same meaning as above.
+ You need not unlock in the same granularity as you have locked.
+ For example, you may release all your locks in a single atomic action by
+ specifying the whole logical address space (aka 2-phase-locking).
+ You may also release only 
+\emph on 
+parts
+\emph default 
+ of a larger lock area, leading to 
+\emph on 
+splits
+\emph default 
+ of your locked regions.
+ Exact pairing of 
+\family typewriter 
+$lock
+\family default 
+ with 
+\family typewriter 
+$unlock
+\family default 
+ is not necessary.
+\layout Standard
+
+Notes on mandates: Always be sure to supply the right 
+\family typewriter 
+mandate
+\family default 
+ parameter.
+ Omitting that parameter in braces will insert the default value 
+\family typewriter 
+@#_mand
+\family default 
+, but that may be the wrong semantics.
+ For example, when you forward a lock operation at a 
+\family typewriter 
+dir_*
+\family default 
+ or 
+\family typewriter 
+union
+\family default 
+ brick from some output to some input, you will normally also have to forward
+ the mandate of the original requestor.
+ Otherwise you may produce incorrect behaviour and even deadlocks, because
+ the underlying lock manager will believe that all locks were originally
+ requested from the same instance (namely your instance), which is wrong
+ in logical sense.
+ However, when your 
+\family typewriter 
+dir_*
+\family default 
+ brick deals with directory status information for which it is solely 
+\emph on 
+responsible
+\emph default 
+, you should issue lock requests for those areas under your own default
+ mandate 
+\family typewriter 
+@#_mand
+\family default 
+.
+ Otherwise you could allow too much incorrect parallelism.
+\layout Subsubsection
+
+Allocation in the Logical Address Space
+\layout Standard
+
+
+\family typewriter 
+$getaddr (len_t log_len, bool where := FALSE, bool exclu := TRUE, action_t
+ action := action_wait, len_t try_len := log_len) => (success_t success,
+ addr_t log_addr, len_t log_len)
+\layout Standard
+
+Atomically pre-reserve space of minimum size 
+\family typewriter 
+log_len
+\family default 
+ and maximum size 
+\family typewriter 
+try_len
+\family default 
+.
+ When 
+\family typewriter 
+where == FALSE
+\family default 
+, reserve the space in a formerly undefined region (default for memory allocator
+s and for writers on a pipe), otherwise reserve at defined regions (used
+ for readers on a pipe).
+ When 
+\family typewriter 
+exclu == FALSE
+\family default 
+, you get a valid area, but it is not actually reserved for you (concurrent
+ lookahead without reservation).
+ With 
+\family typewriter 
+action != action_wait
+\family default 
+, you can specify that failure of immediately obtaining the area will not
+ hurt you existentially (e.g.
+ useful for speculative memory preallocation strategies).
+\layout Standard
+
+Attention! 
+\family typewriter 
+$getaddr
+\family default 
+ is a 
+\emph on 
+pre
+\emph default 
+-reservation; it does not actually reserve or unreserve space via 
+\family typewriter 
+$create
+\family default 
+ or 
+\family typewriter 
+$delete
+\family default 
+, you have to do that by hand afterwards if needed (or use a combined operation).
+ It merely is a synchonisation primitive for pipes, not more.
+\layout Standard
+
+NOTE: the former operation 
+\family typewriter 
+$putaddr
+\family default 
+ has disappeared.
+ Use 
+\family typewriter 
+$delete
+\family default 
+ instead!
+\layout Subsubsection
+
+Dynamic Nests
+\layout Standard
+
+
+\family typewriter 
+$create (addr_t log_addr, len_t log_len, bool clear := FALSE, bool melt
+ := TRUE) => (success_t success)
+\layout Standard
+
+Create a defined area in the logical address space.
+ When 
+\family typewriter 
+clear
+\family default 
+ is set and you try to read data in that area afterwards, NULL blocks will
+ be delivered; otherwise the contents may contain uninitialized garbage.
+ When 
+\family typewriter 
+melt == FALSE
+\family default 
+, packet borders will show up in the adjoint nest (NYI).
+\layout Standard
+\noindent 
+
+\family typewriter 
+$delete (addr_t log_addr, len_t log_len, bool melt := TRUE) => (success_t
+ success)
+\layout Standard
+
+Create a hole in the logical address space (and throw away data).
+ Reading or writing in defined parts of a sparse nest instance will result
+ in errors (
+\family typewriter 
+success == FALSE
+\family default 
+).
+\layout Standard
+\noindent 
+
+\family typewriter 
+$move (addr_t log_addr, len_t log_len, offs_t offset, offs_t offset_max
+ := offset) => (success_t success, offs_t offset)
+\layout Standard
+
+The famous move operation.
+ Used for space management in logical address spaces.
+\layout Standard
+
+In extension to the description from the papers, two offsets 
+\family typewriter 
+offset
+\family default 
+ and 
+\family typewriter 
+offset_max
+\family default 
+ may be specified.
+ The implementation is free to choose any distance in between these two
+ values, whichever is more convenient or efficient.
+ The actually chosen 
+\family typewriter 
+offset
+\family default 
+ is returned again.
+\layout Subsubsection
+
+Combined Operations
+\layout Standard
+
+The elementary operations are meant to be orthogonal to each other, i.e.
+ no operation can be simulated by a combination of others.
+ However, in many cases typical usage patterns require always the same sequences
+ of operation calls.
+ For example, reading from a pipe involves 
+\family typewriter 
+$getaddr
+\family default 
+, 
+\family typewriter 
+$get
+\family default 
+, 
+\family typewriter 
+$transfer
+\family default 
+, and 
+\family typewriter 
+$wait
+\family default 
+.
+ After consuming the data, 
+\family typewriter 
+$put
+\family default 
+, 
+\family typewriter 
+$delete
+\family default 
+ and 
+\family typewriter 
+$putaddr
+\family default 
+ is called.
+ To save the overhead of issuing each call separately, combinations are
+ defined which execute such sequences in a single call.
+\layout Standard
+
+Implementation of combined operations is optional (at least in theory).
+ If you don't implement one, a default version as defined in 
+\family typewriter 
+common.h
+\family default 
+ is automatically used.
+ If you implement one, it 
+\emph on 
+must
+\emph default 
+ deliver the same semantics as the default version! Please study the default
+ implementations.
+ All you can (and should) do is to implement 
+\emph on 
+better performance
+\emph default 
+ for the combined version.
+ Combined operations are in particular necessary for distributed systems,
+ because the 
+\emph on 
+latencies
+\emph default 
+ for issuing separate calls would 
+\emph on 
+add up
+\emph default 
+ when you would call all elementary operations sequentially.
+\layout Standard
+
+TODO: add further combinations.
+ The current set is incomplete.
+\layout Standard
+
+DISCUSS: can we generate all combinations 
+\emph on 
+automatically
+\emph default 
+ from the prototype specs of the elementary operations? Can we do that for
+ the full power set of all possible combinations? Can we create a generic
+ calling syntax for that? Can we even generate specialized high-performance
+ versions from the sourecode of the elementary operations automatically???
+\layout Standard
+
+In general, the individual members of a combined operation share a single
+ 
+\family typewriter 
+struct args
+\family default 
+ instance by simply reusing the same field names many times, even when some
+ of them are produced by a prior call.
+ This saves a lot of unnecessary copying of parameters.
+ In general, the sum of all input parameters consumed by all elementary
+ operations and not produced by any other one must be supplied from the
+ outside.
+ However, parameters which make sense only at a fixed specific value are
+ 
+\emph on 
+not
+\emph default 
+ supplied from the outside, but bound to that fixed value by the combined
+ operation.
+ For example, executing 
+\family typewriter 
+$transfer
+\family default 
+ directly after 
+\family typewriter 
+$get
+\family default 
+ makes only sense when reading data, thus 
+\family typewriter 
+direction
+\family default 
+ is automatically set to 
+\family typewriter 
+direct_read
+\family default 
+.
+ In some cases, the 
+\emph on 
+order
+\emph default 
+ of arguments is slightly changed to become better suited for omission of
+ default values.
+\layout Paragraph
+
+Combined Transfer Operations
+\newline 
+
+\layout Standard
+\noindent 
+
+\family typewriter 
+$tr (addr_t log_addr, len_t log_len, paddr_t phys_addr, direction_t direction,
+ prio_t prio := prio_normal) => (success_t success, plen_t phys_len)
+\layout Standard
+
+Execute 
+\family typewriter 
+$transfer
+\family default 
+ followed by 
+\family typewriter 
+$wait
+\family default 
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$gettr (addr_t log_addr, len_t log_len, prio_t prio := prio_normal) => (success_
+t success, paddr_t phys_addr, plen_t phys_len)
+\layout Standard
+
+Execute 
+\family typewriter 
+$get
+\family default 
+ followed by 
+\family typewriter 
+$tr
+\family default 
+ for reading the data.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$trput (addr_t log_addr, len_t log_len, paddr_t phys_addr, prio_t prio :=
+ prio_normal) => (success_t success)
+\layout Standard
+
+Execute 
+\family typewriter 
+$tr
+\family default 
+ for writing followed by 
+\family typewriter 
+$put
+\family default 
+.
+ THIS WILL VANISH! NO LONGER USE IT! Passing around physical addresses when
+ doing LOGICAL IO is a BAD IDEA! Use the next operation instead:
+\layout Standard
+\noindent 
+
+\family typewriter 
+$putwait (addr_t log_addr, len_t log_len, prio_t prio := prio_normal) =>
+ (success_t success)
+\layout Standard
+
+Execute 
+\family typewriter 
+$put
+\family default 
+ followed by 
+\family typewriter 
+$wait
+\family default 
+.
+ The implementation should force an implicit 
+\family typewriter 
+$transfer
+\family default 
+ internally in the buffer cache if it has not already done so (but most
+ implementations will have done before anyway).
+\layout Paragraph
+
+Memory Creation at known address
+\newline 
+
+\layout Standard
+\noindent 
+
+\family typewriter 
+$createget (addr_t log_addr, len_t log_len, bool clear := FALSE, bool melt
+ := TRUE) => (success_t success, paddr_t phys_addr, plen_t phys_len)
+\layout Standard
+
+Execute 
+\family typewriter 
+$create
+\family default 
+ followed by 
+\family typewriter 
+$get
+\family default 
+ (note that a further 
+\family typewriter 
+$tr
+\family default 
+ for reading would be senseless, because the data has been freshly created.
+ However a 
+\family typewriter 
+$tr
+\family default 
+ for writing zeroed blocks could be feasible, but is there anyone needing
+ this?).
+\layout Paragraph
+
+Memory Allocation at unknown address
+\newline 
+
+\layout Standard
+\noindent 
+
+\family typewriter 
+$getaddrcreateget (len_t log_len, bool clear := FALSE, bool exclu := TRUE,
+ action_t action := action_wait, bool melt := TRUE, len_t try_len := log_len)
+ => (success_t success, addr_t log_addr, len_t log_len, paddr_t phys_addr,
+ plen_t phys_len)
+\layout Standard
+
+Execute 
+\family typewriter 
+$getaddr
+\family default 
+, then 
+\family typewriter 
+$create
+\family default 
+, and finally 
+\family typewriter 
+$get
+\family default 
+.
+ In other words, allocate some new data block and deliver it, similar to
+ classical 
+\family typewriter 
+malloc()
+\family default 
+.
+\layout Standard
+
+NOTE: 
+\family typewriter 
+$deleteputaddr
+\family default 
+ has disappeared.
+ Use 
+\family typewriter 
+$putdelete
+\family default 
+ instead.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$putdelete (addr_t log_addr, len_t log_len) => (success_t success)
+\layout Standard
+
+Combination of 
+\family typewriter 
+$put
+\family default 
+ followed by 
+\family typewriter 
+$delete
+\family default 
+.
+ This is in essence the opposite of 
+\family typewriter 
+$getaddrcreateget
+\family default 
+ and similar to classical 
+\family typewriter 
+free()
+\family default 
+.
+ It can also be used to free an invalid buffer without writing back anymore;
+ the internal implementation may choose to cancel any pending IO request
+ for it.
+\layout Paragraph
+
+Logical IO on Pipes
+\newline 
+
+\layout Standard
+
+Both the reader and writer must each call two operations, one for preparing
+ the transfer, the other for finalizing.
+ The preparing operation will lead to a pre-reservation, i.e.
+ an 
+\emph on 
+intermdiate state
+\emph default 
+ between allocation or freeness.
+ The finalzing operation will then either free or finally allocate the region.
+\layout Subparagraph
+
+Reader
+\newline 
+
+\layout Standard
+\noindent 
+
+\family typewriter 
+$getaddrgettr (len_t log_len, bool exclu := TRUE, action_t action := action_wait
+, forwrite := FALSE, prio := prio_normal, len_t try_len := log_len) => (success_
+t success, addr_t log_addr, len_t log_len, paddr_t phys_addr, plen_t phys_len)
+\layout Standard
+
+This pre-allocates space in the defined region of the nest, allocates a
+ physical buffer and fills it with the data.
+ After that, you may access the data.
+ After accessing the data, you 
+\emph on 
+must
+\emph default 
+ call the following for recycling the buffer space (for usage by the writer):
+\layout Standard
+\noindent 
+
+\family typewriter 
+$putdelete (addr_t log_addr, len_t log_len) => (success_t success)
+\layout Standard
+
+This is the same operation as in memory allocation, but here the 
+\emph on 
+purpose
+\emph default 
+ is slightly different at 
+\emph on 
+semantic
+\emph default 
+ level only.
+ It frees both the physical buffer and the logical address space.
+\layout Subparagraph
+
+Writer
+\newline 
+
+\layout Standard
+
+
+\family typewriter 
+$getaddrget (len_t log_len, bool exclu := TRUE, action_t action := action_wait,
+ len_t try_len := log_len) => (success_t success, addr_t log_addr, len_t
+ log_len, paddr_t phys_addr, plen_t phys_len)
+\layout Standard
+
+This pre-allocates space in the undefined part of the logical address space
+ and a physical buffer (containing unitialized data).
+ After that, you 
+\emph on 
+must
+\emph default 
+ fill your own data in.
+ The buffer muste then be made available to the reader by the following
+ operation:
+\layout Standard
+
+
+\family typewriter 
+$putcreate (addr_t log_addr, len_t log_len, melt := TRUE, prio :=p rio_backgroun
+d) => (success_t success)
+\layout Paragraph
+
+Physical IO on Pipes
+\layout Standard
+
+NYI
+\layout Subsection
+
+Operations Defined on Inputs
+\begin_inset LatexCommand \label{sub:Operations-Defined-on}
+
+\end_inset 
+
+
+\layout Standard
+
+These operations are reserved for exceptional cases, such as signals or
+ critical operation states.
+ In particular, 
+\family typewriter 
+$retract
+\family default 
+ may be used for 
+\emph on 
+partially
+\emph default 
+ giving back some resources when there is a shortage.
+ This is required at some places, e.g.
+ simulation of the well-known clock algorithm by 
+\family typewriter 
+$retract
+\family default 
+ between a 
+\family typewriter 
+buffer
+\family default 
+ cache and 
+\family typewriter 
+mmu
+\family default 
+ instances.
+ Another application is retraction of 
+\emph on 
+optional locks
+\emph default 
+ in client-server configurations.
+\layout Standard
+
+Input operations are 
+\begin_inset Quotes eld
+\end_inset 
+
+travelling
+\begin_inset Quotes erd
+\end_inset 
+
+ in the 
+\emph on 
+reverse
+\emph default 
+ direction of wires.
+ This can countercare the hierarchical structure of brick networks and result
+ in various problems.
+\layout Standard
+
+When you want to call these operations, you 
+\emph on 
+must
+\emph default 
+ use the syntax 
+\family typewriter 
+@=inputcall
+\family default 
+.
+ When executing 
+\family typewriter 
+@=inputcall
+\family default 
+ on an input, the operation will be directly called at the specified input.
+ When executing 
+\family typewriter 
+@=inputcall
+\family default 
+ on an output (which is the common case), the operation will be forwarded
+ to and executed on 
+\emph on 
+all
+\emph default 
+ inputs to which the specified output is currently connected! 
+\layout Standard
+
+WARNING! This means, a 
+\emph on 
+bunch
+\emph default 
+ of calls may actually be performed.
+ Beware of exponentional explosion in the number of operation calls, and
+ beware of ping-pong endless recursion between 
+\begin_inset Quotes eld
+\end_inset 
+
+normal
+\begin_inset Quotes erd
+\end_inset 
+
+ 
+\family typewriter 
+@=outputcall
+\family default 
+ and 
+\family typewriter 
+@=inputcall
+\family default 
+!
+\layout Standard
+
+The 
+\family typewriter 
+success
+\family default 
+ status of an 
+\family typewriter 
+@=inputcall
+\family default 
+ will yield 
+\family typewriter 
+FALSE
+\family default 
+ if any of the actual operation calls yields 
+\family typewriter 
+FALSE
+\family default 
+, otherwise (or when no connection existed at all such that no call will
+ be executed at all) it will yield TRUE.
+\layout Subsubsection
+
+Initialization / Termination
+\layout Standard
+
+Analogously to $output_init, the local state of inputs may also be initialized
+ (but try to avoid this! local state is a BAD THING!).
+ Another usage is at (dynamic) arrays of inputs.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$input_init (bool destr, bool constr, bool clear := FALSE) => (success_t
+ success)
+\layout Standard
+
+The sematics is the same as with 
+\family typewriter 
+$output_init
+\family default 
+.
+ The only difference is that the operation is assigned to an input instance,
+ and local input state variables can be directly accessed via 
+\family typewriter 
+@<fieldname
+\family default 
+.
+\layout Standard
+
+NOTICE: sometimes it makes sense to 
+\family typewriter 
+@=inputcall
+\family default 
+ this operation over wires (e.g.
+ for recursively switching to a stateless state), but in most cases it will
+ be called by the 
+\family typewriter 
+control_*
+\family default 
+ level, in particular by the 
+\family typewriter 
+$instconn
+\family default 
+ operation.
+\layout Subsubsection
+
+Retraction of Resources
+\layout Standard
+\noindent 
+
+\family typewriter 
+$retract (prio_t prio, addr_t log_addr := 0, len_t log_len := (len_t)-1,
+ addr_t try_addr := log_addr, len_t try_len := log_len) => (success_t success)
+\layout Standard
+
+When this operation is called, you 
+\emph on 
+should
+\emph default 
+ or 
+\emph on 
+must
+\emph default 
+ give back any state (whether physical memory achieved by 
+\family typewriter 
+$get
+\family default 
+ or locks achieved by 
+\family typewriter 
+$lock
+\family default 
+, PC information, or whatever) to the former owner.
+ The 
+\family typewriter 
+prio
+\family default 
+ is telling you the urgency: 
+\layout Standard
+
+When 
+\family typewriter 
+prio == prio_urgent
+\family default 
+, the resources may be 
+\begin_inset Quotes eld
+\end_inset 
+
+confiscated
+\begin_inset Quotes erd
+\end_inset 
+
+ if you don't 
+\emph on 
+immediately
+\emph default 
+ return the resources from 
+\family typewriter 
+log_addr
+\family default 
+ to 
+\family typewriter 
+log_addr+log_len
+\family default 
+.
+ In the area specified by 
+\family typewriter 
+try_addr
+\family default 
+ and 
+\family typewriter 
+try_len
+\family default 
+, you are free to return additional resources.
+ Confiscation means that resources may become 
+\emph on 
+invalid
+\emph default 
+ without notice; this may result in failure of your brick instance.
+ This case is much similar to a termination signal.
+\layout Standard
+
+When 
+\family typewriter 
+prio == prio_normal
+\family default 
+, you must also return the resources 
+\emph on 
+immediately
+\emph default 
+, but confiscation will not occur.
+\layout Standard
+
+When 
+\family typewriter 
+prio == prio_background
+\family default 
+, you may delay the return of the resouces for some time, e.g.
+ if you are currently using them for some impartant task.
+\layout Standard
+
+When 
+\family typewriter 
+prio == prio_none
+\family default 
+, you are free to return some of the resources or not.
+ This may be used as a reminder to return currently unused resources.
+\layout Standard
+
+NOTE: you may implement 
+\emph on 
+optional locking
+\emph default 
+ by this operation.
+\layout Subsection
+
+Operations Defined on Bricks
+\layout Standard
+
+NYI
+\layout Subsection
+
+The General Operation 
+\family typewriter 
+$op
+\layout Standard
+
+You may implement a pseudo-operation
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+A pseudo-operation may exist as a generated C function (but need not generally
+ so).
+\end_inset 
+
+ called 
+\family typewriter 
+$op
+\family default 
+ in any section (or for all sections by specifying 
+\family typewriter 
+(:ALL:)
+\family default 
+
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+See 
+\family typewriter 
+section(:ALL:)
+\family default 
+ as described in the preprocessor guide.
+\end_inset 
+
+).
+ Whenever you omit the implementation of another operation, 
+\family typewriter 
+$op
+\family default 
+ will be used by default instead.
+ This means, you can 
+\emph on 
+ensure
+\emph default 
+ that 
+\emph on 
+any
+\emph default 
+ unimplemented operation is redirected to your own 
+\family typewriter 
+$op
+\family default 
+ implementation.
+ If you only implement 
+\family typewriter 
+$op
+\family default 
+ and nothing else, any operation is redirected to it.
+\layout Standard
+
+Note: the redirection is done at preprocessing time.
+\layout Standard
+
+Inside 
+\family typewriter 
+$op
+\family default 
+, you can find out the originally called operation via 
+\family typewriter 
+@op_code
+\family default 
+, which is of 
+\family typewriter 
+enum
+\family default 
+ type 
+\family typewriter 
+op_t
+\family default 
+.
+ You can also find out the section number via 
+\family typewriter 
+@sect_code
+\family default 
+.
+ Usually you will have to program some rather large 
+\family typewriter 
+switch
+\family default 
+ statement by hand in order to handle argument polymorphism correctly.
+ Please note that in 
+\family typewriter 
+$op
+\family default 
+, you can use any valid 
+\family typewriter 
+@name
+\family default 
+ without automatic checking for consistency with 
+\family typewriter 
+@op_code
+\family default 
+, so you are yourself 
+\emph on 
+fully responsible
+\emph default 
+ for correctness of argument polymorphism!
+\layout Standard
+
+You can call the pseudo-operation 
+\family typewriter 
+$op
+\family default 
+ by hand, but only via shortform syntax.
+ Longform syntax is unavailable due to unresolvable polymorphism.
+ Thus you have to ensure by hand that 
+\family typewriter 
+@op_code
+\family default 
+ and 
+\family typewriter 
+@sect_code
+\family default 
+ have correct values before calling 
+\family typewriter 
+$op
+\family default 
+, as well as that 
+\family typewriter 
+@success=FALSE
+\family default 
+.
+ A useful application is polymorphic forwarding of calls to avoid the code
+ bloat produced by 
+\family typewriter 
+$OP_NAME
+\family default 
+.
+ The generated code will automatically dispatch to the right operation by
+ examining 
+\family typewriter 
+@op_code
+\family default 
+; note that 
+\family typewriter 
+$op
+\family default 
+ itself does not really exist in the nest interface.
+\layout Subsection
+
+The Generic Strategy Interface
+\layout Standard
+
+The generic strategy interface is explained in 
+\family typewriter 
+strat.h
+\family default 
+ / 
+\family typewriter 
+strat.c
+\family default 
+.
+ It is just a special data format for the interpretation of the contents
+ of a nest.
+ Each brick instance of a network is represented by one data block.
+ Currently its size is limited by 
+\family typewriter 
+DEFAULT_TRANSFER
+\family default 
+, but this may be changed at a later revision.
+ Each brick instance is represented by a 
+\family typewriter 
+NULL
+\family default 
+-terminated ASCII string with a C-like syntax.
+ Here is an example:
+\layout Standard
+\noindent 
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+ { 
+\backslash 
+baselineskip 1ex
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\layout Standard
+brick=buffer_dummy_linux {
+\layout Standard
+  param buffer_dummy_linux=init_param
+\layout Standard
+  input=dev {
+\layout Standard
+    param dev=other_param
+\layout Standard
+    connect dev==11:out
+\layout Standard
+  }
+\layout Standard
+  output=out {
+\layout Standard
+    param out=out_param
+\layout Standard
+    connect out=13:in
+\layout Standard
+  }
+\layout Standard
+}
+\layout Standard
+
+\backslash 
+end{verbatim}}
+\end_inset 
+
+
+\layout Standard
+
+When calling 
+\family typewriter 
+$tr
+\family default 
+ for reading, you will get a string with 
+\family typewriter 
+LF
+\family default 
+-terminated lines.
+ When you write such a string, actions may be performed by the strategy
+ level (e.g.
+ 
+\family typewriter 
+control_*
+\family default 
+).
+ However, actions will only be performed by those lines where a 
+\family typewriter 
+:=
+\family default 
+ or 
+\family typewriter 
+/=
+\family default 
+ is used in place of 
+\family typewriter 
+==
+\family default 
+.
+ When you simply write back the original string containing only 
+\family typewriter 
+==
+\family default 
+, nothing will happen.
+ When something cannot be changed at all (
+\emph on 
+immutability
+\emph default 
+), a single 
+\family typewriter 
+=
+\family default 
+ indicates this in place of 
+\family typewriter 
+==
+\family default 
+.
+ You cannot replace 
+\family typewriter 
+=
+\family default 
+ by 
+\family typewriter 
+:=
+\family default 
+ or 
+\family typewriter 
+/=
+\family default 
+.
+ There is only one single exeption: the 
+\emph on 
+type
+\emph default 
+ of a brick instance (its name) is immutable at runtime (since changing
+ it would affect the existence of inputs and outputs), but you can de-instantiat
+e it by saying 
+\family typewriter 
+brick /= buffer_dummy_linux
+\backslash 
+n
+\family default 
+.
+\layout Standard
+
+As another example, when you submit a string 
+\family typewriter 
+connect dev/=11:out
+\backslash 
+n
+\family default 
+ the wire to the output 
+\family typewriter 
+out
+\family default 
+ of the 
+\family typewriter 
+device_dummy_linux
+\family default 
+ instance at logical address 11 will be de-instantiated.
+ With 
+\family typewriter 
+:=
+\family default 
+ you can afterwards create a new wire.
+ Whether a parameter or an attribute of a brick (or of an input or of an
+ output) can be changed at all is indicated by == versus =.
+\layout Standard
+
+You can use regular expressions for searching and replacing strings in a
+ generic strategy nest.
+ The intention behind this approach is to ease the development of 
+\emph on 
+universally generic
+\emph default 
+ 
+\family typewriter 
+strategy_*
+\family default 
+ bricks which operate on strategy nests in a rule-based fashion, similar
+ to sed and awk scripts operating on ordinary text files.
+ For example, you can write a universally generic interpreter or compiler
+ performing 
+\emph on 
+transformations
+\emph default 
+ at the strategy level, which are specified by (enhanced) graph grammars,
+ by tree automata, by L-systems, or by some expert system, or by many other
+ methodologies developed in theoretical computer science or artificial intellige
+nce.
+\layout Subsection
+
+The Main Directory
+\layout Standard
+
+In each strategy nest, a special virtual brick instance exists at address
+ 0.
+ It has the name 
+\family typewriter 
+ATHOMUX_MAINDIR
+\family default 
+ and contains only outputs.
+ New outputs with new output names may be instantiated at any time, and
+ connections to other bricks may be added at any time.
+ It is intended to hold the 
+\begin_inset Quotes eld
+\end_inset 
+
+anchors
+\begin_inset Quotes erd
+\end_inset 
+
+ of the strategy nest, e.g.
+ the root of the filesystem, the main 
+\family typewriter 
+control
+\family default 
+ instance, and others.
+ 
+\family typewriter 
+ATHOMUX_MAINDIR
+\family default 
+ is a true dummy brick which cannot execute any operations.
+ By convention, its outputs should be only connected to inputs of other
+ bricks named 
+\family typewriter 
+hook
+\family default 
+, in order to indicate that its topological use.
+\layout Subsection
+
+Additional Strategy Operations
+\layout Standard
+
+The manipulation of small ASCII strings representing simple bricks with
+ a low number of inputs and outputs may be even faster than inquiring and
+ manipulating each input/output and their attributes separately and sequentially
+ (e.g.
+ consider the problem of dynamic space allocation at the interface level
+ for variable-length string parameters).
+ Most simple bricks like 
+\family typewriter 
+adaptor_*
+\family default 
+ will fit in this category.
+ However, for very large bricks with many inputs and outputs, such as 
+\family typewriter 
+fs_*
+\family default 
+, the string representation may induce serious performance problems.
+\layout Standard
+
+In order to address such performance issues, I have decided to add further
+ operations for performing manipulations inside strategy nests.
+ These operations are 
+\emph on 
+redundant
+\emph default 
+, i.e.
+ they just perform the same semantics as directly manipulating the corresponding
+ ASCII string representation.
+ Moreover, there are ways for 
+\emph on 
+automatically translating
+\emph default 
+ between a strategy operation and its corresponding ASCII representation,
+ and vice versa.
+ 
+\layout Standard
+
+Thus you may decide to implement only one of both interfaces.
+ For example, for rapid prototyping the ASCII string interface is usually
+ more convenient.
+ However, when performance is crucial, implement your functionality by strategy
+ operations and let them automatically be called when somebody submits his
+ requests as ASCII strings.
+\layout Standard
+
+The following is experimental and may be changed in later revisions.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$instbrick (addr_t log_addr, name_t name) => (success_t success)
+\layout Standard
+
+Instantiate a new brick with type 
+\family typewriter 
+name
+\family default 
+ at address 
+\family typewriter 
+log_addr
+\family default 
+ of the strategy nest.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$deinstbrick (addr_t log_addr) => (success_t success)
+\layout Standard
+
+De-instantiate at address 
+\family typewriter 
+log_addr
+\family default 
+.
+\layout Standard
+\noindent 
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+
+\backslash 
+baselineskip 1ex 
+\backslash 
+begin{verbatim}
+\layout Standard
+struct conn_info {
+\layout Standard
+  addr_t conn_addr;
+\layout Standard
+  index_t conn_index;
+\layout Standard
+  sname_t conn_name;
+\layout Standard
+}; 
+\layout Standard
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
+\layout Standard
+
+This structure is used for describing a connector: the start address of
+ the brick representation in the strategy nest, the connector name, and
+ the index (only used for arrays of outputs).
+\layout Standard
+\noindent 
+
+\family typewriter 
+$instconn (struct conn_info * conn1, bool clear := FALSE) => (success_t
+ success)
+\layout Standard
+
+Instantiate a new connector (currently only possible with outputs) and call
+ its 
+\family typewriter 
+$output_init
+\family default 
+ operation with parameter 
+\family typewriter 
+clear
+\family default 
+.
+ Currently this must be done for 
+\emph on 
+any
+\emph default 
+ output, otherwise the output will not exist, BUT THIS WILL CHANGE! In future,
+ this will be only necessary for dynamic arrays.
+ Members of fixed arrays of outputs are indexed by 
+\family typewriter 
+conn1->conn_index
+\family default 
+.
+ When 
+\family typewriter 
+conn1->conn_index
+\family default 
+ == 
+\family typewriter 
+-1
+\family default 
+, select and create a new output at an unused array index of a fixed array,
+ or instantiate a new dynamic array member, and return its index in 
+\family typewriter 
+conn1->conn_index
+\family default 
+.
+ For non-arrays, please initialize 
+\family typewriter 
+conn_index
+\family default 
+ to 0.
+ 
+\layout Standard
+\noindent 
+
+\family typewriter 
+$deinstconn (struct conn_info * conn1) => (success_t success)
+\layout Standard
+
+De-instantiate a formerly instantiated connector.
+ Current only works with outputs.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$connect (struct conn_info * conn1, struct conn_info * conn2) => (success_t
+ success)
+\layout Standard
+
+Create a new wire by connecting the own input 
+\family typewriter 
+conn1
+\family default 
+ to the output 
+\family typewriter 
+conn2
+\family default 
+ of another brick instance.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$disconnect (struct conn_info * conn1) => (success_t success)
+\layout Standard
+
+Disconnect the input 
+\family typewriter 
+conn1
+\family default 
+ from its partner by deleting the wire leading to it.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$getconn (struct conn_info * conn1, struct conn_info * res_conn, index_t
+ conn_len) => (success_t success, index_t conn_len)
+\layout Standard
+
+Inquire the connector 
+\family typewriter 
+conn1
+\family default 
+ (may be input or output) about its partner and return results in the array
+ 
+\family typewriter 
+res_conn
+\family default 
+ whose maximum length (in bytes) is given in 
+\family typewriter 
+conn_len
+\family default 
+.
+ Upon success, the actual number of bytes written to 
+\family typewriter 
+res_conn
+\family default 
+ is returned in 
+\family typewriter 
+conn_len
+\family default 
+.
+ Note that input can be connected to at most 1 partner, but outputs to any
+ number.
+\layout Standard
+\noindent 
+
+\family typewriter 
+$findconn (struct conn_info * conn1, struct conn_info * res_conn := NULL,
+ index_t conn_len := 0) => (success_t success, index_t conn_len)
+\layout Standard
+
+Upon calling, only 
+\family typewriter 
+conn1->conn_addr
+\family default 
+ need to be initialized.
+ Find the connector with a param value as specified by the generic operation
+ parameter 
+\family typewriter 
+@param
+\family default 
+ and return its name in 
+\family typewriter 
+conn1->conn_name
+\family default 
+ and index in 
+\family typewriter 
+conn1->conn_index
+\family default 
+.
+ When 
+\family typewriter 
+res_conn
+\family default 
+ is set, the currently connected partners will be delivered in the same
+ way as above.
+ Currently used for efficient lookup of filenames and pathnames.
+\layout Subsection
+
+Regex Library Functions
+\layout Standard
+
+In 
+\family typewriter 
+strat.h
+\family default 
+, you will find some strings denoting commonly used regular expressions
+ for searching in strategy nests.
+ You will also find some parsing routines based on such strings.
+ These are only for your convenience; you may use other methodologies for
+ searching and replacing in strategy nests as you like.
+\layout Section
+
+Error Handling
+\layout Standard
+
+Any operation in an operating system may potentially fail.
+ Thus ATHOMUX adopts the philosophy to check the return code of 
+\emph on 
+any
+\emph default 
+ operation.
+ Always.
+ With almost
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+Well, there may be some exeptions in 
+\emph on 
+very
+\emph default 
+ special cases, e.g.
+ when trying to fix some problem and the result of the fixing operations
+ has no direct influence on further measures.
+\end_inset 
+
+ no exeption.
+\layout Standard
+
+As already mentioned, the parameter 
+\family typewriter 
+success
+\family default 
+ is consistently used for determining success.
+ It is guaranteed to be 
+\family typewriter 
+FALSE
+\family default 
+ at the start of an operation invocation.
+ Thus you simply can 
+\family typewriter 
+return
+\family default 
+ from the operation to indicate some failure.
+\layout Standard
+
+The basic application logic of ATHOMUX should be built on this extremely
+ simple method solely.
+ However, there are cases where more complicated error analysis has to be
+ performed.
+ For example, POSIX compatibility requires to distinguish between different
+ error codes.
+ How to implement that in ATHOMUX?
+\layout Standard
+
+The idea is rather simple: don't implement POSIX error codes in ATHOMUX
+ bricks, but possibly only in adaptor bricks.
+ Within native ATHOMUX, use one of the following error handling macros as
+ defined in 
+\family typewriter 
+common.ath
+\family default 
+:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.err (text...)
+\layout Standard
+
+Unconditionally return from the current operation (or function) via 
+\family typewriter 
+return
+\family default 
+, without altering 
+\family typewriter 
+@success
+\family default 
+ (which is normally left 
+\family typewriter 
+FALSE
+\family default 
+).
+ Before return, the 
+\family typewriter 
+text
+\family default 
+ (and further arguments in the style of 
+\family typewriter 
+printf()
+\family default 
+) will be passed to the caller, who can analyze it or pass it to a human.
+ Currently, the text is simply printed to a debug output, but this will
+ soon be changed; the text will be pushed on a "reverse stack" (which is
+ pushed upon an error return and popped upon a fresh operation call).
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.check (condition, text...)
+\layout Standard
+
+When the 
+\family typewriter 
+condition
+\family default 
+ is true, do a 
+\family typewriter 
+@.err
+\family default 
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.abort (text...)
+\layout Standard
+
+Unconditionally terminate.
+ This corresponds to a "kernel panic".
+ Use 
+\emph on 
+only
+\emph default 
+ in absolutely messy situations when there is really no more chance to recover
+ from the error in any way.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.fatal (condition, text...)
+\layout Standard
+
+When the 
+\family typewriter 
+condition
+\family default 
+ is true, do a 
+\family typewriter 
+@.abort
+\family default 
+.
+\layout Standard
+
+These macros will automatically add further information for the caller,
+ in particular the name of the brick type and the brick instance.
+ Since ATHOMUX is composed of many fine-grained and lightweight brick instances,
+ this carries a lot of information.
+ 
+\layout Standard
+
+In particular, when you implement POSIX error handling, implement each different
+ POSIX error check in another brick type! For example, use one brick type
+ to check for 
+\family typewriter 
+EPERM
+\family default 
+.
+ This way, you can uniquely determine the error code from the brick type.
+ Using trivial bricks for such checks will cost no performance penalty once
+ the preprocessor is smart enough to employ sophisticated macro expansion
+ at the brick level with almost no runtime overhead.
+ With this philosophy, error handling can be highly modularized and becomes
+ highly configurable.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.warn (condition, text...)
+\layout Standard
+
+When the 
+\family typewriter 
+condition
+\family default 
+ is true, print a warning message without returning.
+\layout Section
+
+Threads and IPC
+\layout Standard
+
+The term 
+\begin_inset Quotes eld
+\end_inset 
+
+thread
+\begin_inset Quotes erd
+\end_inset 
+
+ means something more generic in ATHOMUX than in conventional sense.
+ ATHOMUX itself has no concept of a thread; in particular there is nothing
+ like a PID or threadID.
+ If you want to implement the 
+\emph on 
+behaviour
+\emph default 
+ of threads (aka concurrency) or if you want communication among different
+ threads / 
+\family typewriter 
+mmu
+\family default 
+ instances, you can (and must) do so inside the blackboxes of some brick
+ implementations.
+\layout Standard
+
+Creation of threads is 
+\emph on 
+implicitly
+\emph default 
+ just by calling an operation 
+\emph on 
+asynchronously
+\emph default 
+.
+ In ATHOMUX, the notation for asynchronous calls is the same as for synchronous
+ ones; only the 
+\emph on 
+semantics
+\emph default 
+ is different.
+ The discrimination between synchonous and asynchronous calls is just by
+ calling an operation on an input implementing 
+\emph on 
+asynchronous behaviour
+\emph default 
+ instead of synchronous behaviour.
+ The asychronous behaviour itself is implemented in 
+\family typewriter 
+thread_*
+\family default 
+ bricks.
+\layout Standard
+
+When a 
+\family typewriter 
+thread_*
+\family default 
+ instance is wired into an arbitrary wire path, it creates a new thread
+ each time it receives some operation call at its output, and returns immediatel
+y to the caller.
+ The new thread is then executing that operation in parallel to the caller,
+ asynchronously.
+ If you need some cooperation between the threads, you have to implement
+ it yourself (e.g.
+ via locking).
+\layout Standard
+
+A 
+\family typewriter 
+thread_*
+\family default 
+ can be instantiated locally in an arbitrary other brick, and its input
+ can be statically wired to an internal (hidden) output.
+ This way, the enclosing brick has full control over anything going on.
+\layout Standard
+
+Locking is implemented in 
+\family typewriter 
+lock_*
+\family default 
+ bricks.
+\layout Standard
+
+The internal implementation of different 
+\family typewriter 
+thread_*
+\family default 
+ types as well as of 
+\family typewriter 
+lock_*
+\family default 
+ will usually be very different, depending on the 
+\emph on 
+execution environment
+\emph default 
+ where it runs.
+ When ATHOMUX is hosted by an ordinary Linux userspace process, it may be
+ implemented by the 
+\family typewriter 
+pthreads
+\family default 
+ library.
+ When running in Linux kernel space, you may use kernel threads, spinlocks,
+ wait queues, and the like.
+ In a native standalone ATHOMUX implementation, you will have an architecture-de
+pendent 
+\family typewriter 
+cpu_*
+\family default 
+ instance acting as 
+\begin_inset Quotes eld
+\end_inset 
+
+device driver
+\begin_inset Quotes erd
+\end_inset 
+
+ for the physical CPUs, and you may communicate with it via traps or other
+ interrupts (e.g.
+ page faults when 
+\begin_inset Quotes eld
+\end_inset 
+
+blindly
+\begin_inset Quotes erd
+\end_inset 
+
+ calling into non-mapped executable code).
+ Note that a single 
+\family typewriter 
+cpu_*
+\family default 
+ instance should be able to serve an arbitrary number of 
+\family typewriter 
+thread_*
+\family default 
+ and 
+\family typewriter 
+lock_*
+\family default 
+ instances.
+ Communication between these instances may be outside the standard nest
+ interface of ATHOMUX, and in some cases necessarily must be so due to hardware
+ restrictions.
+\layout Standard
+
+Interprocess communication (IPC) is implemented via communication bricks.
+ To get the 
+\emph on 
+abstract functionality
+\emph default 
+ of 
+\family typewriter 
+remote_*
+\family default 
+, you will usually implement a client and a server part, each running in
+ a different execution environment.
+ There may be many different pairs of client and server brick types, depending
+ on the underlying communication mechanism.
+ There may be many different LRPC implementations based on host operating
+ systems, traps, or hardware specific mechanisms such as Intel call gates.
+ In the area of networking, many different implementations based on different
+ protocols and technologies may exist.
+\layout Standard
+
+I believe that not prescribing a specific way for implementation of parallelism,
+ synchronization and communication is the most flexible and universally
+ generic way.
+ You may exploit the information hiding of blackboxes for interfacing and
+ communicating with and via nearly anything imaginable on earth.
+\layout Subsection
+
+Mutual Exclusion inside Bricks
+\layout Standard
+
+Currently, you are responsible for implementing a brick in a thread-safe
+ fashion.
+ You can always ensure thread-safety by calling 
+\family typewriter 
+$lock
+\family default 
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ Sometimes you need not do anything, e.g.
+ when your operations are working on the stack solely.
+ 
+\layout Standard
+
+TODO: some future brick attributes will produce automatic code for thread-safety
+ in an automatic way.
+ Then you will not need to worry about mutual exclusion if your brick is
+ not 
+\emph on 
+extremely
+\emph default 
+ performance-critical.
+\layout Section
+
+Generic Types / Operations
+\layout Standard
+
+Although the genuine Athomux philosophy encourages reuse of the standard
+ nest interface at each possible opportunity, in some cases a richer set
+ of operations is required (e.g.
+ simulation of 
+\family typewriter 
+ioctl()
+\family default 
+ operations).
+ In other areas, access to foreign data structures with a particular 
+\emph on 
+layout
+\emph default 
+ is required, e.g.
+ in networking code.
+\layout Standard
+
+Both problems are solved via 
+\emph on 
+generic types
+\emph default 
+.
+ A generic type is much like a C 
+\family typewriter 
+struct
+\family default 
+, but more flexible.
+ It can not only express arbitrarily overlapping structures (even with holes)
+ and variant records, but it can also 
+\emph on 
+delay
+\emph default 
+ the offset computation until runtime.
+\layout Standard
+
+If you need to implement a generic operation, define a generic type for
+ its parameters.
+ Then implement a standard 
+\family typewriter 
+$transfer
+\family default 
+ operation (e.g.
+ on a dedicated section of the nest such as section 
+\family typewriter 
+(:2:)
+\family default 
+ which is often reserved for generic operations), such that the passed data
+ block is interpreted via the generic type access operation 
+\family typewriter 
+@*->
+\family default 
+.
+\layout Subsection
+
+Defining an own Generic Type
+\layout Standard
+
+After an 
+\family typewriter 
+output
+\family default 
+ statement, you may declare a generic type via the following syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+define TYPE 
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+ "
+\family default 
+\emph on 
+string
+\family typewriter 
+\emph default 
+" ;
+\layout Standard
+\noindent 
+
+\family typewriter 
+define export TYPE 
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+ "
+\family default 
+\emph on 
+string
+\family typewriter 
+\emph default 
+" ;
+\layout Standard
+
+The second variant exports the typename for use via 
+\family typewriter 
+use
+\family default 
+ statements (see section 
+\begin_inset LatexCommand \ref{sub:Use-of-Foreign}
+
+\end_inset 
+
+).
+\layout Standard
+
+All defined 
+\emph on 
+typename
+\emph default 
+s must be distinct (note: this may change later when/if scoped defintions
+ are introduced).
+ The string must be a comma-separated list of type declataions of the following
+ form:
+\layout Standard
+
+
+\emph on 
+type
+\emph default 
+ 
+\emph on 
+fieldname
+\family typewriter 
+\emph default 
+:
+\family default 
+\emph on 
+offset
+\layout Standard
+
+where 
+\emph on 
+type
+\emph default 
+ is a valid C type, 
+\emph on 
+fieldname
+\emph default 
+ is the designated field name, and the optional 
+\family typewriter 
+:
+\family default 
+\emph on 
+offset
+\emph default 
+ (which must be a constant C expression) can be used to directly specify
+ the offset of this fields in units of bytes.
+ When 
+\family typewriter 
+:
+\family default 
+\emph on 
+offset
+\emph default 
+ is omitted, the field will immediately follow after the previous field
+ without any gap (NOTE: some architectures like SPARC require alignment
+ to machine words, which is 
+\emph on 
+not
+\emph default 
+ ensured by our generic mechanism; anyone needing this???)
+\layout Standard
+
+In the constant expression 
+\family typewriter 
+:
+\family default 
+\emph on 
+offset
+\emph default 
+, you may use symbolic pseudo-references to previously defined fields via
+ the syntax 
+\family typewriter 
+OFFSET(
+\family default 
+\emph on 
+otherfieldname
+\family typewriter 
+\emph default 
+)
+\family default 
+ and 
+\family typewriter 
+LENGTH(
+\family default 
+\emph on 
+otherfieldname
+\family typewriter 
+\emph default 
+)
+\family default 
+, with obvious meaning.
+ By placing some fields at the same offset, you may define arbitrary variant
+ structures or overlapping structures.
+\layout Standard
+
+In the code of arbitrary operations, access to the fields is possible via
+ the following syntaxes:
+\layout Standard
+\noindent 
+
+\emph on 
+pointer_identifier
+\family typewriter 
+\emph default 
+@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+-
+\emph on 
+>
+\family default 
+fieldname
+\layout Standard
+\noindent 
+
+\family typewriter 
+(
+\family default 
+\emph on 
+pointer_expression
+\family typewriter 
+\emph default 
+)@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+-
+\emph on 
+>
+\family default 
+fieldname
+\layout Standard
+
+The semantics is much like the 
+\family typewriter 
+->
+\family default 
+ operator of C, except that the 
+\emph on 
+typename
+\emph default 
+ must be provided each time.
+ The generated code is as efficient as in ordinary C (resulting in addition
+ of a constant displacement to a pointer value) when using 
+\family typewriter 
+define TYPE
+\family default 
+ this way.
+\layout Standard
+
+WARNING: the 
+\family typewriter 
+@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+-
+\emph on 
+>
+\family default 
+\emph default 
+ operator is interpreted by the Athomux preprocessor, not the C compiler.
+ It is much like a macro substitution.
+ It has no knowledge of the context, in particular of C operator precedence.
+ When in doubt, use parentheses around the pointer expression.
+\layout Standard
+
+HINT: in conjuction with the 
+\family typewriter 
+@.deftype
+\family default 
+ directive of the macro preprocessor, you may use the abbreviated form 
+\family typewriter 
+@*->
+\family default 
+ (without specifying 
+\emph on 
+typename
+\emph default 
+ each time) for shorter and better readable code.
+\layout Subsection
+
+
+\family typewriter 
+@.sizeof(
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+The default field name 
+\family typewriter 
+LASTFIELD
+\family default 
+ is automatically added to each defined 
+\emph on 
+typename
+\emph default 
+.
+ It captures the offset of an empty field having length 0.
+ When you write 
+\family typewriter 
+&(
+\family default 
+\emph on 
+pointer
+\family typewriter 
+\emph default 
+@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+->LASTFIELD)
+\family default 
+, you will get the first free address after all defined fields.
+ By writing (len_t)
+\family typewriter 
+&(NULL@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+->LASTFIELD)
+\family default 
+ or using the standard macro 
+\family typewriter 
+@.sizeof(
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+)
+\family default 
+ (see 
+\family typewriter 
+common.ath
+\family default 
+), you can determine the total size of a generic type.
+\layout Subsection
+
+Variant Structures
+\layout Standard
+
+In place of a field declaration, the 
+\emph on 
+string
+\emph default 
+ may contain a variant definition:
+\layout Standard
+\noindent 
+
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\family typewriter 
+\emph default 
+ {
+\family default 
+\emph on 
+substring
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+where 
+\emph on 
+substring
+\emph default 
+ is a comma-separated list of further type definitions.
+ Usually, you will specify a comma-separated list of multiple definitions
+ like 
+\family typewriter 
+.label1{
+\family default 
+\emph on 
+substr1
+\family typewriter 
+\emph default 
+}, .label2{
+\family default 
+\emph on 
+substr2
+\family typewriter 
+\emph default 
+}
+\family default 
+.
+ The fields of each 
+\emph on 
+substr
+\emph default 
+ are (by default) overlayed with the fields of the other 
+\emph on 
+substr
+\emph default 
+s; notice that all label names and all field names must be distinct since
+ they belong to a flat namespace.
+ The total size of the variants will be the maximum size of all alternatives.
+ When some ordinary field is following the 
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\emph default 
+ list, its default offset will start at that maximum.
+\layout Standard
+
+NOTE: when some 
+\emph on 
+substr
+\emph default 
+ contains fields with zero or negative offsets (e.g.
+ produced by 
+\family typewriter 
+OFFSET(
+\family default 
+\emph on 
+prior_field
+\family typewriter 
+\emph default 
+)
+\family default 
+ or the like), the total size may be zero, but never become negative.
+\layout Standard
+
+When the 
+\emph on 
+substring
+\emph default 
+ of some 
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\emph default 
+ definition contains further 
+\family typewriter 
+.
+\family default 
+\emph on 
+sublabel
+\emph default 
+ directives, the total result is a flat label namespace with labels of the
+ form 
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\family typewriter 
+\emph default 
+.
+\family default 
+\emph on 
+sublabel
+\emph default 
+.
+\layout Subsection
+
+Variant Selection
+\layout Standard
+
+Variants can be removed from a generic type defintion 
+\emph on 
+string
+\emph default 
+ by appending a comma-separated list of selection specifiers to the 
+\emph on 
+string
+\emph default 
+:
+\layout Standard
+\noindent 
+
+\family typewriter 
+=.
+\family default 
+\emph on 
+label
+\layout Standard
+
+This removes the fields of all other labels, such that only the fields belonging
+ to 
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\emph default 
+ will survive.
+ If you need the survival of multiple variants, you may specify a comma-separate
+d list like 
+\family typewriter 
+=.label1,=.label2
+\family default 
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+!.
+\family default 
+\emph on 
+label
+\layout Standard
+
+Definitely remove the fields of 
+\family typewriter 
+.
+\family default 
+\emph on 
+label
+\emph default 
+.
+\layout Standard
+
+Variant selections are particularly useful in combination with OO-like extension
+ of generic types:
+\layout Subsection
+
+OO inheritance
+\layout Standard
+
+The following syntax allows the extension of existing generic types by additiona
+l fields:
+\layout Standard
+\noindent 
+
+\family typewriter 
+define TYPE 
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+ from 
+\family default 
+\emph on 
+othertype_list
+\family typewriter 
+\emph default 
+ "
+\family default 
+\emph on 
+string
+\family typewriter 
+\emph default 
+" ;
+\layout Standard
+
+where 
+\emph on 
+othertype_list
+\emph default 
+ is a comma-separated list of already defined generic types.
+\layout Standard
+
+Obviously, you can even simulate multiple inheritance this way.
+ However, recall the Athomux philosophy (also called LEGO principle) and
+ please don't abuse this mechanism for building large OO class hierarchies.
+ Athomux thinking is purely instance oriented, not object oriented.
+\layout Standard
+
+NOTE: when 
+\emph on 
+string
+\emph default 
+ is empty, you may define another name for an already defined generic type.
+ When 
+\emph on 
+string
+\emph default 
+ contains variant selection specifiers such as 
+\family typewriter 
+=.
+\family default 
+\emph on 
+label
+\emph default 
+, you may easily derive a specialized type from a more general one.
+\layout Subsection
+
+Use of Foreign Type Definitions
+\begin_inset LatexCommand \label{sub:Use-of-Foreign}
+
+\end_inset 
+
+
+\layout Standard
+
+After an 
+\family typewriter 
+input
+\family default 
+ statement, you may declare a foreign type via the following syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+use TYPE 
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+ from 
+\family default 
+\emph on 
+othertype_list
+\family typewriter 
+\emph default 
+ "
+\family default 
+\emph on 
+string
+\family typewriter 
+\emph default 
+" ;
+\layout Standard
+
+In contrast to 
+\family typewriter 
+define export TYPE
+\family default 
+, you 
+\emph on 
+must not
+\emph default 
+ specify any 
+\family typewriter 
+:
+\family default 
+\emph on 
+offset
+\emph default 
+ in the 
+\emph on 
+string
+\emph default 
+.
+ A foreign type declaration just tells the preprocessor that the mentioned
+ fields will 
+\emph on 
+exist
+\emph default 
+, but not at what offset they will exist! Thus the order of the fields inside
+ 
+\emph on 
+string
+\emph default 
+ does not matter.
+\layout Standard
+
+The concrete offsets will only be known after a 
+\family typewriter 
+$connect
+\family default 
+ operation (or an internal 
+\family typewriter 
+wire
+\family default 
+ statement) which connects the input to another output.
+ The output must have a 
+\family typewriter 
+define export TYPE
+\family default 
+ statement with the same 
+\emph on 
+typename
+\emph default 
+, and at least all fields mentioned at 
+\family typewriter 
+use TYPE
+\family default 
+ must be present at the foreign 
+\family typewriter 
+define export TYPE
+\family default 
+; however much more fields may be defined than used.
+ When you 
+\family typewriter 
+$connect
+\family default 
+ or 
+\family typewriter 
+wire
+\family default 
+ to different outputs with different 
+\family typewriter 
+define export TYPE
+\family default 
+ statements, the resulting offsets of your fields may be different in each
+ case.
+\layout Standard
+
+NYI: when the 
+\family typewriter 
+use TYPE
+\family default 
+ declaration contains a field name not present in the 
+\family typewriter 
+define export TYPE
+\family default 
+ (or a mismatch of the C type strings), an error will occur.
+ Thus type-safety is enforced.
+\layout Section
+
+Commodity Library Routines
+\layout Standard
+
+These library routines are intended for simplifying your task of programming
+ ATHOMUX bricks.
+ You don't need to use them, but they can probably save you a lot of time
+ and code to write.
+ They are not inteded to be extensible; if you think further functionality
+ is needed at the common infrastructure, you should discuss that with all
+ other developers.
+\layout Subsection
+
+The Pointer Cache (PC)
+\layout Standard
+
+In both stateless and pseudo-stateless brick types, you will have to manage
+ local state 
+\emph on 
+explicitly
+\emph default 
+, i.e.
+ you normally keep your state in an input nest instead of in @# variables.
+\layout Standard
+
+Keeping state this way bears some traps: you 
+\series bold 
+must not use C pointers
+\series default 
+ for addressing objects out of other objects! This is because a C pointer
+ is only valid after a 
+\family typewriter 
+$get
+\family default 
+ or 
+\family typewriter 
+$gettr
+\family default 
+.
+ Once you have done a 
+\family typewriter 
+$put
+\family default 
+, the next re-
+\family typewriter 
+$get
+\family default 
+ of the same logical page at the same logical address may deliver it at
+ a 
+\emph on 
+different physical address!
+\emph default 
+ Moreover, the physical address may be totally different at a remote site
+ in a network of computers.
+ Physical addresses are 
+\emph on 
+meaningless
+\emph default 
+ even on persistent nests!
+\layout Standard
+
+Thus you 
+\series bold 
+have to
+\series default 
+ use logical addresses (type 
+\family typewriter 
+addr_t
+\family default 
+) instead of C pointers inside of your state keeping 
+\family typewriter 
+struct
+\family default 
+s when you want to reference other state keeping objects!
+\layout Standard
+
+As long as the space requirement for your state is statically bounded, it
+ is easiest to allocate one or a few pages 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ This method should be preferred whenever possible.
+\layout Standard
+
+Another simple way is using
+\emph on 
+ arrays of pages
+\emph default 
+.
+ To address smaller logical array elements than DEFAULT_TRANSFER, you can
+ place of bunch of the smaller objects them in each page and maintain index
+ computation by hand.
+\layout Standard
+
+Although this is nearly trivial, writing code for such a thing will increase
+ redundancy unnecessarily.
+ The pointer cache (PC) will automate that task for you.
+\layout Subsubsection
+
+Basic Pointer Caches
+\layout Standard
+
+You can declare one are many independent pointer caches after an 
+\family typewriter 
+input
+\family default 
+ statement via the following kind of declaration:
+\layout Standard
+\noindent 
+
+\family typewriter 
+use PC 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+ [
+\family default 
+\emph on 
+max
+\family typewriter 
+\emph default 
+] ;
+\layout Standard
+
+The names of all pointer caches must be distinct.
+ When the constant 
+\emph on 
+max
+\emph default 
+ in brackets is omitted, 
+\begin_inset Formula $16$
+\end_inset 
+
+ is used as default for the number of cache entries; for best efficiency
+ 
+\emph on 
+max
+\emph default 
+ should be a power of 2.
+\layout Standard
+
+NOTE: when ATHOMUX is compiled for a 32-bit Linux kernel environment, 64-bit
+ division and modulo operations are not available (since libgcc is missing).
+ In this case, all constants 
+\emph on 
+must
+\emph default 
+ be powers of 2, since only then bit-operations can be substituted for divisions
+ and modulo.
+\layout Standard
+
+After the declaration, you can access the PC via the following macros:
+\layout Standard
+\noindent 
+
+\emph on 
+res_ptr
+\family typewriter 
+\emph default 
+ = PC_GET(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_addr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\shape italic 
+log_len
+\family typewriter 
+\shape default 
+)
+\layout Standard
+
+When the physical address for 
+\emph on 
+log_addr
+\emph default 
+ is not already present in the cache, it will be fetched via 
+\family typewriter 
+$gettr
+\family default 
+.
+ As a result, you will get a 
+\family typewriter 
+void*
+\family default 
+ pointer.
+\layout Standard
+
+When your access patterns bear high locality, a 
+\family typewriter 
+$gettr
+\family default 
+ will not be issued every time once again, but rather some previously cached
+ pointers will be reused.
+ Hence the name 
+\begin_inset Quotes eld
+\end_inset 
+
+pointer cache
+\begin_inset Quotes erd
+\end_inset 
+
+.
+\layout Standard
+
+NOTICE: when the underlying 
+\family typewriter 
+$gettr
+\family default 
+ fails due to some reason (e.g.
+ undefined 
+\emph on 
+log_addr
+\emph default 
+), you will get a 
+\family typewriter 
+NULL
+\family default 
+ pointer.
+ Don't forget to check for this condition!
+\layout Standard
+\noindent 
+
+\family typewriter 
+PC_DIRTY(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Mark your object as dirty.
+ You 
+\emph on 
+must
+\emph default 
+ call that at least once after 
+\family typewriter 
+PC_GET()
+\family default 
+ whenever you have modified your data; forgetting this may cause strange
+ effects! When you know 
+\emph on 
+in advance
+\emph default 
+ that you will touch the data, please use 
+\family typewriter 
+PC_GET_DIRTY()
+\family default 
+ instead (for saving some overhead).
+ Please use 
+\family typewriter 
+PC_DIRTY()
+\family default 
+ only if you don't know in advance whether you will modify the data.
+ 
+\layout Standard
+\noindent 
+
+\emph on 
+res_ptr
+\family typewriter 
+\emph default 
+ = PC_GET_DIRTY(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+addr
+\family typewriter 
+\emph default 
+,
+\family default 
+\shape italic 
+ len
+\family typewriter 
+\shape default 
+)
+\layout Standard
+
+Like a combination of 
+\family typewriter 
+PC_GET()
+\family default 
+ followed by 
+\family typewriter 
+PC_DIRTY()
+\family default 
+, but saves some overhead.
+ Always calling 
+\family typewriter 
+PC_GET_DIRTY()
+\family default 
+ when you actually don't modify the data is no good idea, because writing
+ back of dirty pages may involve high costs, e.g.
+ when your state is kept remote in a network (which is 
+\emph on 
+possible
+\emph default 
+, and you don't know to which other brick instances your state-keeping input
+ will be connected at runtime).
+\layout Standard
+\noindent 
+
+\family typewriter 
+PC_SET(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_addr
+\family typewriter 
+\emph default 
+,
+\family default 
+\shape italic 
+ log_len
+\family typewriter 
+\shape default 
+, 
+\family default 
+\emph on 
+phys_ptr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+dirty
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Set a cache element 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ This makes sense after you have called 
+\family typewriter 
+$getaddrcreateget
+\family default 
+ by hand, in order to avoid useless traffic for re-getting the same data
+ afterwards.
+ See notes in next subsection.
+\layout Standard
+\noindent 
+
+\family typewriter 
+PC_UNSET(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Release a single cache element via 
+\family typewriter 
+$put
+\family default 
+ (if present).
+\layout Standard
+\noindent 
+
+\family typewriter 
+PC_FLUSH(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Release all internally cached data via 
+\family typewriter 
+$put
+\family default 
+.
+ After that, no physical pointer is valid anymore.
+ You 
+\emph on 
+must
+\emph default 
+ call 
+\family typewriter 
+PC_FLUSH()
+\family default 
+ for all your caches at your implementation of 
+\family typewriter 
+$init
+\family default 
+ when the argument 
+\family typewriter 
+destr
+\family default 
+ is 
+\family typewriter 
+TRUE
+\family default 
+.
+ Otherwise your brick will not only be stateful instead of pseudo-stateless,
+ but also be 
+\emph on 
+incorrect
+\emph default 
+ (due to non-returned resources).
+\layout Standard
+
+DISCUSS: should the code for calling 
+\family typewriter 
+PC_FLUSH()
+\family default 
+ at 
+\family typewriter 
+$init
+\family default 
+ be automatically generated by the preprocessor?
+\layout Subsubsection
+
+Pointer Caches with Allocation
+\layout Standard
+
+Allocation 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+ is cumbersome and error-prone.
+ For your convenience, here are routines imitating the classical 
+\family typewriter 
+malloc()
+\family default 
+ / 
+\family typewriter 
+free()
+\family default 
+ routines:
+\layout Standard
+\noindent 
+
+\emph on 
+phys_ptr
+\family typewriter 
+\emph default 
+ = PC_ALLOC(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_len
+\family typewriter 
+\emph default 
+) => (
+\family default 
+\emph on 
+log_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+This calls 
+\family typewriter 
+$getaddrcreateget
+\family default 
+ for you and inserts the new element into the PC, already marked as dirty.
+ The logical address is returned as result parameter, and a valid C pointer
+ as function result.
+ In general, you will need to store 
+\emph on 
+log_addr
+\emph default 
+ somewhere, because it remains valid after 
+\family typewriter 
+PC_FLUSH()
+\family default 
+, but 
+\emph on 
+phys_ptr
+\emph default 
+ will not be valid anymore.
+\layout Standard
+\noindent 
+
+\family typewriter 
+PC_FREE(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_addr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+log_len
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+This clears the cache element (if present) and returns the memory to the
+ underlying nest via 
+\family typewriter 
+$putdeleteputaddr
+\family default 
+.
+ Note that in general you 
+\emph on 
+must
+\emph default 
+ supply the same size as formerly at the allocation; this is needed because
+ the cache element need not be present and then we will not know the former
+ size any more.
+\layout Subsubsection
+
+Granularity Considerations
+\layout Standard
+
+In many cases, memory elements will be multiples of some block size or some
+ data structure size.
+ The following declaration generates a more efficient implementation for
+ that case:
+\layout Standard
+\noindent 
+
+\family typewriter 
+use PC 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+ [
+\family default 
+\emph on 
+max
+\family typewriter 
+\emph default 
+] aligned ;
+\layout Standard
+
+Now, all logical addresses and sizes 
+\emph on 
+must
+\emph default 
+ be multiples of 
+\family typewriter 
+DEFAULT_TRANSFER
+\family default 
+.
+ Doing that wrong is an error.
+ Therefore we supply a further variant:
+\layout Standard
+\noindent 
+
+\family typewriter 
+use PC 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+ [
+\family default 
+\emph on 
+max
+\family typewriter 
+\emph default 
+] aligned round;
+\layout Standard
+
+
+\emph on 
+Conceptually
+\emph default 
+, all logical addresses and sizes are also multiples of 
+\family typewriter 
+DEFAULT_TRANSFER
+\family default 
+.
+ However, if you supply 
+\begin_inset Quotes eld
+\end_inset 
+
+inequal
+\begin_inset Quotes erd
+\end_inset 
+
+ addresses or sizes, they will be 
+\emph on 
+automatically
+\emph default 
+ 
+\emph on 
+corrected
+\emph default 
+ by the pointer cache implementation.
+ This means, the lower bits of the logical address will be internally cleared
+ (i.e.
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+rounded down
+\begin_inset Quotes erd
+\end_inset 
+
+), and the size will be internally rounded up to the next multiple of 
+\family typewriter 
+DEFAULT_TRANSFER
+\family default 
+.
+ This way, you can access smaller objects inside larger pages 
+\emph on 
+without fear
+\emph default 
+.
+ If two smaller objects happen to live in the same page, the same cache
+ element will handle that case for you (leading to better performance due
+ to coincidence of cache hits).
+\layout Standard
+
+However note that this also applies to 
+\family typewriter 
+PC_ALLOC()
+\family default 
+ and 
+\family typewriter 
+PC_FREE()
+\family default 
+.
+ If you don't manage the sub-space inside your pages 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+, you will probably either waste space or produce incorrect deallocation
+ side effects due to different granularities.
+\layout Standard
+
+You may 
+\begin_inset Quotes eld
+\end_inset 
+
+round down
+\begin_inset Quotes erd
+\end_inset 
+
+ an address by hand via the macro 
+\family typewriter 
+PC_BASEADDR(
+\family default 
+\emph on 
+name
+\emph default 
+, 
+\emph on 
+addr
+\family typewriter 
+\emph default 
+)
+\family default 
+, if you are interested in doing so.
+\layout Standard
+\noindent 
+
+\family typewriter 
+use PC 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+ [
+\family default 
+\emph on 
+max
+\family typewriter 
+\emph default 
+] aligned(
+\family default 
+\emph on 
+size
+\family typewriter 
+\emph default 
+) ;
+\layout Standard
+
+This variant (which is combinable with 
+\family typewriter 
+round
+\family default 
+) allows you to define other granularities than 
+\family typewriter 
+DEFAULT_TRANSFER
+\family default 
+.
+ Although it works for any 
+\emph on 
+size
+\begin_inset Formula $>0$
+\end_inset 
+
+
+\emph default 
+, it is advantageous to use a constant power of 2: bit-operations will be
+ used internally instead of division or modulo operations.
+\layout Standard
+
+DISCUSS: Should we supply variants of 
+\family typewriter 
+PC_ALLOC()
+\family default 
+ and 
+\family typewriter 
+PC_FREE()
+\family default 
+ which don't round (but the others do)? Then the underlying nest implementation
+ could automate the task of sub-allocation in pages.
+\layout Subsubsection
+
+Current Problems
+\layout Standard
+
+Currently, a new 
+\family typewriter 
+PC_GET()
+\family default 
+ may invalidate a prior pointer delivered by a prior call to 
+\family typewriter 
+PC_GET()
+\family default 
+ if both happen to conflict in the internal hash table of the PC.
+ TODO: This will be resolved by introduction of a syntactic construct which
+ a) limits the accessability of the physical pointer and b) 
+\begin_inset Quotes eld
+\end_inset 
+
+locks
+\begin_inset Quotes erd
+\end_inset 
+
+ the hash entry so it can't disappear.
+\layout Subsection
+
+Cyclic doubly-linked lists
+\layout Standard
+
+Our list implementation is based on a pointer cache (PC) which 
+\emph on 
+must
+\emph default 
+ be declared as 
+\family typewriter 
+aligned(
+\family default 
+\emph on 
+elemsize
+\family typewriter 
+\emph default 
+) round
+\family default 
+, where 
+\emph on 
+elemsize
+\emph default 
+ corresponds to the 
+\family typewriter 
+sizeof
+\family default 
+ of the list members struct (or, better, a round-up to the next power of
+ 2).
+\layout Standard
+
+Usually, you will declare some 
+\family typewriter 
+struct elem
+\family default 
+ which contains at least one 
+\family typewriter 
+struct link
+\family default 
+ (see 
+\family typewriter 
+common.h
+\family default 
+).
+\layout Standard
+
+Doubly-linked lists cost more space than single-linked ones (because two
+ 
+\family typewriter 
+addr_t
+\family default 
+ pointers must be kept instead of one).
+ But they have the advantage that removal of 
+\emph on 
+any
+\emph default 
+ element from the list costs only 
+\begin_inset Formula $O(1)$
+\end_inset 
+
+ time instead of 
+\begin_inset Formula $O(n)$
+\end_inset 
+
+.
+ This occurs frequently, e.g.
+ at LRU lists.
+ 
+\layout Standard
+
+Cyclic lists are slighly more difficult to understand than 
+\begin_inset Formula $0$
+\end_inset 
+
+-terminated ones, but easier to program and more efficient, because special
+ cases at the edges are eliminated.
+ 
+\layout Standard
+
+This implementations assumes that the anchor of type 
+\family typewriter 
+struct link
+\family default 
+ is kept in a blind element, and that all addresses directly refer to the
+ next (or previous) 
+\family typewriter 
+struct link
+\family default 
+ inside each 
+\family typewriter 
+struct elem
+\family default 
+, including any offset.
+ The enclosing structure of your 
+\family typewriter 
+struct link
+\family default 
+ is always addressed by rounding down to the 
+\emph on 
+elemsize
+\emph default 
+ by the underlying PC.
+\layout Standard
+\noindent 
+
+\family typewriter 
+LI_INIT(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+anchor_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Initialize the blind list anchor at logical address 
+\emph on 
+anchor_addr
+\emph default 
+ such that it points to itself (cyclic loop).
+ 
+\emph on 
+name
+\emph default 
+ refers to the name of a valid pointer cache which is internally used for
+ updating the data stucture.
+ Note that 
+\emph on 
+anchor_addr
+\emph default 
+ must be the true address of the anchor (including any offset in its 
+\emph on 
+elemsize
+\emph default 
+), not rounded down to 
+\emph on 
+elemsize
+\emph default 
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+LI_APPEND(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+anchor_addr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+link_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+\noindent 
+
+\family typewriter 
+LI_PREPEND(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+anchor_addr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+link_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Appends or prepends the element specified by logical address 
+\emph on 
+link_addr
+\emph default 
+ to the blind list anchor 
+\emph on 
+anchor_addr
+\emph default 
+.
+ The 
+\emph on 
+link_addr
+\emph default 
+ must include the offset of the 
+\family typewriter 
+struct link
+\family default 
+ in its 
+\family typewriter 
+struct elem
+\family default 
+, not rounded down to 
+\emph on 
+elemsize
+\emph default 
+
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+If the corresponding 
+\family typewriter 
+struct link
+\family default 
+ is the first member of your 
+\family typewriter 
+struct elem
+\family default 
+, then of course the offset is 0.
+ In general, multiple 
+\family typewriter 
+struct link
+\family default 
+ instances may be embedded in one 
+\family typewriter 
+struct elem
+\family default 
+ instance; they will be automatically discriminated by their offset modulo
+ 
+\emph on 
+elemsize
+\emph default 
+.
+\end_inset 
+
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+LI_REMOVE(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+link_addr
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Removes the element specified by 
+\emph on 
+link_addr
+\emph default 
+ from the list.
+ When one of the neighbours is the anchor, no special case must be considered;
+ it is automatically correct even for that case.
+\layout Standard
+\noindent 
+
+\emph on 
+phys_ptr
+\family typewriter 
+\emph default 
+ = LI_GET(
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+elem_addr
+\family typewriter 
+\emph default 
+, 
+\family default 
+\emph on 
+dirty
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+Returns a pointer to the 
+\family typewriter 
+struct elem
+\family default 
+, rounded down modulo 
+\emph on 
+elemsize
+\emph default 
+.
+\layout Subsection
+
+Hashes (HASH)
+\layout Standard
+
+NYI
+\the_end

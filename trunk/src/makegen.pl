@@ -15,15 +15,15 @@ use Digest::MD5 qw(md5),qw(md5_hex);
 
 # first, get all the relevant file names
 
-my @targets = `ls target.*`;
+my @targets = `ls target.* | grep -v "~"`;
 map chomp, @targets;
 map { s/target\.// } @targets;
 
-my @pconfs = `ls pconf.*`;
+my @pconfs = `ls pconf.* | grep -v "~"`;
 map chomp, @pconfs;
 map { s/pconf\.// } @pconfs;
 
-my @cconfs = `ls cconf.*`;
+my @cconfs = `ls cconf.* | grep -v "~"`;
 map chomp, @cconfs;
 map { s/cconf\.// } @cconfs;
 
@@ -47,7 +47,10 @@ foreach my $pconf (@pconfs) {
   system "mkdir -p $pconf";
   system "ln -sf ../defs.h $pconf/";
   system "ln -sf ../common.h $pconf/";
+  system "ln -sf ../strat.h $pconf/";
   system "ln -sf ../loaders.h $pconf/";
+  system "ln -sf ../lib.c $pconf/";
+  system "ln -sf ../strat.c $pconf/";
   foreach my $target (@targets) {
     system "ln -sf ../$target.c $pconf/";
   }

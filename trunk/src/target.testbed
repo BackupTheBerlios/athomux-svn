@@ -1,2 +1,4 @@
-$(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $(bricks) $(allobjs) common.c
-	$(CC) $(CFLAGS) $(LDFLAGS) $(allobjs) common.c -o $@ $<
+$(cconf)_extras=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o 
+
+$(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $(bricks) $(allobjs) $($(cconf)_extras)
+	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_objs) $($(cconf)_extras) -o $@ $<

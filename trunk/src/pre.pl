@@ -1908,6 +1908,9 @@ sub parse_all {
   } else {
     warn "please start your file with Author: Copyright: and License: clauses";
   }
+  while($text =~ m/\A${ws}context.*\n/) {
+    $text = $POSTMATCH;
+  }
   for(;;) {
     if($text =~ m/\A${ws}(strategy)/m) {
       $::strat = $1;

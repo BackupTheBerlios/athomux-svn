@@ -1,0 +1,4625 @@
+#LyX 1.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 220
+\textclass article
+\language english
+\inputencoding auto
+\fontscheme times
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize a4paper
+\paperpackage a4wide
+\use_geometry 0
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+The ATHOMUX Preprocessor User's Guide
+\layout Author
+
+Thomas Schöbel-Theuer
+\layout Date
+
+Version 0.26, 27 Sept 2004
+\layout Standard
+
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset 
+
+
+\layout Section
+
+Purpose
+\layout Standard
+
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+
+\backslash 
+sloppy 
+\end_inset 
+
+The ATHOMUX preprocessor automates many programming tasks which would be
+ very tedious when done by hand.
+ It generates C code from high-level brick specifications, intermixed with
+ ordinary C code.
+\layout Standard
+
+To understand this document, you should have read some basic papers on the
+ architecture of ATHOMUX, and you should be familiar with C programming.
+ Currently the description is very brief; you can help yourself by reading
+ example code.
+ A lot of stuff is missing; this document may soon be outdated.
+\layout Section
+
+Invocation
+\layout Standard
+
+
+\family typewriter 
+pre.pl 
+\family default 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+.ath
+\layout Standard
+
+Generates files 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+.h
+\family default 
+ and 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+.c
+\family default 
+ from 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+.ath
+\family default 
+.
+ For inspection and debugging purposes, a 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+.pre
+\family default 
+ is also created, which contains the result of the macro processor expansion.
+\layout Standard
+
+Currently there are no options.
+ Future versions shall support generation of multiple versions from a single
+ 
+\family typewriter 
+*.ath
+\family default 
+ source file, by binding certain version attribute variables to particular
+ values (NYI).
+\layout Section
+
+Structure of an ATHOMUX brick
+\layout Standard
+
+The following description is no formal language description, but an informal
+ intuitive description for hackers.
+ At almost any places in the sourcecode, you can insert whitespace and C
+ comments (either 
+\family typewriter 
+//...
+\backslash 
+n
+\family default 
+ or 
+\family typewriter 
+/*
+\family default 
+ recursively nested comments allowed 
+\family typewriter 
+*/
+\family default 
+).
+ The recursive nesting of 
+\family typewriter 
+(
+\family default 
+...
+\family typewriter 
+)
+\family default 
+ 
+\family typewriter 
+[
+\family default 
+...
+\family typewriter 
+]
+\family default 
+ 
+\family typewriter 
+{
+\family default 
+...
+\family typewriter 
+}
+\family default 
+ pairs is obeyed by the preprocessor; most syntax errors are resulting from
+ incorrect nesting! Currently the preprocessor will issue syntax errors
+ for all bad syntax 
+\emph on 
+at the preprocessor level
+\emph default 
+, but the messages may not be very enlightening.
+ Whenever some C code appears in your Athomux sourcecode, it is passed to
+ the C compiler nearly unchecked; bad C syntax and semantics will be catched
+ by the C compiler.
+ 
+\layout Standard
+
+Bad 
+\emph on 
+semantics
+\emph default 
+ at the preprocessor level is checked in many cases, but not always.
+\layout Standard
+
+TODO: after the experimental stage is left and the language became stable,
+ write a more formal description.
+\layout Subsection
+
+Brick header
+\layout Standard
+
+Each 
+\family typewriter 
+*.ath
+\family default 
+ file 
+\emph on 
+must directly
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+This means, at this place no comments are allowed.
+\end_inset 
+
+
+\emph default 
+ start with a header, indicating the author, copyright and license information
+ for this file:
+\layout Standard
+\noindent 
+
+\family typewriter 
+Author: 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+
+\backslash 
+n
+\newline 
+Copyright: 
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+
+\backslash 
+n
+\newline 
+License: see files 
+\family default 
+\emph on 
+file1,file2
+\family typewriter 
+\emph default 
+
+\backslash 
+n
+\layout Standard
+
+Notice that according to European law, the author(s) 
+\emph on 
+must
+\emph default 
+ be 
+\emph on 
+personally
+\emph default 
+ mentioned.
+ For multiple authors, please repeat the 
+\family typewriter 
+Author:
+\family default 
+ line.
+ Under European law, removal / replacement / transfer of author information
+ is generally not permitted, not even with consent of the author itself,
+ and not even by contract.
+ Notice that the GPL / LGPL is 
+\emph on 
+necessarily
+\emph default 
+ based on that European law whenever a European author starts to write a
+ new brick under (L)GPL.
+\layout Standard
+
+In contrast to the author information, the 
+\family typewriter 
+Copyright:
+\family default 
+ section can name an institution such as the Athomux Society (which has
+ yet to be founded), if the copyright has been transferred accordingly.
+ The transfer may even take place after publication of sourcecode.
+\layout Standard
+
+After the 
+\family typewriter 
+License: see files
+\family default 
+, a list of file names residing in the root directory of the Athomux release
+ should be specified.
+ As an author of a new brick, you can freely choose whatever license you
+ want.
+ However, it is strongly recommended to use both the default 
+\family typewriter 
+SOFTWARE-LICENSE
+\family default 
+ (which encompasses both the GPL and LGPL) and 
+\family typewriter 
+PATENT-LICENSE
+\family default 
+ (which permits free use of my patents provided that you put your software
+ under GPL or LGPL).
+ Otherwise, you are not only at your own for obtaining the necessary rights
+ (e.g.
+ in the field of software patents), but you also may complicate legal issues
+ a lot when a larger Athomux system is composed out of incompatible licenses.
+\layout Subsection
+
+
+\family typewriter 
+brick
+\family default 
+ statement
+\layout Standard
+
+After the header, a 
+\family typewriter 
+brick
+\family default 
+ statement must follow: 
+\layout Standard
+\noindent 
+
+\family typewriter 
+brick #
+\family default 
+\emph on 
+brick_name
+\emph default 
+
+\newline 
+
+\family typewriter 
+purpose
+\family default 
+ 
+\emph on 
+short-description
+\family typewriter 
+\emph default 
+
+\backslash 
+n
+\family default 
+
+\newline 
+
+\family typewriter 
+description
+\family default 
+ 
+\emph on 
+long-description
+\emph default 
+ ...
+ 
+\family typewriter 
+enddescription
+\family default 
+
+\newline 
+
+\family typewriter 
+example
+\family default 
+ ...
+ 
+\family typewriter 
+endexample
+\family default 
+
+\newline 
+
+\family typewriter 
+attr
+\family default 
+ 
+\emph on 
+name
+\emph default 
+ 
+\emph on 
+= value
+\family typewriter 
+\emph default 
+
+\backslash 
+n
+\family default 
+\emph on 
+
+\newline 
+...
+\layout Standard
+
+The documentation part is indicated by keywords 
+\family typewriter 
+purpose
+\family default 
+, 
+\family typewriter 
+description
+\family default 
+ and 
+\family typewriter 
+enddescription
+\family default 
+.
+ The 
+\family typewriter 
+purpose
+\family default 
+ is described by exactly one line; please keep it short.
+ The 
+\family typewriter 
+description
+\family default 
+ should tell the user anything necessary for 
+\emph on 
+using
+\emph default 
+ the brick (intended environment etc.).
+ Note that in this section the correct nesting of braces need not be observed,
+ since it is textual description, no sourcecode.
+ Inside the description, the keyword 
+\family typewriter 
+enddescription
+\family default 
+ is forbidden, since it indicates the end.
+\layout Standard
+
+All documentation phrases are optional (by omitting them completely), but
+ are recommended for any useful brick.
+ An 
+\family typewriter 
+example
+\family default 
+ for use cases of the brick may also be added.
+\layout Standard
+
+The 
+\family typewriter 
+attr
+\family default 
+ list may be empty.
+ It specifies static brick attributes (currently NYI).
+ Each line ist terminated by a linefeed.
+\layout Standard
+
+The 
+\family typewriter 
+brick
+\family default 
+ statement may be preceded by the keyword s
+\family typewriter 
+trategy
+\family default 
+.
+ In this case 
+\family typewriter 
+strat.h
+\family default 
+ is automatically included and some further code is automatically generated.
+\layout Standard
+
+TODO: write some tools for automatic extraction of docs from the sources
+ (literate programming).
+\layout Subsubsection
+
+Static header and implementation definitions
+\layout Standard
+\noindent 
+
+\family typewriter 
+static_header {
+\family default 
+\emph on 
+global_defs
+\family typewriter 
+\emph default 
+}
+\newline 
+static_data {
+\family default 
+\emph on 
+global_code
+\family typewriter 
+\emph default 
+}
+\newline 
+static_init {
+\family default 
+\emph on 
+global_init
+\family typewriter 
+\emph default 
+}
+\newline 
+static_exit {
+\family default 
+\emph on 
+global_exit
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+The 
+\emph on 
+global_defs
+\emph default 
+ is an optional part containing pure C code (with properly nested parens
+ and braces) which is copied to the start of the *.h output file 
+\emph on 
+unmodified
+\emph default 
+.
+ Similarly, the optional 
+\emph on 
+global_code
+\emph default 
+ is copied unmodified to the start of the *.c output file.
+ Normally this should be used 
+\emph on 
+only
+\emph default 
+ for pseudo- or dummy-bricks running in the context of a foreign operating
+ system such as Linux.
+ Don't misuse for bad things! True ATHOMUX bricks should 
+\emph on 
+never
+\emph default 
+ #include foreign header files! If you 
+\emph on 
+really
+\emph default 
+ need that part, you should only place typedefs there or define some constants
+ such as array dimensions, but no static or external variables (if not 
+\emph on 
+absolutely
+\emph default 
+ necessary).
+\layout Standard
+
+The optional 
+\emph on 
+global_init
+\emph default 
+ and 
+\emph on 
+global_exit
+\emph default 
+ parts may be used for more sophisticated initialization and finalization
+ upon loading / unloading of static module code.
+ You cannot access instance variable from that code, but only static variables
+ (you are 
+\emph on 
+strongly
+\emph default 
+ advised to avoid them at all! Whenever using static data, be sure that
+ 
+\emph on 
+logical
+\emph default 
+ statelessness is never violated!).
+ You must not call any operations (including 
+\family typewriter 
+@.abort
+\family default 
+ macros), since this code will be executed at an early stage where 
+\emph on 
+no inputs are connected!
+\emph default 
+ This is only for 
+\emph on 
+advanced usage
+\emph default 
+ such as creating self-describing meta information, self-contained strategy
+ nests and the like.
+ Please use the 
+\family typewriter 
+static_*
+\family default 
+ keywords 
+\emph on 
+only
+\emph default 
+ if you 
+\emph on 
+really
+\emph default 
+ know what you are doing!
+\layout Subsubsection
+
+Instance variables / fields
+\layout Standard
+
+Instances of bricks may contain 
+\begin_inset Quotes eld
+\end_inset 
+
+local
+\begin_inset Quotes erd
+\end_inset 
+
+ variables which will exist during the lifetime of the instance.
+ They are declared 
+\layout Standard
+\noindent 
+
+\family typewriter 
+data {
+\family default 
+\emph on 
+instance_var_declarations
+\family typewriter 
+\emph default 
+}
+\newline 
+init {
+\family default 
+\emph on 
+instance_var_initcode
+\family typewriter 
+\emph default 
+}
+\newline 
+exit {
+\family default 
+\emph on 
+instance_var_exitcode
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+The 
+\emph on 
+instance_var_declarations
+\emph default 
+ are C declarations, later copied to inside a C 
+\family typewriter 
+struct
+\family default 
+.
+ This means: nothing else than C field declarations are permitted.
+ 
+\layout Standard
+
+The optional 
+\emph on 
+instance_var_initicode
+\emph default 
+ may contain arbitrary C code which is executed once at brick instantiation
+ time (when 
+\family typewriter 
+init_
+\family default 
+\emph on 
+brickname
+\emph default 
+ is called by the 
+\family typewriter 
+$instbrick
+\family default 
+ operation).
+ The instance vars 
+\emph on 
+must
+\emph default 
+ be accessed by the special notation 
+\family typewriter 
+@#
+\family default 
+\emph on 
+variable_name
+\emph default 
+, since you will not have an ordinary C pointer for accessing the instance
+ variables in conventional sense.
+ Please don't circumvent the official syntax for accessing instance variables,
+ since the generated code may change in future releases.
+\layout Standard
+
+NOTICE: the concepts of instance variables is in conflict with the concept
+ of statelessness! Try to avoid instance variables as much as possible!
+ If you use them, always ensure that any state is flushed to an input by
+ the 
+\family typewriter 
+$init
+\family default 
+ operation when the 
+\family typewriter 
+destr
+\family default 
+ parameter is set (see programming guide)!
+\layout Subsection
+
+
+\family typewriter 
+input
+\family default 
+ and 
+\family typewriter 
+output
+\family default 
+ statements
+\layout Standard
+
+After the 
+\family typewriter 
+brick
+\family default 
+ statement, a sequence of 
+\family typewriter 
+input
+\family default 
+ and 
+\family typewriter 
+output
+\family default 
+ statements may follow:
+\layout Standard
+\noindent 
+
+\family typewriter 
+input :<
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+(:
+\family default 
+\emph on 
+max_sections
+\family typewriter 
+\emph default 
+:)
+\family default 
+
+\newline 
+
+\family typewriter 
+attrib
+\family default 
+ 
+\emph on 
+name
+\emph default 
+ 
+\emph on 
+min_value
+\emph default 
+ 
+\emph on 
+max_value
+\emph default 
+ 
+\emph on 
+step_value 
+\family typewriter 
+
+\backslash 
+n
+\family default 
+
+\newline 
+...
+\newline 
+
+\family typewriter 
+\emph default 
+data {
+\family default 
+\emph on 
+input_var_declarations
+\family typewriter 
+\emph default 
+}
+\newline 
+init {
+\family default 
+\emph on 
+input_var_initcode
+\family typewriter 
+\emph default 
+}
+\newline 
+exit {
+\family default 
+\emph on 
+input_var_exitcode
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+Declares an input as part of the preceding brick specification.
+ 
+\layout Standard
+
+The optional 
+\emph on 
+input_var_declarations
+\emph default 
+ and 
+\emph on 
+input_var_initcode
+\emph default 
+ / 
+\emph on 
+input_var_exitcode
+\emph default 
+ parts are similar to brick instance variables, but accessed via 
+\family typewriter 
+@<
+\family default 
+\emph on 
+var_name
+\emph default 
+.
+\layout Standard
+
+An input may consist of multiple nest instances called sections, which are
+ always wired in parallel; typical usage is for meta nests.
+ The number of sections must be a constant evaluable by the perl preprocessor
+ (TODO: allow C-evaluable constant expressions).
+ When the 
+\emph on 
+max_sections
+\emph default 
+ number and the 
+\family typewriter 
+(::)
+\family default 
+ are omitted, 1 is used as default (e.g.
+ when a meta-nest is not used); this saves some static space (not at 
+\emph on 
+each
+\emph default 
+ instance).
+ Note that the input variable instances are 
+\emph on 
+common
+\emph default 
+ for all sections!
+\layout Standard
+\noindent 
+
+\family typewriter 
+output :>
+\family default 
+\emph on 
+name
+\family typewriter 
+\emph default 
+(:
+\family default 
+\emph on 
+max_sections
+\family typewriter 
+\emph default 
+:)
+\family default 
+
+\newline 
+
+\family typewriter 
+attrib
+\family default 
+ 
+\emph on 
+name
+\emph default 
+ 
+\emph on 
+min_value
+\emph default 
+ 
+\emph on 
+max_value
+\emph default 
+ 
+\emph on 
+step_value 
+\family typewriter 
+
+\backslash 
+n
+\family default 
+
+\newline 
+...
+\newline 
+
+\family typewriter 
+\emph default 
+data {
+\family default 
+\emph on 
+output_var_declarations
+\family typewriter 
+\emph default 
+}
+\newline 
+init {
+\family default 
+\emph on 
+output_var_initcode
+\family typewriter 
+\emph default 
+}
+\newline 
+exit {
+\family default 
+\emph on 
+output_var_exitcode
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+Declares an output.
+ The 
+\emph on 
+max_sections
+\emph default 
+ is optional as above.
+ Output vars are acessed by the special notation 
+\family typewriter 
+@>
+\family default 
+\emph on 
+var_name
+\emph default 
+.
+ 
+\layout Subsubsection
+
+Arrays of inputs / outputs
+\layout Standard
+
+The output or input name may be followed by an optional 
+\family typewriter 
+[
+\family default 
+\emph on 
+constant_expression
+\family typewriter 
+\emph default 
+]
+\family default 
+ suffix, declaring an array of outputs or inputs (examples see 
+\family typewriter 
+dir_simple.ath
+\family default 
+).
+ Their local vars are duplicated for each array member, so be careful with
+ their space requirements.
+\layout Standard
+
+You may access the fields of other array members via the syntax 
+\family typewriter 
+@>output_arrayname[
+\family default 
+\emph on 
+index
+\emph default 
+]
+\family typewriter 
+.fieldname
+\family default 
+ or 
+\family typewriter 
+@<input_name[
+\family default 
+\emph on 
+index
+\emph default 
+]
+\family typewriter 
+.fieldname
+\family default 
+ in the code of your operations.
+\layout Standard
+
+When the output or input name is followed by empty brackets 
+\family typewriter 
+[]
+\family default 
+, a 
+\emph on 
+dynamic
+\emph default 
+ array of outputs or inputs is declared.
+ The space for each array member will be 
+\emph on 
+dynamically
+\emph default 
+ allocated by 
+\family typewriter 
+control_*
+\family default 
+ 
+\emph on 
+after
+\emph default 
+ 
+\family typewriter 
+$instbrick
+\family default 
+ when 
+\family typewriter 
+$instconn
+\family default 
+ is executed.
+\layout Standard
+
+NOTICE: addressing of array members via the syntax 
+\family typewriter 
+@>arrayname[
+\family default 
+\emph on 
+index
+\emph default 
+]
+\family typewriter 
+.fieldname
+\family default 
+ works only for fixed arrays! Also, notice that 
+\family typewriter 
+alias
+\family default 
+ and 
+\family typewriter 
+wire
+\family default 
+ statements (see section 
+\begin_inset LatexCommand \ref{sub:Wiring-of-Arrays}
+
+\end_inset 
+
+) will not work for dynamic arrays.
+\layout Standard
+
+HINT: address calculation, total overhead and processor cache pollution
+ (i.e.
+ working set behaviour) is better for 
+\emph on 
+fixed
+\emph default 
+ arrays in many cases.
+ Whenever a fixed bound for the number of array members is known, please
+ prefer fixed arrays.
+ Use dynamic arrays only if you 
+\emph on 
+really
+\emph default 
+ know that an unlimited number may occur!
+\layout Subsection
+
+
+\family typewriter 
+use
+\family default 
+ statements
+\layout Standard
+
+After an 
+\family typewriter 
+input
+\family default 
+ statement, a list of 
+\family typewriter 
+use
+\family default 
+ statements may follow.
+ Their specific syntax and purpose is described in the Programming Guide.
+ Currently, some commodity library routines like transparent access to data
+ blocks (Pointer Cache PC), cyclic doubly-linked ring lists with 
+\begin_inset Formula $O(1)$
+\end_inset 
+
+ element removal (LIST), and hashes (HASH) are planned/implemented.
+ A 
+\family typewriter 
+use
+\family default 
+ statement is always terminated by a semicolon.
+\layout Subsection
+
+
+\family typewriter 
+section
+\family default 
+ statements
+\layout Standard
+
+May be optionally used after output statements to switch to operations on
+ the meta-nest, the operation nest, or the operation-meta-nest of the currently
+ active output.
+ These nests are distinguished by numbers.
+ The interpretation of the numbers is currently not fully fixed, but preliminary
+ use it as follows: 0 (the default)is used for ordinary data nests, 1 for
+ meta nests in the filesystem.
+\layout Standard
+\noindent 
+
+\family typewriter 
+section (:
+\family default 
+\emph on 
+sec_nr
+\family typewriter 
+\emph default 
+:)
+\layout Standard
+
+Switches both the 
+\emph on 
+default
+\emph default 
+ section number for 
+\family typewriter 
+operation
+\family default 
+ statements als well as the default for 
+\family typewriter 
+@=call
+\family default 
+ statements.
+ The default is only used if you omit the section number in a specifier.
+ You may always override any default section number by explicitly specifying
+ it.
+\layout Standard
+
+By specifying the reserved word 
+\family typewriter 
+ALL
+\family default 
+ for 
+\emph on 
+sec_nr
+\emph default 
+, the following 
+\family typewriter 
+operation
+\family default 
+ declarations will (by default) be automatically assigned to all sections,
+ without producing code bloat.
+ Inside such a multi-section operation, you may access the actual section
+ number via 
+\family typewriter 
+@sect_code
+\family default 
+ at runtime.
+ When a section specifier for the target of a 
+\family typewriter 
+@=call
+\family default 
+ statement is 
+\family typewriter 
+ALL
+\family default 
+ (either by default inheritance, or by explicitly specifying 
+\family typewriter 
+ALL
+\family default 
+), the 
+\family typewriter 
+@sect_code
+\family default 
+ from the caller is forwarded to the callee.
+\layout Subsection
+
+
+\family typewriter 
+operation
+\family default 
+ statements
+\layout Standard
+
+Output statements may be followed by operation statements declaring elementary
+ operations as described in the Programming Guide (and in some architecture
+ papers).
+\layout Standard
+\noindent 
+
+\family typewriter 
+operation $
+\family default 
+\emph on 
+op_name
+\family typewriter 
+\emph default 
+ {
+\family default 
+\emph on 
+code
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+
+\emph on 
+op_name
+\emph default 
+ must be one of the official names as described in the Programming Guide
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+ In case of doubt (inconsistent description etc), please consult the Perl
+ hashtable 
+\family typewriter 
+%::op_args
+\family default 
+ in 
+\family typewriter 
+pre.pl
+\family default 
+.
+ 
+\end_inset 
+
+.
+ In the 
+\emph on 
+code
+\emph default 
+, the arguments can be accessed via 
+\family typewriter 
+@
+\family default 
+\emph on 
+arg_name
+\emph default 
+, where 
+\emph on 
+arg_name
+\emph default 
+ must be mentioned in the operation description (see Programming Guide
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+In case of doubt, consult the comma-separated lists in 
+\family typewriter 
+%::op_args
+\family default 
+.
+ The first list tells the input parameter names of the operation, the second
+ tells the output parameter names.
+ When a third list is present, it tells the arguments which may be clobbered
+ by that operation.
+ Any arguments not mentioned in this list must not be clobbered (BUG: the
+ current implementation violates this at some points! CHECK!).
+ TODO: only permit output or clobber arguments as C lvalues! Currently not
+ yet checked!
+\end_inset 
+
+).
+ 
+\layout Standard
+
+The 
+\emph on 
+code
+\emph default 
+ may also contain references to brick instance variables denoted 
+\family typewriter 
+@#
+\family default 
+\emph on 
+brick_var
+\emph default 
+ and to output vars 
+\family typewriter 
+@>
+\family default 
+\emph on 
+output_var
+\emph default 
+ of the last 
+\family typewriter 
+output
+\family default 
+ statement (TODO: input vars 
+\family typewriter 
+@<
+\family default 
+\emph on 
+input_var
+\emph default 
+ should also work, but have not been tested).
+\layout Standard
+
+Calls to elementary operations of inputs or other outputs may also be performed,
+ as described in section 
+\begin_inset LatexCommand \ref{sec:Call-syntax}
+
+\end_inset 
+
+.
+\layout Standard
+
+When 
+\family typewriter 
+$
+\family default 
+\emph on 
+op_name
+\emph default 
+ is prefixed by a section specifier 
+\family typewriter 
+(:
+\family default 
+\emph on 
+sect_nr
+\family typewriter 
+\emph default 
+:)
+\family default 
+, the operation will belong to the specified section and not to the default
+ section (e.g.
+ as specified by a previous 
+\family typewriter 
+section
+\family default 
+ statement).
+ It is recommended to use a 
+\family typewriter 
+section
+\family default 
+ statement for a series of 
+\family typewriter 
+operation
+\family default 
+ statements instead of individually specifying the section of each one.
+\layout Standard
+
+When 
+\family typewriter 
+$
+\family default 
+\emph on 
+op_name
+\emph default 
+ is prefixed by the section specifier 
+\family typewriter 
+(:ALL:)
+\family default 
+, that operation implementation will be assigned to 
+\emph on 
+all
+\emph default 
+ sections.
+ However, in addition to specifying 
+\family typewriter 
+operation $
+\family default 
+\emph on 
+op_name
+\family typewriter 
+\emph default 
+(:ALL:)
+\family default 
+, you may override a single section with ad different implementation like
+ 
+\family typewriter 
+operation $
+\family default 
+\emph on 
+op_name
+\family typewriter 
+\emph default 
+(:0:)
+\family default 
+ or similar.
+\layout Section
+
+Specifiers
+\layout Standard
+
+Basic specifiers have been already used in the preceding description.
+ Bricks are denoted 
+\family typewriter 
+#
+\family default 
+\emph on 
+brick_name
+\emph default 
+, inputs 
+\family typewriter 
+:<
+\family default 
+\emph on 
+input_name
+\emph default 
+, outputs 
+\family typewriter 
+:>
+\family default 
+\emph on 
+output_name
+\emph default 
+, sections 
+\family typewriter 
+(:
+\family default 
+\emph on 
+sect_nr
+\family typewriter 
+\emph default 
+:)
+\family default 
+, and operations 
+\family typewriter 
+$
+\family default 
+\emph on 
+op_name
+\emph default 
+.
+ 
+\layout Standard
+
+Full specifiers (in contrast to basic specifiers) may comprise multiple
+ basic specifiers pasted together in 
+\emph on 
+ascending
+\emph default 
+ order (starting from brick to specifier), 
+\emph on 
+without any whitespace
+\emph default 
+ between them.
+ A full operation specifier may e.g.
+ be denoted 
+\family typewriter 
+#
+\family default 
+\emph on 
+brick_name
+\family typewriter 
+\emph default 
+:>
+\family default 
+\emph on 
+output_name
+\family typewriter 
+\emph default 
+(:
+\family default 
+\emph on 
+sec_nr
+\family typewriter 
+\emph default 
+:)$
+\family default 
+\emph on 
+op_name
+\emph default 
+.
+ Similarly, full section specifiers contain a basic brick specifier, basic
+ output and basic section specifier.
+ Full input and output specifiers are preceded by a basic brick specifier,
+ and brick specifiers always stand for their own.
+\layout Standard
+
+If any prefix of a full specifier is missing, the current context is automatical
+ly filled in.
+ For example, if a specifier 
+\family typewriter 
+$get(:1:)
+\family default 
+ is used in the context of operation 
+\family typewriter 
+#test_brick:>out(:0:)$put
+\family default 
+, the brick and output part is automatically added to yield the full specifier
+ 
+\family typewriter 
+#test_brick:>out(:1:)$get
+\family default 
+.
+\layout Section
+
+Call Syntax
+\begin_inset LatexCommand \label{sec:Call-syntax}
+
+\end_inset 
+
+
+\layout Subsection
+
+Basic Syntax
+\layout Standard
+
+Other output operations are called via the following basic syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@=outputcall 
+\family default 
+\emph on 
+op_specifier 
+\family typewriter 
+\emph default 
+(
+\family default 
+\emph on 
+in_args
+\family typewriter 
+\emph default 
+) => (
+\family default 
+\emph on 
+out_args
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+where 
+\emph on 
+in_args
+\emph default 
+ is a comma-separated list of expressions which are assigned to the formal
+ input parameters of the operation in the same order as described in the
+ Perl hashtable 
+\family typewriter 
+%::op_args
+\family default 
+ (see 
+\family typewriter 
+pre.pl
+\family default 
+), and 
+\emph on 
+out_args
+\emph default 
+ is a comma-separated list of C lvalues which receive the results.
+\layout Standard
+
+The boolean output parameter 
+\family typewriter 
+@success
+\family default 
+ exists at each operation.
+ It denotes success or failure of the called operation.
+ Prior to actually calling, it is initialized to 
+\family typewriter 
+false
+\family default 
+.
+ If the callee does not explicity set it to 
+\family typewriter 
+true
+\family default 
+, it will remain 
+\family typewriter 
+false
+\family default 
+.
+ Thus failure of an operation may be simply indicated by prematurely exiting
+ it (e.g.
+ via normal C 
+\family typewriter 
+return
+\family default 
+) before 
+\family typewriter 
+@success
+\family default 
+ has been set to 
+\family typewriter 
+true
+\family default 
+.
+\layout Standard
+
+Please insert a blank before the first argument parenthesis, because the
+ 
+\emph on 
+op_specifier
+\emph default 
+ may also contain a paren at the section part.
+ You should do that anyway to increase readability.
+ 
+\layout Standard
+
+The 
+\emph on 
+op_specifier
+\emph default 
+ may contain a runtime-evaluatable expression at the section part.
+ In such a case, the target nest is computed at runtime.
+ TODO: allow computable operation names, probably even computable connector
+ names.
+\layout Standard
+
+There is another short form of the call syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@=outputcall 
+\family default 
+\emph on 
+op_specifier args_pointer
+\layout Standard
+
+where 
+\emph on 
+args_pointer
+\emph default 
+ must be an expression of type 
+\family typewriter 
+struct args*
+\family default 
+ (see file 
+\family typewriter 
+common.h
+\family default 
+).
+ There is one standard parameter of each operation named 
+\family typewriter 
+@args
+\family default 
+, which is the default argument buffer for that operation.
+ You may directly use 
+\family typewriter 
+@args
+\family default 
+ in place of 
+\emph on 
+args_pointer
+\emph default 
+, leading to a shortcut argument passing.
+ The advantage of this method is that no new argument buffer needs to be
+ constructed on the stack (and finally destructed) as is necessary with
+ the full calling syntax.
+ The shortcut syntax is thus much more efficient.
+ You can access the default parameter 
+\family typewriter 
+@success
+\family default 
+ equivalently via 
+\family typewriter 
+@args->success
+\family default 
+.
+ When declaring own argument buffers of type 
+\family typewriter 
+struct args
+\family default 
+, you cannot use the 
+\family typewriter 
+@
+\family default 
+ notation but have to access to the fields as in conventional C.
+\layout Standard
+
+When a section specifier for the target of a 
+\family typewriter 
+@=call
+\family default 
+ statement is 
+\family typewriter 
+ALL
+\family default 
+ (either by default inheritance, or by explicitly specifying 
+\family typewriter 
+ALL
+\family default 
+), the 
+\family typewriter 
+@sect_code
+\family default 
+ from the caller is forwarded to the callee.
+\layout Standard
+
+Instead of 
+\family typewriter 
+@=outputcall
+\family default 
+, the short form 
+\family typewriter 
+@=call
+\family default 
+ may be used synonymously for both call variants; most calls will be 
+\family typewriter 
+@=outputcalls
+\family default 
+ in practice.
+\layout Subsection
+
+Extended Syntax
+\layout Standard
+
+Both call syntaxes may be extended by an optional 
+\family typewriter 
+: 
+\family default 
+\emph on 
+arg
+\emph default 
+ after the parameter list (or after the arg in short form syntax), which
+ will be replaced for the default 
+\family typewriter 
+@param
+\family default 
+ string argument of the called operations.
+ By default, the 
+\family typewriter 
+@param
+\family default 
+ of the caller is just passed through.
+\layout Subsection
+
+Mandates
+\layout Standard
+
+As explained in the monography, 
+\emph on 
+mandates
+\emph default 
+ are general-purpose descriptors denoting 
+\emph on 
+owners
+\emph default 
+ of resources.
+ Mandates may be 
+\emph on 
+transferred
+\emph default 
+ amoung brick instances.
+ Currently, mandates are only used for locks (but this may soon change!).
+\layout Standard
+
+After the 
+\emph on 
+op_specifier
+\emph default 
+ of the default call syntax, an optional bracket expression 
+\family typewriter 
+[
+\family default 
+\emph on 
+mandate
+\family typewriter 
+\emph default 
+]
+\family default 
+ may be added.
+ It tells the callee under which mandate the operation should be executed.
+ When omitted at the long call syntax, the default mandate 
+\family typewriter 
+@#_mand
+\family default 
+ of the caller instance is automatically used by default.
+ However, when omitted at the short call syntax, the 
+\family typewriter 
+@mandate
+\family default 
+ parameter may be uninitialized when you forget to initialize it explicitly.
+ When you just forward 
+\family typewriter 
+@args
+\family default 
+, the old mandate value supplied by your caller will be forwarded, which
+ may be just your intended behaviour.
+ 
+\layout Standard
+
+Be sure to check whether you want an operation to act under the mandate
+ of your own brick instance or under a foreign mandate.
+\layout Standard
+
+DISCUSS: these special-case syntaxes are irregular and should be replaced
+ by a more systematic syntax!
+\layout Subsection
+
+Calls of Input Operations
+\layout Standard
+
+Operations defined on inputs (such as 
+\family typewriter 
+$input_init
+\family default 
+ or 
+\family typewriter 
+$retract
+\family default 
+) may be called by denoting 
+\family typewriter 
+@=inputcall
+\family default 
+ instead of 
+\family typewriter 
+@=outputcall
+\family default 
+.
+ This results in forwarding of calls 
+\emph on 
+against
+\emph default 
+ the ordinary direction of wires; when multiple inputs are connected to
+ a single output, the specified operation is called at 
+\emph on 
+each
+\emph default 
+ of those inputs.
+ For more details, see the Programming Guide.
+\layout Section
+
+Nested Brick Instances
+\layout Standard
+
+Locally nested brick instances can be inserted into the enclosing brick
+ instance via the following syntax (after the brick definition, but before
+ defining inputs and outputs):
+\layout Standard
+\noindent 
+
+\family typewriter 
+instance 
+\family default 
+\emph on 
+brick_type
+\family typewriter 
+\emph default 
+ as 
+\family default 
+\emph on 
+instance_namc 
+\family typewriter 
+\emph default 
+;
+\layout Standard
+
+You may create multiple instances of the same type, but they must have distinct
+ names.
+\layout Standard
+
+The Inputs and Outputs of a nested instance can be accessed via the following
+ extended specifier syntax: 
+\family typewriter 
+#
+\family default 
+\emph on 
+mybrick_name
+\family typewriter 
+\emph default 
+.
+\family default 
+\emph on 
+instance_name
+\emph default 
+ or shortform 
+\family typewriter 
+#.
+\family default 
+\emph on 
+instance_name
+\emph default 
+.
+ You may directly call an operation on an output or input of the nested
+ instance just by using the extended specifier syntax.
+ When calling an operation of the nested instance from code of the outer
+ level, a slightly more efficient 
+\emph on 
+direct
+\emph default 
+ procedure call is produced by the preprocessor instead of an 
+\emph on 
+indirect
+\emph default 
+ call.
+ However, the converse ist currently not optimized, because we don't generate
+ code for a new version of the inner instance where the indirect calls could
+ be replaced by direct ones.
+ Doing that could easily lead to 
+\emph on 
+code bloat
+\emph default 
+ and is expected to be counter-productive in 
+\emph on 
+most cases
+\emph default 
+ due to processor cache pollution! 
+\layout Standard
+
+TODO / DISCUSS: by introduction of keywords 
+\family typewriter 
+specialized
+\family default 
+ and 
+\family typewriter 
+macro
+\family default 
+, some (extremely tiny!) operations could be marked for inline expansion
+ when they are used as an inner instance.
+\layout Subsection
+
+Wiring of Plain Sub-Instance Connectors
+\layout Standard
+
+This section treats only aliases and wires for non-array inputs/outputs.
+\layout Standard
+
+Instead of explicitly calling the operations of a nested output, you can
+ generate an 
+\emph on 
+alias
+\emph default 
+ for a nested output such that it 
+\emph on 
+directly
+\emph default 
+ appears as an external output of the enclosing instance:
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias #
+\family default 
+\emph on 
+mybrick_name
+\family typewriter 
+\emph default 
+.
+\family default 
+\emph on 
+instance_name
+\family typewriter 
+\emph default 
+:>
+\family default 
+\emph on 
+sub_output
+\family typewriter 
+\emph default 
+ as #
+\family default 
+\emph on 
+mybrick_name
+\family typewriter 
+\emph default 
+:>
+\family default 
+\emph on 
+my_output
+\family typewriter 
+\emph default 
+ ;
+\layout Standard
+
+or shortform
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias :>
+\family default 
+\emph on 
+sub_output
+\family typewriter 
+\emph default 
+ as :>
+\family default 
+\emph on 
+my_output
+\family typewriter 
+\emph default 
+ ;
+\layout Standard
+
+In the shortform, missing parts of the first specifier are always automatically
+ completed with the nested sub-instance name, and the second specifier is
+ completed with the enclosing brick name.
+ Please prefer to create an alias wire whenever possible, because it does
+ not consume any ressources, it just creates an alias-specifier which makes
+ the inner output to appear as an output of the enclosing instance.
+\layout Standard
+
+Analogously, if you want a nested input to appear as an externally accessible
+ input of the enclosing instance, you can do that also:
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias #
+\family default 
+\emph on 
+mybrick_name
+\family typewriter 
+\emph default 
+.
+\family default 
+\emph on 
+instance_name
+\family typewriter 
+\emph default 
+:<
+\family default 
+\emph on 
+sub_input
+\family typewriter 
+\emph default 
+ as #
+\family default 
+\emph on 
+mybrick_name
+\family typewriter 
+\emph default 
+:<
+\family default 
+\emph on 
+my_input
+\family typewriter 
+\emph default 
+ ;
+\layout Standard
+
+or shortform
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias :<
+\family default 
+\emph on 
+sub_input
+\family typewriter 
+\emph default 
+ as :<
+\family default 
+\emph on 
+my_input
+\family typewriter 
+\emph default 
+ ;
+\layout Standard
+
+In case of inputs, you cannot intercept any operation calls produced by
+ the local instance, because it is directly forwarded to the outside as
+ if it had been called on an ordinary input.
+ If you want to intercept calls, you can do so by declaring a local output:
+\layout Standard
+\noindent 
+
+\family typewriter 
+local output :>
+\family default 
+\emph on 
+my_localname
+\family typewriter 
+\emph default 
+ {} {}
+\layout Standard
+
+This produces an output in the enclosing instance which is however not visible
+ from the outside, i.e.
+ you cannot call 
+\family typewriter 
+$connect
+\family default 
+ at it at the strategy level.
+ Now you can implement your operations on the local output 
+\emph on 
+my_name
+\emph default 
+ and redirect the nested input to your local output via the following statement:
+\layout Standard
+\noindent 
+
+\family typewriter 
+wire :<
+\family default 
+\emph on 
+sub_input
+\family typewriter 
+\emph default 
+ as :>
+\family default 
+\emph on 
+my_localname
+\family typewriter 
+\emph default 
+ ;
+\layout Standard
+
+The keyword 
+\family typewriter 
+wire
+\family default 
+ indicates that one of the specifiers is an input while the other is an
+ output.
+ The result is the same as if a 
+\family typewriter 
+control_*
+\family default 
+ had performed a wiring operation; however this is more efficient because
+ the wire connection is created 
+\emph on 
+locally
+\emph default 
+ at instantiation time of the enclosing instance.
+\layout Standard
+
+Note that in this case, we currently re-use the indirect procedure calls
+ of the nested instance and just redirect them to the outer code.
+\layout Standard
+
+Of course, the same kind of redirection will also works with non-local (visible)
+ outputs and with local outputs of (other) nested instances.
+ 
+\layout Standard
+
+You can also create local inputs by prefixing the keyword 
+\family typewriter 
+input
+\family default 
+ with the keyword 
+\family typewriter 
+local
+\family default 
+.
+ However, the rules for connecting are slightly different: while a visible
+ input must not be forwarded to any other (local or nested) output (since
+ a connection can only be made by 
+\family typewriter 
+control_*
+\family default 
+), a local input 
+\emph on 
+must
+\emph default 
+ always be wired locally (since there is no 
+\family typewriter 
+control_*
+\family default 
+ which could create a connection).
+ Currently, operation calls on local inputs are always generated as 
+\emph on 
+indirect
+\emph default 
+ procedure calls; when you want more efficient direct calls, just directly
+ call the wired output of the nested instance.
+\layout Standard
+
+You can even directly 
+\family typewriter 
+wire
+\family default 
+ an input of a sub-instance to an output of another sub-instance.
+\layout Standard
+
+TODO/DISCUSS: allow non-local outputs to be additionally wired internally
+ such that parallel wiring of both internal and external wires may occur.
+\layout Standard
+
+WARNING: 
+\family typewriter 
+$init
+\family default 
+ of nested instances is 
+\emph on 
+not
+\emph default 
+ automatically called at instantiation time.
+ You have to do that 
+\begin_inset Quotes eld
+\end_inset 
+
+by hand
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ A good place is from some 
+\family typewriter 
+$init
+\family default 
+ implementation at the outer level.
+\layout Standard
+
+WARNING: be sure that you connect 
+\emph on 
+all
+\emph default 
+ the inputs of the sub-instances (whether to a local instance or to the
+ outside).
+ Otherwise they will never be wired.
+ Calling an operation on an unwired input will crash!
+\layout Subsection
+
+Wiring of Arrays of Connectors
+\begin_inset LatexCommand \label{sub:Wiring-of-Arrays}
+
+\end_inset 
+
+
+\layout Standard
+
+When your sub-instance has fixed arrays of inputs or outputs, you should
+ read the following carefully.
+ Dynamic arrays are generally not treatable by 
+\family typewriter 
+alias
+\family default 
+ and 
+\family typewriter 
+wire
+\family default 
+.
+\layout Standard
+
+Exporting arrays to the outside works only for 
+\emph on 
+arrays as a whole
+\emph default 
+.
+ You have to explicitly denote this case by empty brackets as in the following
+ examples:
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias :
+\emph on 
+<
+\family default 
+sub_input_array
+\family typewriter 
+\emph default 
+[] as :
+\emph on 
+<
+\family default 
+exported_array
+\family typewriter 
+\emph default 
+[] ; 
+\layout Standard
+\noindent 
+
+\family typewriter 
+alias :
+\emph on 
+>
+\family default 
+sub_output_array
+\family typewriter 
+\emph default 
+[] as :
+\family default 
+\emph on 
+>exported_array
+\family typewriter 
+\emph default 
+[] ; 
+\layout Standard
+
+Analogously, you can create internal bunches of wires to local arrays of
+ connectors as follows:
+\layout Standard
+\noindent 
+
+\family typewriter 
+wire :
+\emph on 
+<
+\family default 
+sub_input_array
+\family typewriter 
+\emph default 
+[] as :
+\emph on 
+>
+\family default 
+local_array
+\family typewriter 
+\emph default 
+[] ; 
+\layout Standard
+\noindent 
+
+\family typewriter 
+wire :
+\emph on 
+>
+\family default 
+sub_output_array
+\family typewriter 
+\emph default 
+[] as :
+\family default 
+\emph on 
+<local_array
+\family typewriter 
+\emph default 
+[] ; 
+\layout Standard
+
+However ensure that your local array declaration has the same number of
+ elements.
+ Otherwise you will get a crash at instantiation time.
+ TODO: automatically check bounds by the preprocessor or compiler, even
+ in presence of arbitrary constant expressions for the array sizes!
+\layout Standard
+
+You can also create a wire for a 
+\emph on 
+single
+\emph default 
+ array member of the sub-instance to a non-array local connector.
+ This is denoted as follows:
+\layout Standard
+\noindent 
+
+\family typewriter 
+wire :
+\emph on 
+<
+\family default 
+sub_input_array
+\family typewriter 
+\emph default 
+[
+\family default 
+\emph on 
+17
+\family typewriter 
+\emph default 
+] as :
+\emph on 
+>
+\family default 
+local_output
+\family typewriter 
+\emph default 
+ ; 
+\layout Standard
+\noindent 
+
+\family typewriter 
+wire :
+\emph on 
+>
+\family default 
+sub_output_array
+\family typewriter 
+\emph default 
+[
+\family default 
+\emph on 
+const-expr
+\family typewriter 
+\emph default 
+] as :
+\family default 
+\emph on 
+<local_input
+\family typewriter 
+\emph default 
+ ; 
+\layout Standard
+
+Be sure to connect all array members of the sub-instance on which an operation
+ could (potentially) be called.
+ Otherwise you will get a crash.
+\layout Standard
+
+Wires to individual array memebers of local connectors are also possible.
+ Be sure to connect any of the array members somehow.
+\layout Section
+
+Macro processor
+\layout Standard
+
+The ATHOMUX preprocessor comes with its own macro processor, independent
+ from the conventional C preprocessor.
+ It should be both more comfortable and more capable.
+\layout Standard
+
+New macros are defined via one of the following syntaxes:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.define 
+\family default 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+ (
+\family default 
+\emph on 
+formal_inparams
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+code
+\family typewriter 
+\emph default 
+}
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.define 
+\family default 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+ (
+\family default 
+\emph on 
+formal_inparams
+\family typewriter 
+\emph default 
+) => (
+\family default 
+\emph on 
+formal_outparams
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+code
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+The formal parameters is either a comma-separated list of names, or a list
+ of pairs 
+\emph on 
+type_spec
+\emph default 
+ 
+\emph on 
+name
+\emph default 
+ where 
+\emph on 
+type_spec
+\emph default 
+ is an ordinary C type-expression.
+ When types are present, the macro expansion will later behave differently:
+ the actual argument is assigned to a temporary variable of type 
+\emph on 
+type_spec
+\emph default 
+ and thus evaluated only once, regardless how often it is used inside 
+\emph on 
+code
+\emph default 
+.
+ This is much similar to 
+\family typewriter 
+inline
+\family default 
+ functions in C and different from the C preprocessor.
+ When 
+\emph on 
+type_spec
+\emph default 
+s are omitted, the actual argument is evaluated at each occurrence in 
+\emph on 
+code
+\emph default 
+.
+\layout Standard
+
+Instead of writing the 
+\emph on 
+code
+\emph default 
+ in braces, you may write it in parens instead.
+ In this case, the whole macro should be a comma-expression, and should
+ be called in place of an expression.
+ A third variant is 
+\family typewriter 
+({
+\family default 
+\emph on 
+code
+\family typewriter 
+\emph default 
+})
+\family default 
+ which acts also as an expression, but contains statements (see docs for
+ proprietary extensions of the GNU C compiler).
+\layout Standard
+
+Attention: the expansion can be used only in place of statements or expressions
+ inside other code, because it opens a new lexical scope.
+ When you want to write macros containing other preprocessor instructions
+ such as 
+\family typewriter 
+section
+\family default 
+ or whole 
+\family typewriter 
+operation
+\family default 
+s, you have to use 
+\family typewriter 
+@.macro
+\family default 
+ instead of 
+\family typewriter 
+@.define
+\family default 
+ as explained later.
+\layout Standard
+
+Macros are simply called via 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+ (
+\family default 
+\emph on 
+actual_inparams
+\family typewriter 
+\emph default 
+)
+\family default 
+ or 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+ (
+\family default 
+\emph on 
+actual_inparams
+\family typewriter 
+\emph default 
+) => (
+\family default 
+\emph on 
+actual_outparams
+\family typewriter 
+\emph default 
+)
+\family default 
+.
+\layout Standard
+
+Note: the 
+\emph on 
+macro_name
+\emph default 
+ may be a whitespace-separated list of multiple names, where the first may
+ start with the special characters 
+\family typewriter 
+@
+\family default 
+ and 
+\family typewriter 
+@.
+
+\family default 
+ as well as 
+\family typewriter 
+@=.
+ 
+\family default 
+This way, even the 
+\family typewriter 
+@=call
+\family default 
+ syntax can be emulated by the macro processor.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.undef (
+\family default 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+This removes the defined 
+\emph on 
+macro_name
+\emph default 
+ (if it was defined).
+ When 
+\emph on 
+macro_name
+\emph default 
+ was not actually defined, nothing happens.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.isdef (
+\family default 
+\emph on 
+macro_name
+\family typewriter 
+\emph default 
+)
+\layout Standard
+
+When 
+\emph on 
+macro_name
+\emph default 
+ is currently defined, yield the text 
+\family typewriter 
+1
+\family default 
+ else 
+\family typewriter 
+0
+\family default 
+.
+ Useful in combination with 
+\family typewriter 
+@.compute
+\family default 
+ and 
+\family typewriter 
+@.if
+\family default 
+.
+ 
+\layout Subsection
+
+Local operations
+\layout Standard
+
+These are variants of the macro syntax, just by saying 
+\family typewriter 
+@.func
+\family default 
+ instead of 
+\family typewriter 
+@.define
+\family default 
+.
+ Instead of expanding a macro at each call, a local function is generated
+ with standard arguments 
+\family typewriter 
+@args
+\family default 
+ and additional arguments as specified by the formal parameters (where type
+ specifiers are mandatory for proper generation of function prototypes).
+ At each call, the 
+\family typewriter 
+@args
+\family default 
+ of the caller is tranferred to the callee implicitly and automatically,
+ to allow access to 
+\family typewriter 
+@
+\family default 
+\emph on 
+arg_name
+\emph default 
+ like with ordinary macro expansion.
+ In comparison to macros, code bloat is avoided.
+ However, there are subtle semantic differences: when 
+\family typewriter 
+return
+\family default 
+ is executed inside a macro, the 
+\emph on 
+callee
+\emph default 
+ is abandoned, because the code is inserted inline into the callee.
+ In contrast, 
+\family typewriter 
+return
+\family default 
+ inside 
+\family typewriter 
+@.func
+\family default 
+ only exits from that local function.
+\layout Standard
+
+DISCUSS: should the same 
+\family typewriter 
+return
+\family default 
+ behaviour be implemented with macros, to make 
+\family typewriter 
+@.define
+\family default 
+ a true drop-in replacement for 
+\family typewriter 
+@.func
+\family default 
+ and vice versa? (the syntax is already the same) Then existing code must
+ be revised.
+\layout Subsection
+
+Generic macros
+\layout Standard
+
+When you want to place other preprocessor constructs inside a macro, you
+ have to use 
+\family typewriter 
+@.macro
+\family default 
+ in place of 
+\family typewriter 
+@.define
+\family default 
+.
+ The disctinction is necessary, because expansion of a 
+\family typewriter 
+@.define
+\family default 
+ macro generates a new C scope in braces or parens with correct lexical
+ nesting of identifiers.
+ The generic 
+\family typewriter 
+@.macro
+\family default 
+ variant omits the braces and can thus be used in places where preprocessor
+ constructs such as 
+\family typewriter 
+input
+\family default 
+, 
+\family typewriter 
+output
+\family default 
+, 
+\family typewriter 
+section
+\family default 
+, 
+\family typewriter 
+operation
+\family default 
+, 
+\family typewriter 
+attr
+\family default 
+ and so on are to be generated by macros.
+ 
+\layout Standard
+
+You 
+\emph on 
+should not
+\emph default 
+ use type specifiers for parameters of generic 
+\family typewriter 
+@.macro
+\family default 
+s, since there may be no scope or the wrong scope where argument expression
+ evaluation can be bound to.
+ When you do anyway, be sure that you know what you are doing, and check
+ the generated code.
+\layout Subsection
+
+Include Files / C preprocessor
+\layout Standard
+
+You may include any other file via the following syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.include "
+\family default 
+\emph on 
+filename
+\family typewriter 
+\emph default 
+"
+\layout Standard
+
+The following directive will first feed the 
+\emph on 
+text
+\emph default 
+ through the C preprocessor before expanding it again in the Athomux preprocesso
+r:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.cpp {
+\family default 
+\emph on 
+text
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+Note that the result of the C preprocessor expansion is expanded once again
+ by the Athomux macro processor (usually without causing harm).
+\layout Subsection
+
+Stringification
+\layout Standard
+
+You may convert any sequence of characters to a C string via the following
+ directive:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.string{
+\family default 
+\emph on 
+text
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+The 
+\emph on 
+text
+\emph default 
+ will be first expanded for further macro occurrences.
+ The result is then surrounded by quotation marks.
+ Internal quotation marks from the 
+\emph on 
+text
+\emph default 
+ will be escaped by a backslash.
+ Percent signs will be doubled, and backslashes be escaped by another backslash.
+\layout Subsection
+
+Expression Evaluation
+\layout Standard
+
+Computation of arbitray Perl expressions is supported by the following directive
+:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.compute{
+\family default 
+\emph on 
+expr
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+First, the 
+\emph on 
+expr
+\emph default 
+ is expanded by the macro processor.
+ The resulting text is then interpreted by Perl 
+\family typewriter 
+eval()
+\family default 
+.
+ The final result must be a Perl scalar, either a string or a number, according
+ to the Perl rules.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.subst (
+\family default 
+\emph on 
+regular_expression
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+text
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+The 
+\emph on 
+text
+\emph default 
+ will be processed with the 
+\emph on 
+regular_expression
+\emph default 
+ via Perl's 
+\family typewriter 
+=~
+\family default 
+ operator.
+ Note that 
+\emph on 
+regular_expression
+\emph default 
+ is not expanded, but the substituted text will be further processed.
+\layout Subsection
+
+Conditional Expansion
+\layout Standard
+
+
+\family typewriter 
+@.if (
+\family default 
+\emph on 
+expr1
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+text1
+\family typewriter 
+\emph default 
+} @.elsif (
+\family default 
+\emph on 
+expr2
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+text2
+\family typewriter 
+\emph default 
+} @.else {
+\family default 
+\emph on 
+text3
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+First, 
+\emph on 
+expr1
+\emph default 
+ is expanded in the current macro scope and then interpreted by Perl 
+\family typewriter 
+eval()
+\family default 
+.
+ When it results in a non-empty string or a non-null number (according to
+ the Perl rules), the 
+\emph on 
+text1
+\emph default 
+ (without braces) will be the result of the expansion of the whole statement.
+ Otherwise, the optional 
+\family typewriter 
+@.elsif
+\family default 
+ or 
+\family typewriter 
+@.else
+\family default 
+ parts (if any) will be expanded according to the usual rules of modern
+ programming languages, as you will expect.
+\layout Subsection
+
+Lexical Scoping
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.scope {
+\family default 
+\emph on 
+text
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+This will treat the 
+\emph on 
+text
+\emph default 
+ in a new sub-scope.
+ Any definitions inside 
+\emph on 
+text
+\emph default 
+ will be lost after closing the scope.
+\layout Standard
+
+By default, any macro is also expanded in a new scope.
+ When you define a (parameterized) macro inside another macro, the definition
+ will not be visible from the outside.
+\layout Standard
+
+The default behaviour of 
+\family typewriter 
+@.define
+\family default 
+ and 
+\family typewriter 
+@.macro
+\family default 
+ may be changed by the following extension:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.define[
+\family default 
+\emph on 
+option_list
+\family typewriter 
+\emph default 
+] (
+\family default 
+\emph on 
+param_list
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+body
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+where 
+\emph on 
+option_list
+\emph default 
+ is a comma-separated list of one of the following option names:
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+flat
+\family default 
+ When the macro is expanded later, the expansion will occur in the scope
+ of the caller.
+ In particular, any sub-definitions from the 
+\emph on 
+body
+\emph default 
+ will remain valid.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+preexpand
+\family default 
+ Before defining the maco, the body is expanded in the current scope and
+ expansion mode.
+ At substitution time, it will be expanded once again by default.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+prescope
+\family default 
+ Do the 
+\family typewriter 
+preexpand
+\family default 
+ in its own scope (i.e.
+ discard any macro definitions resulting from it).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+postprotect
+\family default 
+ When the maco is expanded later, the body will not be expanded.
+ However, ordinary arguments will be substituted.
+ This is often useful in combination with 
+\family typewriter 
+preexpand
+\family default 
+.
+\layout Standard
+
+DISCUSS: anyone needing a 
+\emph on 
+full
+\emph default 
+ equivalent of 
+\family typewriter 
+
+\backslash 
+gdef
+\family default 
+ from 
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+TeX
+\end_inset 
+
+?
+\layout Subsection
+
+Expansion Order
+\layout Standard
+
+Although the ATHOMUX macro processor does not aim in sophistication, it
+ can control the expansion order to some degree.
+\layout Standard
+
+Normally, the macro processor does 
+\emph on 
+deep expansion
+\emph default 
+ of macros in the following way: Whenever a macro is found, its body will
+ also be expanded.
+ Endless recursion is avoided by allowing any macro to occur in an expansion
+ at most 
+\emph on 
+once
+\emph default 
+; trying to expand an endless recursion will simply not work.
+\layout Standard
+
+If you want to expand something 
+\emph on 
+exactly once
+\emph default 
+, you can do so by saying
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.step
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.step {
+\family default 
+\emph on 
+expanded_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+In the first form, the 
+\emph on 
+further_text
+\emph default 
+ will be expanded exactly once and only at the beginning, i.e.
+ the next token 
+\emph on 
+must
+\emph default 
+ belong to a macro call; later macro invocations will not be expanded.
+ In the second form, the expansion may take place only at 
+\emph on 
+expanded_text
+\emph default 
+; the 
+\emph on 
+following_text
+\emph default 
+ is treated the same way as if 
+\family typewriter 
+@.step
+\family default 
+ was not present at all (depending on the calling context).
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.expand
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.expand {
+\family default 
+\emph on 
+expanded_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+Any occurrences of any macro will be expanded anywhere in 
+\emph on 
+further_text
+\emph default 
+ resp.
+ 
+\emph on 
+expanded_text,
+\emph default 
+ but each expansion will be exactly one level (not deep).
+\layout Standard
+
+By placing further 
+\family typewriter 
+@.expand
+\family default 
+ directives into the 
+\emph on 
+expanded_text
+\emph default 
+, you may expand more times, but you will have to mark those places explicitly
+ with 
+\family typewriter 
+@.expand
+\family default 
+ each time.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.deep
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.deep {
+\family default 
+\emph on 
+expanded_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+You may use this for switching back to deep expansion when you are in (possibly
+ repeated) single expansion mode.
+\layout Standard
+
+To protect against expansion, you may use the following forms:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.protect
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.protect {
+\family default 
+\emph on 
+protected_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+The 
+\emph on 
+further_text
+\emph default 
+ resp.
+ 
+\emph on 
+protected_text
+\emph default 
+ will not be expanded at all, i.e.
+ copied verbatim.
+ This will work even in case of deep expansion (which is the default).
+ However notice the difference between 
+\emph on 
+deep expansion
+\emph default 
+ and 
+\emph on 
+repeated expansion
+\emph default 
+: when you nest two 
+\family typewriter 
+@.expand{}
+\family default 
+ around some text, the text will be expanded exactly twice; if there is
+ some 
+\family typewriter 
+@.protect
+\family default 
+ in it, it will be removed the first time, and thus be expanded upon the
+ second 
+\emph on 
+repeated
+\emph default 
+ evaluation.
+ 
+\layout Standard
+
+Instead of nesting arbitrary numbers of 
+\family typewriter 
+@.expand
+\family default 
+ or of another evaluation order directive, you may use the following abbreviated
+ syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.expand(
+\family default 
+\emph on 
+count
+\family typewriter 
+\emph default 
+)
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.expand(
+\family default 
+\emph on 
+count
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+expanded_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+The 
+\emph on 
+count
+\emph default 
+ must be a numeric constant, interpretable by Perl.
+ It also works with 
+\family typewriter 
+@.step
+\family default 
+, 
+\family typewriter 
+@.protect
+\family default 
+ and 
+\family typewriter 
+@.deep
+\family default 
+.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.copy(
+\family default 
+\emph on 
+count
+\family typewriter 
+\emph default 
+)
+\family default 
+ 
+\emph on 
+further_text
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.copy(
+\family default 
+\emph on 
+count
+\family typewriter 
+\emph default 
+) {
+\family default 
+\emph on 
+expanded_text
+\family typewriter 
+\emph default 
+} 
+\family default 
+\emph on 
+following_text
+\layout Standard
+
+The 
+\emph on 
+further_text
+\emph default 
+ resp.
+ 
+\emph on 
+expanded_text
+\emph default 
+ will be expanded in the current expansion mode.
+ The result is then textually repeated 
+\emph on 
+count
+\emph default 
+ times.
+ This is different from 
+\family typewriter 
+@.expand(
+\family default 
+\emph on 
+count
+\family typewriter 
+\emph default 
+)
+\family default 
+ because the 
+\emph on 
+expansion itself
+\emph default 
+ is repeated exactly once, while the 
+\emph on 
+result
+\emph default 
+ will be repeated 
+\emph on 
+count
+\emph default 
+-fold.
+ When 
+\emph on 
+count
+\emph default 
+ == 0, the result of the expansion is discarded.
+ This is useful for catching the side effects of the expansion, e.g.
+ further macro definitions inside 
+\emph on 
+expanded_text
+\emph default 
+.
+ Here is an example for transferring a C preprocessor definition into the
+ Athomux preprocessor:
+\layout Quotation
+
+
+\family typewriter 
+@.copy(0){@.cpp{
+\layout Quotation
+
+
+\family typewriter 
+#include <stdio.h>
+\layout Quotation
+
+
+\family typewriter 
+@.define my_bufsiz (BUFSIZ)
+\layout Quotation
+
+
+\family typewriter 
+}}
+\layout Standard
+
+
+\family typewriter 
+@.shuffle [
+\family default 
+\emph on 
+number_list
+\family typewriter 
+\emph default 
+] {
+\family default 
+\emph on 
+body0
+\family typewriter 
+\emph default 
+} {
+\family default 
+\emph on 
+body1
+\family typewriter 
+\emph default 
+}
+\family default 
+ ...
+\layout Standard
+
+Use this to change the order amoung the bodies.
+ First, all the bodies are expanded in their original order, but not copied
+ to the output.
+ The 
+\emph on 
+number_list
+\emph default 
+ must be a Perl-interpretable comma-separated list of numbers.
+ Each number 
+\begin_inset Formula $n$
+\end_inset 
+
+ in the list indexes the expanded 
+\emph on 
+body
+\emph default 
+
+\begin_inset Formula $n$
+\end_inset 
+
+; the result will be the expanded 
+\emph on 
+body
+\emph default 
+
+\begin_inset Formula $n$
+\end_inset 
+
+ in the given order.
+ When the same number appears multiple times in 
+\emph on 
+number_list
+\emph default 
+, the corresponding body will appear each time.
+ When a body number does not appear at all, the body will not show up in
+ the result.
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.expshuffle [
+\family default 
+\emph on 
+number_list
+\family typewriter 
+\emph default 
+] {
+\family default 
+\emph on 
+body0
+\family typewriter 
+\emph default 
+} {
+\family default 
+\emph on 
+body1
+\family typewriter 
+\emph default 
+}
+\family default 
+ ...
+\layout Standard
+
+This does not change the order of the bodies, but determines the order in
+ which each body will be expanded, similar to 
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+TeX
+\end_inset 
+
+'s 
+\family typewriter 
+
+\backslash 
+expandafter
+\family default 
+ (but for arbitrary number of bodies and expansion permutations).
+ After individual expansion of each body in the given order (possibly even
+ multiple times), all bodies (whether previously expanded or not) will appear
+ in the original order.
+ Usage is only recommended for 
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+TeX
+\backslash 
+
+\end_inset 
+
+ gurus who know what they do.
+\layout Subsection
+
+Parameter Expansion
+\layout Standard
+
+At a macro definition, each parameter may be individually prefixed by an
+ indicator of the parameter expansion mode:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@:
+\family default 
+ Substitute the actual parameter 
+\emph on 
+unmodfied
+\emph default 
+, i.e.
+ don't expand the actual parameter before it is substituted.
+ This is the default!
+\layout Standard
+\noindent 
+
+\family typewriter 
+@!:
+\family default 
+ First expand the actual parameter before it is substituted; the expansion
+ is done in the old scope of the 
+\emph on 
+caller
+\emph default 
+.
+\layout Standard
+
+The 
+\emph on 
+point in time
+\emph default 
+ where a parameter is substituted can be controlled 
+\emph on 
+independently
+\emph default 
+ from the above:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@<-:
+\family default 
+ First substitute the actual parameters into the macro body 
+\emph on 
+before
+\emph default 
+ expanding the body.
+ As a consequence, the parameter will 
+\emph on 
+only
+\emph default 
+ be expanded in the scope of the called macro, but not in nested scopes
+ of 
+\emph on 
+recursively
+\emph default 
+ called macros (if you don't 
+\emph on 
+explicitly
+\emph default 
+ pass it on as a parameter, which is of course possible).
+ This expansion rule is much like the 
+\emph on 
+dynamic
+\emph default 
+ scope rules of C, not of a classical macro processor.
+ This is the default!
+\layout Standard
+
+You may combine 
+\family typewriter 
+@<-:
+\family default 
+ with 
+\family typewriter 
+@!:
+\family default 
+ via the compound syntax 
+\family typewriter 
+@!<-:
+\family default 
+ in order to evaluate the actual argument twice, once in the scope of the
+ caller and once again in the scope of the callee (together with other macros).
+\layout Standard
+\noindent 
+
+\family typewriter 
+@->:
+\family default 
+ First expand the body of the macro, and only 
+\emph on 
+after
+\emph default 
+ that substitute the actual parameter.
+ If you don't use the combination 
+\family typewriter 
+@!->:
+\family default 
+, the actual parameter will not be expanded at all (however you may force
+ a re-expansion by an external 
+\family typewriter 
+@.deep(2)
+\family default 
+ around the whole macro call).
+\layout Standard
+\noindent 
+
+\family typewriter 
+@def:
+\family default 
+ define a parameterless macro at the scope of the callee (which will later
+ substitute the formal parameter name with the actual parameter argument),
+ then expand the macro body.
+ This will not only result in 
+\emph on 
+lazy
+\emph default 
+ expansion, but it can have strange side effects: if anyone re-defines the
+ same macro name inside nested macros (e.g.
+ with another 
+\family typewriter 
+@def:
+\family default 
+ on the same name), the old definition will be 
+\emph on 
+shadowed
+\emph default 
+ (i.e.
+ obey the scope nesting, but get a totally different meaning).
+ To avoid some strange effects resulting therefrom, you should use the combinati
+on 
+\family typewriter 
+@!def:
+\family default 
+, which will first expand the actual parameter at the 
+\emph on 
+old
+\emph default 
+ scope before potentially destroying an old macro definition.
+\layout Standard
+
+WARNING: when using 
+\family typewriter 
+@def:
+\family default 
+ in a 
+\family typewriter 
+flat
+\family default 
+ macro expansion, the symbol will remain defined even 
+\emph on 
+after
+\emph default 
+ the flat expansion!
+\layout Subsection
+
+Computed Identifiers
+\layout Standard
+
+You may create 
+\emph on 
+computed identifiers
+\emph default 
+ via the special syntax 
+\family typewriter 
+@@
+\family default 
+:
+\layout Standard
+\noindent 
+
+\family typewriter 
+name1@@
+\family default 
+\emph on 
+name2
+\layout Standard
+
+where 
+\emph on 
+name2
+\emph default 
+ is an argument of your macro.
+ Assume that 
+\family typewriter 
+replace2
+\family default 
+ is the actual argument for 
+\emph on 
+name2
+\emph default 
+, then you will get a compound identifier 
+\family typewriter 
+name1replace2
+\family default 
+ where the 
+\family typewriter 
+@@
+\family default 
+ is removed.
+\layout Standard
+
+When the name created this way is itself appearing in another @@ context,
+ the first @@ is expanded first.
+ For example, 
+\emph on 
+name1
+\family typewriter 
+\emph default 
+@@
+\family default 
+\emph on 
+name2
+\family typewriter 
+\emph default 
+@@
+\family default 
+\emph on 
+name3
+\emph default 
+ will first concatenate the expansions of 
+\emph on 
+name1
+\emph default 
+ and 
+\emph on 
+name2
+\emph default 
+, yielding a new identifier (which may itself expand to yet another identifier)
+ before appending the expansion of 
+\emph on 
+name3
+\emph default 
+.
+ If you need a different expansion order, use 
+\family typewriter 
+@.expand
+\family default 
+ (see previous subsection).
+\layout Subsection
+
+Misc Preprocessor Aids
+\layout Standard
+
+The generic type system (see Programming Guide) often leads to tedious repetitio
+ns of 
+\family typewriter 
+@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+->
+\family default 
+ operators where always the same 
+\emph on 
+typename
+\emph default 
+ must be denoted.
+ For better convenience and better readable code, you may use the following
+ shortcut writing:
+\layout Standard
+\noindent 
+
+\family typewriter 
+@.deftype 
+\family default 
+\emph on 
+typename
+\family typewriter 
+\emph default 
+ { 
+\family default 
+\emph on 
+body including 
+\family typewriter 
+\emph default 
+@*->
+\family default 
+\emph on 
+ operators ...
+
+\family typewriter 
+\emph default 
+ }
+\layout Standard
+
+After expanding the 
+\emph on 
+body
+\emph default 
+ in the current expansion mode, all occurrences of 
+\family typewriter 
+@*->
+\family default 
+ in the expanded 
+\emph on 
+body
+\emph default 
+ will be replaced with 
+\family typewriter 
+@
+\emph on 
+*
+\family default 
+typename
+\family typewriter 
+\emph default 
+->
+\family default 
+.
+\layout Section
+
+Additions
+\layout Subsection
+
+Avoiding code bloat
+\layout Standard
+
+Multiple operations sharing the same 
+\emph on 
+code
+\emph default 
+ may be declared by
+\layout Standard
+\noindent 
+
+\family typewriter 
+operation $
+\family default 
+\emph on 
+op1
+\family typewriter 
+\emph default 
+,$
+\family default 
+\emph on 
+op2
+\family typewriter 
+\emph default 
+,$
+\family default 
+\emph on 
+op3
+\layout Standard
+
+This avoids code duplication in the 
+\family typewriter 
+*.ath
+\family default 
+ sourcecode.
+ The following predefined placeholders may be used inside such common code:
+\layout Standard
+\noindent 
+
+\family typewriter 
+BRICK_NAME
+\family default 
+ is substituted with the current brick name
+\newline 
+
+\family typewriter 
+CONN_NAME
+\family default 
+ is substituted with the current input or output connector name
+\newline 
+
+\family typewriter 
+SECT_NAME
+\family default 
+ is substituted with the current section number
+\newline 
+
+\family typewriter 
+OP_NAME
+\family default 
+ is substitued with the current operation name
+\layout Standard
+
+When 
+\family typewriter 
+OP_NAME
+\family default 
+ is not used inside the body, only one single C function is generated which
+ is shared by all operations from the operation specifier list.
+ When 
+\family typewriter 
+OP_NAME
+\family default 
+ is present, a separate version with different subsitute values for each
+ 
+\emph on 
+op1
+\emph default 
+, 
+\emph on 
+op2
+\emph default 
+ and so on is generated.
+\layout Subsection
+
+Qualified instance variables
+\layout Standard
+
+DISCUSS: this is inconsistent with the specifier notation! Better notation
+ required!
+\layout Standard
+
+Foreign input and output variables may be accessed with the notation 
+\family typewriter 
+@<
+\family default 
+\emph on 
+input_name
+\family typewriter 
+\emph default 
+.
+\family default 
+\emph on 
+var_name 
+\emph default 
+or 
+\family typewriter 
+@>
+\family default 
+\emph on 
+output_name
+\family typewriter 
+\emph default 
+[
+\family default 
+\emph on 
+index
+\family typewriter 
+\emph default 
+].
+\family default 
+\emph on 
+var_name
+\emph default 
+.
+\layout Section
+
+Not yet implemented
+\layout Standard
+
+A lot of stuff....
+\layout Subsection
+
+Variants
+\layout Standard
+
+Proposed syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+variant 
+\family default 
+\emph on 
+attrib_name
+\emph default 
+ 
+\emph on 
+value1
+\family typewriter 
+\emph default 
+,
+\family default 
+\emph on 
+value2
+\family typewriter 
+\emph default 
+,
+\family default 
+\emph on 
+value3
+\family typewriter 
+\emph default 
+,
+\family default 
+...
+\layout Standard
+
+By invoking 
+\family typewriter 
+pre.pl
+\family default 
+ with a parameter 
+\emph on 
+attrib_name
+\family typewriter 
+\emph default 
+=
+\family default 
+\emph on 
+value
+\emph default 
+, specialized code is generated as if the attribute 
+\emph on 
+attrib_name
+\emph default 
+ had only that one value.
+ The first value is treated as default value when the invocation parameter
+ is omitted.
+\layout Standard
+
+Conditional code generation should also be permitted.
+ Proposed syntax:
+\layout Standard
+\noindent 
+
+\family typewriter 
+??
+\family default 
+\emph on 
+attrib_name
+\family typewriter 
+\emph default 
+ == 
+\family default 
+\emph on 
+value
+\family typewriter 
+\emph default 
+ {
+\family default 
+\emph on 
+code
+\family typewriter 
+\emph default 
+}
+\layout Standard
+
+Probably further variants like != or set inclusion relations could be added
+ later.
+ Usage of the attribute value in ordinary C code must also be possible,
+ e.g.
+ by the syntax 
+\family typewriter 
+@?
+\family default 
+\emph on 
+attrib_name
+\emph default 
+.
+\layout Subsection
+
+Provide / Require
+\layout Standard
+
+In addition to static and dynamic brick/input/output attributes, functional
+ and non-functional requirements and provisions should be easily denotable
+ and automatically checkable by 
+\family typewriter 
+control
+\family default 
+.
+ Details have to be worked out.
+\layout Subsection
+
+Generic Types
+\layout Standard
+
+The current generic type system should be revised and improved.
+\layout Section
+
+Philosophy
+\layout Standard
+
+The architectural philosophy of ATHOMUX is explained in more depth in the
+ German monography, in some English papers, and in diverse presentations.
+ These are for an academic audience.
+ Here is a quick abstract with emphasis on hacker's interests:
+\layout Standard
+
+Please forget anything you know on object oriented design, and forget many
+ things (but not all!) you know on operating system architecture, and on
+ how to build higher-level abstractions.
+ ATHOMUX is almost the converse of OO, and very different from classical
+ OS kernel architectures.
+ It does not fit in such categories like 
+\begin_inset Quotes eld
+\end_inset 
+
+microkernel
+\begin_inset Quotes erd
+\end_inset 
+
+ or 
+\begin_inset Quotes eld
+\end_inset 
+
+exokernel
+\begin_inset Quotes erd
+\end_inset 
+
+ or 
+\begin_inset Quotes eld
+\end_inset 
+
+monolithical kernel
+\begin_inset Quotes erd
+\end_inset 
+
+, because it can be 
+\emph on 
+configured
+\emph default 
+ to simulate any of those models.
+ If you need a headline, call it an 
+\emph on 
+instance-oriented
+\emph default 
+ operating system architecture.
+\layout Standard
+
+ATHOMUX does anything with two basic abstractions: nests and bricks.
+ The nest is a universally generic address space abstraction.
+ If 
+\emph on 
+necessary
+\emph default 
+, higher-level abstractions 
+\emph on 
+may
+\emph default 
+ be built 
+\emph on 
+on top of
+\emph default 
+ nests, but if possible try to avoid this and remain at the universally
+ generic level as long as possible! When you have to raise to a higher level
+ of abstraction, do this 
+\emph on 
+as late as possible
+\emph default 
+, and remain universally generic 
+\emph on 
+as long as possible
+\emph default 
+.
+\layout Standard
+
+
+\series bold 
+Instead of creating new abstractions, create 
+\emph on 
+new functionality
+\emph default 
+!
+\layout Standard
+
+Create new functionality 
+\emph on 
+either
+\emph default 
+ inside brick implementations (i.e.
+ use bricks as blackbox wrappers and 
+\emph on 
+reuse
+\emph default 
+ the universally generic nest interface), 
+\emph on 
+or
+\emph default 
+ (even better) create it by 
+\emph on 
+composing
+\emph default 
+ brick instances to new brick network configurations (aka compositorical
+ genericity, i.e.
+ 
+\emph on 
+reuse
+\emph default 
+ existing components).
+ This is similar to using the Unix shell for creating pipelines of filter
+ instances, such as 
+\family typewriter 
+grep
+\family default 
+, 
+\family typewriter 
+awk
+\family default 
+, 
+\family typewriter 
+cut
+\family default 
+, 
+\family typewriter 
+Perl
+\family default 
+ etc.
+ Unix pipes are universally generic, by allowing 
+\emph on 
+any
+\emph default 
+ stream of bytes flowing through them, and by providing a 
+\emph on 
+uniform interface
+\emph default 
+ for all filters (aka 
+\begin_inset Quotes eld
+\end_inset 
+
+pipe and filters style
+\begin_inset Quotes erd
+\end_inset 
+
+ in software architecture).
+ Good filters are universally generic, by processing a large class of possible
+ data formats.
+ The shell creates compositorical genericity by allowing nearly arbitrary
+ combinations of filter instances.
+ However, note that nests are slightly higher-level than Unix pipes and
+ even more generic for a much larger class of applications (the pipes are
+ mentioned only as examples of a 
+\emph on 
+similar
+\emph default 
+ architectural style, not to explain nests!).
+\layout Standard
+
+When you need a metaphor from real life, call ATHOMUX a LEGO-like brick
+ system.
+ Current mainstream OS technology is at a stage where each part is manufactored
+ 
+\emph on 
+individually
+\emph default 
+, with indidual interfaces, leading to high development costs and an inflexible
+ design.
+ The next step after that is using 
+\emph on 
+components
+\emph default 
+: According to Szyperski, a component is characterized by explicitly interfacing
+ between 
+\emph on 
+anoymous
+\emph default 
+ software components which sometimes even don't know with which partner
+ (from which manufacturer) they are interacting.
+ However, components are often built according to the metaphor of a 
+\emph on 
+puzzle
+\emph default 
+: a single piece may be replaced by another one having the same shape, but
+ there exist a lot of different interface shapes.
+ 
+\layout Standard
+
+ATHOMUX is already the next generation 
+\emph on 
+after
+\emph default 
+ component software: by using a 
+\emph on 
+uniform interface type
+\emph default 
+ (similar to the LEGO principle of using always the same interface tenon
+ even for very different brick types), there are far more compositions than
+ with current component software.
+ While component software (e.g.
+ plugin architectures) deals with composition of 
+\emph on 
+program code
+\emph default 
+, ATHOMUX deals with composition of (a potentially unlimited number of)
+ 
+\emph on 
+runtime instances
+\emph default 
+.
+\layout Standard
+
+Another fundamental difference of the ATHOMUX architecture to other architecture
+s (in particular OO) is 
+\emph on 
+statelessness
+\emph default 
+ or 
+\emph on 
+pseudo-statelessness
+\emph default 
+ of brick instances.
+ Of course, it is possible to implement bricks as stateful ones.
+ However, statelessness will ease reconfiguration, fault tolerance, migration,
+ network transparency, and much more by treating state 
+\emph on 
+explicitly
+\emph default 
+.
+ Statelessness means simply that state is kept in the inputs of a brick
+ instance, not in the instance itself.
+ State keeping is 
+\emph on 
+delegated
+\emph default 
+ to other instances, until finally to the hardware.
+ Explicit state has the advantage that you can copy and migrate it!
+\layout Standard
+
+ATHOMUX may be labelled an 
+\begin_inset Quotes eld
+\end_inset 
+
+instance oriented operating system
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ What is instance orientation?
+\layout Standard
+
+
+\emph on 
+Composition
+\emph default 
+ of brick instances to networks is regarded as a basic building principle,
+ similar to LEGO brick systems in the area of toys or other LEGO-like mechanical
+ systems (e.g.
+ look at the mechanical/pneumatic components of the German engineering company
+ Festo, and others).
+ We deal with composition networks 
+\emph on 
+explicitly
+\emph default 
+.
+ Wired networks of bricks are described by nest instances, recursively.
+ This is done at a separate level called 
+\emph on 
+strategy level
+\emph default 
+.
+ There you can do 
+\emph on 
+transformations
+\emph default 
+ on brick networks, e.g.
+ create new 
+\emph on 
+views
+\emph default 
+ on brick networks or even 
+\emph on 
+virtual brick networks
+\emph default 
+.
+ That's the basic idea of instance orientation.
+\layout Standard
+
+Some examples for such transformations may be found in the paper on merging
+ operating systems and databases.
+ A simple example is creation of 
+\emph on 
+location transparency
+\emph default 
+ in a network of computers: a transformation on the strategy level may automatic
+ally insert 
+\family typewriter 
+remote
+\family default 
+ and 
+\family typewriter 
+mirror
+\family default 
+ bricks wherever necessary, and provide a view where the concrete location
+ of brick instances is hidden.
+ You can get a true 
+\emph on 
+distributed operating system
+\emph default 
+ (in contrast to a network OS) with that, but when orthogonally combined
+ with database functionality, you get something no word has been coined
+ for yet.
+\layout Standard
+
+The 
+\emph on 
+far-distant
+\emph default 
+ goal is thus: 
+\emph on 
+beyond
+\emph default 
+ Unix and current mainstream OSes, 
+\emph on 
+far beyond!
+\emph default 
+ The architecture of ATHOMUX aims to provide the construction principles
+ for the next 30 years, as a successor of the currently established OS building
+ principles which have been successfully used for more than 30 years now,
+ and have been extended and balconized many time (but showing up their limits
+ more and more often).
+ ATHOMUX is thus starting from scratch.
+ Its native interface to applications could and should be different from
+ other OS interfaces.
+ Only for the sake of compatibility, in particular with Unix / Linux (but
+ not limited to that), 
+\emph on 
+personalities
+\emph default 
+ shall be added, based on 
+\emph on 
+adaptors.
+
+\emph default 
+ Such adaptors should be principally optional configurations, interoperable
+ with each other.
+\layout Standard
+
+At current stage, ATHOMUX is at its very infancy.
+ Like any OS, it will require many years and much effort until it becomes
+ mature enough to compete with current mainstream technology.
+ It will become valuable if people become interested and intrigued by its
+ 
+\emph on 
+potential
+\emph default 
+.
+ 
+\layout Standard
+
+If you can see the potential very far 
+\emph on 
+beyond
+\emph default 
+ current OS architectures, please come and join its delevopment!
+\layout Section
+\start_of_appendix 
+Appendix: Predefined Names
+\layout Description
+
+
+\family typewriter 
+@args
+\family default 
+ The default arguments of an operation, of type 
+\family typewriter 
+struct args
+\family default 
+.
+ The members may be accessed via the syntax 
+\family typewriter 
+@
+\family default 
+\emph on 
+member
+\emph default 
+.
+\layout Description
+
+
+\family typewriter 
+@param
+\family default 
+ The default parameter string
+\layout Description
+
+
+\family typewriter 
+@#_mand
+\family default 
+ The default mandate number of the current brick instance.
+ Default numbers are automatically generated at brick instantiation time.
+\the_end
