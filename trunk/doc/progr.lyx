@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.24, 29 November 2004
+Version 0.25, 30 November 2004
 \layout Standard
 
 
@@ -2955,6 +2955,201 @@ When the
 condition
 \family default 
  is true, print a warning message without returning.
+\layout Section
+
+The Lifecycle of Brick Instances
+\layout Standard
+
+Usually a brick instance goes through many phases during its life:
+\layout Standard
+\noindent \align center 
+
+\begin_inset Graphics
+	filename states.fig
+	width 100col%
+
+\end_inset 
+
+
+\layout Standard
+
+According to the figure, operations must be called in a certain order for
+ both construction and destruction of brick instances.
+\layout Subsection
+
+Created Phase
+\layout Standard
+
+After a brick has come into existence by 
+\family typewriter 
+$instbrick
+\family default 
+, it is called 
+\emph on 
+created
+\emph default 
+.
+ 
+\layout Standard
+
+At created phase, no inputs have been connected yet.
+ Thus no operation can be called at all, not even 
+\family typewriter 
+$brick_init
+\family default 
+.
+ Before calling any operation, at least the inputs must have been connected.
+\layout Standard
+
+Special case: if there are no inputs at all, the created phasee is equivalent
+ to the connected phase; this may be the case for some device drivers.
+\layout Standard
+
+During creation, the 
+\family typewriter 
+init{}
+\family default 
+ routine for the brick is called.
+ Since there are no connections yet, you 
+\emph on 
+must not call
+\emph default 
+ any operations from 
+\family typewriter 
+init{}
+\family default 
+; not even despite the fact that the 
+\family typewriter 
+@=call
+\family default 
+ syntax does not work to prohibit you from trying that.
+\layout Standard
+
+Symmetrically, 
+\family typewriter 
+exit{}
+\family default 
+ is called upon 
+\family typewriter 
+$deinstbrick
+\family default 
+.
+ Notice that 
+\family typewriter 
+$deinstbrick
+\family default 
+ is only when all inputs have been disconnected.
+\layout Subsection
+
+Connected Phase
+\layout Standard
+
+As soon as all inputs have been connected via 
+\family typewriter 
+$connect
+\family default 
+, the brick is called 
+\emph on 
+connected
+\emph default 
+.
+\layout Standard
+
+IMPORTANT: prior to connected phase, you 
+\series bold 
+must not call
+\series default 
+ any operations, not even 
+\family typewriter 
+$brick_init
+\family default 
+!
+\layout Standard
+
+Special case: for (dynamic) arrays of inputs, not all of them must be connected,
+ since the number of connections can vary dynamically at runtime.
+ However, you are at your own risk for ensuring / checking that no bad operation
+ call at an unconnected array member can occur.
+\layout Standard
+
+In order to return to created phase, you must call 
+\family typewriter 
+$disconnect
+\family default 
+ for any connected input.
+\layout Subsection
+
+Operating Phase
+\layout Standard
+
+Before any operation can be called at any output, the corresponding output
+ must have been initialized by 
+\family typewriter 
+$output_init
+\family default 
+ with 
+\family typewriter 
+@constr=TRUE
+\family default 
+.
+ Then the output is called 
+\emph on 
+operating
+\emph default 
+.
+ In general, it is an error to call any operation on an non-operating output;
+ however it is possible to implement outputs in such a way that non-operating
+ mode can be tolerated.
+\layout Standard
+
+IMPORTANT: as a writer of strategy bricks, you should always assume that
+ outputs need a 
+\family typewriter 
+$output_init
+\family default 
+ before any other operation can be called.
+ It is unwise to assume other behaviour even in special cases, because somebody
+ may change the implementation of a brick at a later time such that a missing
+ 
+\family typewriter 
+$output_init
+\family default 
+ is no longer tolerated.
+\layout Standard
+
+NYI: instead of calling 
+\family typewriter 
+$output_init
+\family default 
+ for all outputs individually, you may call 
+\family typewriter 
+$brick_init
+\family default 
+ instead which by default calls 
+\family typewriter 
+$output_init
+\family default 
+ for all outputs.
+\layout Standard
+
+Turning back to connected phase is possible by calling 
+\family typewriter 
+$*_init
+\family default 
+ with parameter 
+\family typewriter 
+destr=TRUE
+\family default 
+.
+ IMPORTANT: before returning from such a destruction, be sure that any logical
+ state has been returned; this may be achieved by 
+\family typewriter 
+$retract
+\family default 
+ from all outputs.
+\layout Section
+
+How to Implement Statelessness
 \layout Section
 
 Threads and IPC
