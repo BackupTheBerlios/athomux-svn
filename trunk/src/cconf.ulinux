@@ -2,4 +2,4 @@
 
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS)
 
-include cconf-include.default
+include cconf-include.ulinux

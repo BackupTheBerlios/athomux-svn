@@ -2,4 +2,4 @@
 
 $(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG -DTRACE
 
-include cconf-include.default
+include cconf-include.ulinux
