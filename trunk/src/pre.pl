@@ -165,6 +165,21 @@ sub brace_replace {
   }
 }
 
+# embed the main code in a prefix and suffix part
+sub embrace_code {
+  my ($prefix, $code, $suffix) = @_;
+  $code =~ m/{/m;
+  my $prior = $PREMATCH;
+  $code = $MATCH . $POSTMATCH;
+  my $label = "_return_label";
+  while($code =~ m/[^\w]$label[^\w]/) {
+    $label .= "_x";
+  }
+  $code =~ s/([^\w])return\s*;/$1goto $label;/mg;
+  indent(\$code);
+  return "$prior\{ __label__ $label; $prefix$code\n$label: $suffix\nif(0) goto $label;\n}\n";
+}
+
 ##########################################################################
 
 # Preprocessor Part
@@ -2287,20 +2302,20 @@ sub make_pointers {
   my ($code, $spec, $direct) = @_;
   my $brick = sp_name($spec, 1);
   my $conn = sp_name($spec, 2);
-  insert_pseudoparam($code, $entry_debug) if $debug_level >= 1;
+  my $prefix = "struct local_${conn} * const _on = (void*)on; (void)_on; ";
   if($direct) {
-    insert_pseudoparam($code, "struct brick_${brick} * const _brick = brick; (void)_brick; ");
+    $prefix .= "struct brick_${brick} * const _brick = brick; (void)_brick; ";
   } elsif($spec =~ m/\[/) {
-    insert_pseudoparam($code, "struct brick_${brick} * const _brick = _on->_brick_ptr_; (void)_brick; ");
+    $prefix .= "struct brick_${brick} * const _brick = _on->_brick_ptr_; (void)_brick; ";
   } elsif($spec =~ m/:<BRICK/) {
-    insert_pseudoparam($code, "struct brick_${brick} * const _brick = (void*)on; (void)_brick; ");
-    return;
+    $prefix = "struct brick_${brick} * const _brick = (void*)on; (void)_brick; ";
   } else {
     # compute static offset (this is more efficient)
     my $field = sp_conn_instance($spec);
-    insert_pseudoparam($code, "struct brick_${brick} * const _brick = BASE(_on, struct brick_${brick}, $field); (void)_brick; ");
+    $prefix .= "struct brick_${brick} * const _brick = BASE(_on, struct brick_${brick}, $field); (void)_brick; ";
   }
-  insert_pseudoparam($code, "struct local_${conn} * const _on = (void*)on; (void)_on; ");
+  $prefix .= $entry_debug if $debug_level >= 1;
+  $$code = embrace_code($prefix, $$code, "");
 }
 
 sub gen_ops {

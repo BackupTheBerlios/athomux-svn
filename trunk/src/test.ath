@@ -333,4 +333,8 @@ input :<dyn_in[]
 
 operation $input_init
 {
+  if(!@.is_connected(:<)) {
+  }	
+  if(!@.is_connected(:<in2)) {
+  }	
 }

@@ -3162,6 +3162,35 @@ destr=TRUE
 $retract
 \family default 
  from all outputs.
+\layout Subsection
+
+Macros for Inquiry of the Phase
+\layout Standard
+
+The following macros (from 
+\family typewriter 
+common.ath
+\family default 
+) may be used to determine the current phase of a brick, input or output:
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+@.is_connected(
+\family default 
+\emph on 
+input_spec
+\family typewriter 
+\emph default 
+)
+\family default 
+ Determine whether the input is currently connected.
+ The input belonging to the current oepration can be abbreviated as 
+\family typewriter 
+:<
+\family default 
+ without a name.
 \layout Section
 
 How to Implement Statelessness

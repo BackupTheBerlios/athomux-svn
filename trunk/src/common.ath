@@ -4,6 +4,12 @@
 
 ///////////////////////////////////////////////////////////////////////////
 
+// general inquiry macros
+
+@.define @.is_connected (input_spec) (@input_spec._input_.connect != NULL)
+
+///////////////////////////////////////////////////////////////////////////
+
 // These routines can _only_ be used in an ordinary operation, but
 // not in static_init or the like!
 
