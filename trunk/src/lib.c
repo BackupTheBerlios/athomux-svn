@@ -36,6 +36,30 @@ void close_debug()
 
 //////////////////////////////////////////////////////////////////////////
 
+// general brick init
+
+void init_all_conns(const struct loader * loader, int type, void * brick, struct args * args, const char * param)
+{
+  const struct load_conn * load_conn;
+  int i = loader->conn_count;
+  for(load_conn = loader->conn; i > 0; load_conn++, i--) {
+    if(type >= 0 && load_conn->type != type) {
+      continue;
+    }
+    void * conn = (char*)brick + load_conn->offset;
+    int j;
+    for(j = load_conn->count; j > 0; conn++, j--) {
+      args->success = FALSE;
+      load_conn->init_conn(conn, args, param);
+      if(!args->success) {
+	return;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 #define MISSING(name)                                                         \
 void missing_##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \

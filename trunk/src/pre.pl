@@ -1378,7 +1378,7 @@ sub add_connector {
   my $cname = sp_name(spec_bricktype($namespec), 2);
   my $gen_type = "type_$cname";
   $::conn_init =~ s/\^//;
-  $::conn_init .= "  {\n    \"$external_name\",\n    \"^\",\n    $gen_type,\n    init_conn_$cname,\n    exit_conn_$cname,\n    $typecode,\n    $::conn_totalcount,\n    $count,\n    $offset,\n    $sect_count,\n    sizeof(struct local_${subbrick}_$name)\n  },\n";
+  $::conn_init .= "  {\n    \"$external_name\",\n    \"^\",\n    $gen_type,\n    init_conn_$cname,\n    exit_conn_$cname,\n    ${cname}_0_${type}_init,\n    $typecode,\n    $::conn_totalcount,\n    $count,\n    $offset,\n    $sect_count,\n    sizeof(struct local_${subbrick}_$name)\n  },\n";
   $::conn_count++;
   $::conn_totalcount .= " + $count";
 }
@@ -1500,6 +1500,7 @@ sub gen_call {
 	$call .= "$directname(_other_, $arg, $param); ";
       }
     } else { # call on output
+      warn "you should not @=inputcall \$$op on an output\n" if $op =~ m/_init\Z/;
       my $inst = sp_conn_instance($target);
       $call .= "const struct input * _other_; ";
       $call .= "success_t __success = TRUE; ";
@@ -1511,6 +1512,7 @@ sub gen_call {
     }
   # $optype eq "output"
   } elsif($target =~ m/:</) { # call on input
+    warn "you should not @=outputcall \$$op on an input\n" if $op =~ m/_init\Z/;
     #TODO: check section bounds
     my $inst = sp_conn_instance($target);
     $call .= "const union connector * _other_ = (void*)_brick->$inst._input_.connect; ";
@@ -1707,13 +1709,13 @@ $::warn_syntax = "";
 %::extern_type_defs = ();
 
 sub make_ops {
-  my $body = shift;
-  my ($brick, $conn, $unused, $section, $op) = sp_parts($::current);
+  my ($spec, $body) = @_;
+  my ($brick, $conn, $unused, $section, $op) = sp_parts($spec);
   $body =~ s/BRICK_NAME/$brick/gm;
   $body =~ s/CONN_NAME/$conn/gm;
   $body =~ s/SECT_NAME/$section/gm;
   $body =~ s/OP_NAME/$op/gm;
-  $::ops_spec{$::current} = $body;
+  $::ops_spec{$spec} = $body;
 }
 
 sub parse_lit {
@@ -1805,7 +1807,7 @@ sub parse_2 {
       if($remember) {
 	if($names eq "\$op") {
 	  $::current = sp_complete($names);
-	  make_ops($body);
+	  make_ops($::current, $body);
 	  my $secspec = sp_shorten($::current, 3);
 	  my @trylist = ();
 	  foreach my $ops_spec (keys %::ops_aliases) {
@@ -1826,7 +1828,7 @@ sub parse_2 {
 	  foreach my $level2 (split ',', $names) {
 	    die "bad operation type '$level2'" if sp_type($level2) != 4;
 	    $::current = sp_complete($level2);
-	    make_ops($body);
+	    make_ops($::current, $body);
 	    gen_ops_aliases($::current, $::current, 0, $opset);
 	  }
 	} else {
@@ -1836,7 +1838,7 @@ sub parse_2 {
 	  $level2 =~ s/,/X/g;
 	  $level2 =~ s/^/\$/;
 	  $::current = sp_complete($level2);
-	  make_ops($body);
+	  make_ops($::current, $body);
 	  foreach my $name (split ',', $names) {
 	    my $single = sp_complete($name);
 	    gen_ops_aliases($single, $::current, 0, $opset);
@@ -1939,7 +1941,7 @@ sub parse_1 {
       $text = $POSTMATCH;
       if($remember) {
 	$::current = sp_complete($name, sp_part($::current,1) . ":<BRICK(:0:)");
-	make_ops($body);
+	make_ops($::current, $body);
 	gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
       }
       next;
@@ -2088,6 +2090,11 @@ sub parse_all {
   $::inst_types{$::current} = $brick;
   $text = parse_lit($text, $macros);
   $text = parse_attr($text, $macros, not $prefix);
+
+  unless($prefix) {
+    # default $brick_init operation
+    make_ops("${brick}:<BRICK(:0:)\$brick_init", "{\n  INIT_ALL_CONNS(BRICK);\n}");
+  }
 
   # this is old syntax, will VANISH in the future!!!
   if($text =~ m/\A$ws($brackmatch)?$ws($brackmatch)?$ws($brackmatch)?$ws($brackmatch)?$ws($bracematch)$ws($bracematch)?$ws($bracematch)?/m) {
@@ -2629,6 +2636,7 @@ close(OUT);
 
 open(OUT, "> $cfile") or die "cannot create output file";
 print OUT "// brick $brick, generated automatically\n$copyright";
+print OUT "\n#define BRICK $brick\n\n";
 print OUT "#define BASEFILE \"$infile\"\n";
 print OUT "\n#undef OPERATION\n#define OPERATION \"preamble $brick\"\n";
 print OUT "#include \"$brick.h\"\n";
@@ -2647,7 +2655,7 @@ print OUT "\n// Loader info for provisionary static linking with control_dummy_l
 $::conn_init =~ s/\^//;
 $::full =~ s/\^//;
 print OUT "\nconst struct load_conn conns_$brick\[] = {\n$::conn_init};\n";
-print OUT "\nconst struct loader loader_$brick = {\n  \"${brick}\",\n  MAGIC_$brick,\n  \"$::full\",\n  attr_$brick,\n  sizeof(struct brick_$brick),\n  $::conn_count,\n  $::conn_totalcount,\n  conns_$brick,\n  &init_static_$brick,\n  &exit_static_$brick,\n  &init_$brick,\n  &exit_$brick\n};\n\n";
+print OUT "\nconst struct loader loader_$brick = {\n  \"${brick}\",\n  MAGIC_$brick,\n  \"$::full\",\n  attr_$brick,\n  sizeof(struct brick_$brick),\n  $::conn_count,\n  $::conn_totalcount,\n  conns_$brick,\n  &init_static_$brick,\n  &exit_static_$brick,\n  &init_$brick,\n  &exit_$brick,\n  ${brick}_BRICK_0_brick_init,\n};\n\n";
 close(OUT);
 
 warn "please update the connector syntax for the following connectors: $::warn_syntax" if $::warn_syntax;

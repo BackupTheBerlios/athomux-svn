@@ -273,11 +273,11 @@ operation $put
   // test nested calls
   @=call #test#subtest_instance:>out1$output_init (FALSE, FALSE) => (@success);
   @=call ##subtest_instance:>out1$output_init @args;
-  @=call ##subtest_instance:<in1$output_init @args;
+  @=inputcall ##subtest_instance:<in1$input_init @args;
   // test _deeply_ nested calls
   @=call #test#subtest_instance#sub2:>out1$output_init (FALSE, FALSE) => (@success);
   @=call ##subtest_instance#sub2:>out1$output_init @args;
-  @=call ##subtest_instance#sub2:<in1$output_init @args;
+  @=inputcall ##subtest_instance#sub2:<in1$input_init @args;
   @mandate++;
 }
 

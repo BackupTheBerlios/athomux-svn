@@ -22,12 +22,6 @@ input :<in
 output :>out
 
 
-operation $output_init
-{
-  @=call :<in$OP_NAME @args;
-}
-
-
 operation $trans,$transwait
 {
 

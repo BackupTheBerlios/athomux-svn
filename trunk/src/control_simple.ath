@@ -555,7 +555,7 @@ bool delete_brick(struct brick_header ** hash, struct brick_header * brick, cons
 	if(tmp->c_param && tmp->c_param != brick->b_param) {
 	  struct args init_args = { .destr = TRUE, .op_code = opcode_output_init };
 	  struct output * output = GET_OUTPUT(tmp);
-	  output->ops[0][opcode_output_init]((void*)output, &init_args, b_param);
+	  tmp->load_conn->init_conn((void*)output, &init_args, b_param);
 	  free(tmp->c_param);
 	  rawtrace("free 4\n");
 	  tmp->c_param = NULL;
@@ -715,7 +715,7 @@ operation $instconn
   if(load_conn->type) {
     struct output * output = GET_OUTPUT(conn);
     struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_output_init };
-    output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
+    load_conn->init_conn((void*)output, &init_args, @param);
     if(!init_args.success) {
       if(!load_conn->count) { // dynamic array
 	free(conn->instance);
@@ -730,7 +730,7 @@ operation $instconn
   } else {
     struct input * input = GET_INPUT(conn);
     struct args init_args = { .constr = TRUE, .clear = @clear, .op_code = opcode_input_init };
-    input->ops[0][opcode_input_init - opcode_output_max - 1]((void*)input, &init_args, @param);
+    load_conn->init_conn((void*)input, &init_args, @param);
     if(!init_args.success) {
       if(!load_conn->count) { // dynamic array
 	free(conn->instance);
@@ -770,12 +770,12 @@ operation $deinstconn
     @.check(conn->link.first, "brick '%s' address %llx output '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
     struct output * output = GET_OUTPUT(conn);
     struct args init_args = { .destr = TRUE, .op_code = opcode_output_init };
-    output->ops[0][opcode_output_init]((void*)output, &init_args, @param);
+    conn->load_conn->init_conn((void*)output, &init_args, @param);
   } else {
     @.check(conn->link.first, "brick '%s' address %llx input '%s' index %d has remaining connections", brick->loader->name, conn1->conn_addr, conn1->conn_name, conn1->conn_index);
     struct input * input = GET_INPUT(conn);
     struct args init_args = { .destr = TRUE, .op_code = opcode_input_init };
-    input->ops[0][opcode_input_init - opcode_output_max - 1]((void*)input, &init_args, @param);
+    conn->load_conn->init_conn((void*)input, &init_args, @param);
   }
   free(conn->c_param);
   trace("free 4\n");

@@ -152,7 +152,7 @@ typedef enum {
   opcode_input_init,
   opcode_retract,
   opcode_input_max,
-  // BRICK OPERATIONS
+  // STATIC OPERATIONS
   opcode_brick_init,
   opcode_brick_max,
 } PACKED op_t;
@@ -452,6 +452,7 @@ struct load_conn {
   const struct gen_type * gen_type;
   const init_conn init_code;
   const init_conn exit_code;
+  operation init_conn;
   bool type;
   index_t start_index;
   index_t count;
@@ -473,6 +474,14 @@ struct loader {
   void (*static_exit)(void); // called upon code unloading, NYI!!
   mand_t (*dynamic_init)(void*, const char*, mand_t); // called upon instantiation
   void (*dynamic_exit)(void*, const char*); // called upon de-instantiation
+  operation init_brick;
 };
+
+void init_all_conns(const struct loader * loader, int type, void * brick, struct args * args, const char * param);
+
+#define __INIT_ALL(BRICK,NR) init_all_conns(&loader_##BRICK, NR, _brick, _args, _param)
+#define INIT_ALL_CONNS(BRICK)   __INIT_ALL(BRICK, -1)
+#define INIT_ALL_INPUTS(BRICK)  __INIT_ALL(BRICK, 0)
+#define INIT_ALL_OUTPUTS(BRICK) __INIT_ALL(BRICK, 1)
 
 #endif
