@@ -26,8 +26,6 @@ static_data {
 #include "control_simple.h"
 
 
-static addr_t initbrick;
-
 bool athomux_init(const struct output * on, const bool constr, char *initbrick_name, char *initbrick_param)
 {
   struct args args = { .op_code = opcode_output_init, .destr = !constr, .constr = constr, .success = FALSE, .phys_addr = MAKE_PADDR(initbrick_name) };

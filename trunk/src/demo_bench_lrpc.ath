@@ -27,7 +27,6 @@ static_data {
 
   #define MY_STRAT_LEN 1000
 
-  extern struct output * root_strategy;
 
 // change param for static wired brick instances
 // NOTE: evil coding style - don't do that...
@@ -40,10 +39,6 @@ data {
   struct connref device_out, bench_in, bench_out;
 }
 
-init {
-  // do static wire to root_strategy output
-  ini->_conn_strat[0]._input_.connect = root_strategy;
-}
 
 
 instance #lrpc_linux_client as controlpool;
@@ -54,13 +49,13 @@ instance #adapt_complete as acomp;
 wire ##acomp:>out as :<bdev;
 
 
-wire ##control_klinux:>out as :<strat[1];
 wire ##controlpool:>out as :<idpool[1];
 
-local input :<strat[2]
 local input :<idpool[2]
 
 local input :<bdev
+
+input :<strat
 
 output :>program
 
@@ -89,11 +84,19 @@ output :>program
     .action = action_wait,
     .success = FALSE,
   };
-  @=call :<strat[addr_space]$gadr &myargs;
+  if(addr_space) {
+    @=call ##control_klinux:>out$gadr &myargs;
+  } else {
+    @=call :<strat$gadr &myargs;
+  }
   @.check(!myargs.success, "gadr failed");
   myargs.success = FALSE;
   strncpy((char *)&myargs.name, brickname, sizeof(myargs.name));
-  @=call :<strat[addr_space]$instbrick &myargs : myparam;
+  if(addr_space) {
+    @=call ##control_klinux:>out$instbrick &myargs : myparam;
+  } else {
+    @=call :<strat$instbrick &myargs : myparam;
+  }
   @.check(!myargs.success, "instbrick failed");
 
   brickref = myargs.log_addr + (STRAT_ADDRSPACE_SIZE * addr_space);
@@ -113,11 +116,19 @@ output :>program
     .success = FALSE,
   };
 
-  @=call :<strat[addr_space]$deinstbrick &myargs;
+  if(addr_space) {
+    @=call ##control_klinux:>out$deinstbrick &myargs;
+  } else {
+    @=call :<strat$deinstbrick &myargs;
+  }
   mysuccess = myargs.success;
 
   @.check(!myargs.success, "deinstbrick failed");
-  @=call :<strat[addr_space]$delete &myargs;
+  if(addr_space) {
+    @=call ##control_klinux:>out$delete &myargs;
+  } else {
+    @=call :<strat$delete &myargs;
+  }
 }
 
 @.func myinstconn (struct connref * conn) => (success_t mysuccess)
@@ -168,21 +179,29 @@ output :>program
     // instconn LRPC client
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
-    @=call :<strat[0]$instconn &myargs;
+    @=call :<strat$instconn &myargs;
     @.check(!myargs.success, "LRPC instconn local failed");
 #endif
 
     // instconn LRPC server
     myargs.conn1 = &conn->foreign;
     myargs.success = FALSE;
-    @=call :<strat[conn->addr_space]$instconn &myargs;
+    if(conn->addr_space) {
+      @=call ##control_klinux:>out$instconn &myargs;
+    } else {
+      @=call :<strat$instconn &myargs;
+    }
     @.check(!myargs.success, "LRPC instconn failed");
 
     // connect LRPC server to requested brick instance
     myargs.success = FALSE;
     myargs.conn1 = &conn->connection;
     myargs.conn2 = &conn->foreign;
-    @=call :<strat[conn->addr_space]$connect &myargs;
+    if(conn->addr_space) {
+      @=call ##control_klinux:>out$connect &myargs;
+    } else {
+      @=call :<strat$connect &myargs;
+    }
     @.check(!myargs.success, "LRPC connect failed");
 
 #if 0    
@@ -203,7 +222,7 @@ output :>program
     //0 instconn LRPC client
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
-    @=call :<strat[0]$instconn &myargs;
+    @=call :<strat$instconn &myargs;
     @.check(!myargs.success, "LRPC instconn local failed");
 #endif
     mysuccess = myargs.success;
@@ -211,10 +230,10 @@ output :>program
     /*
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
-    @=call :<strat[0]$instconn &myargs;
+    @=call :<strat$instconn &myargs;
     mysuccess = myargs.success;
     */
-    @=call :<strat[0]$instconn (&conn->native) => (mysuccess);
+    @=call :<strat$instconn (&conn->native) => (mysuccess);
   }
 }
 
@@ -233,19 +252,27 @@ output :>program
       .success = FALSE,
     };
     // disconnect LRPC server
-    @=call :<strat[conn->addr_space]$disconnect &myargs;
+    if(conn->addr_space) {
+      @=call ##control_klinux:>out$disconnect &myargs;
+    } else {
+      @=call :<strat$disconnect &myargs;
+    }
     @.check(!myargs.success, "LRPC disconnect failed");
 
     // deinstconn LRPC server
     myargs.conn1 = &conn->foreign;
     myargs.success = FALSE;
-    @=call :<strat[conn->addr_space]$deinstconn &myargs;
+    if(conn->addr_space) {
+      @=call ##control_klinux:>out$deinstconn &myargs;
+    } else {
+      @=call :<strat$deinstconn &myargs;
+    }
     @.check(!myargs.success, "LRPC deinstconn failed");
 
     // deinstconn LRPC client
     myargs.conn1 = &conn->native;
     myargs.success = FALSE;
-    @=call :<strat[0]$deinstconn &myargs;
+    @=call :<strat$deinstconn &myargs;
     @.check(!myargs.success, "LRPC deinstconn local failed");
 
     // deinst LRPC client
@@ -264,7 +291,7 @@ output :>program
     mysuccess = TRUE;
 
   } else {
-    @=call :<strat[0]$deinstconn (&conn->native) => (mysuccess);
+    @=call :<strat$deinstconn (&conn->native) => (mysuccess);
   }
 }
 
@@ -298,7 +325,7 @@ operation $output_init
     @.checkjump(!s, init3, "generic_instconn(2) failed");
 #endif
 
-    @=call :<strat[0]$connect (&@#.bench_in.native, &@#.device_out.native) => (s);
+    @=call :<strat$connect (&@#.bench_in.native, &@#.device_out.native) => (s);
     @.checkjump(!s, init4, "connect failed");
 
     @#.bench_out.native.conn_addr = @#.bench_ref;
@@ -311,7 +338,7 @@ operation $output_init
     mydeinstconn (&@#.bench_out) => (s);
     @.check(!s, "generic_deinstconn(3) failed");
 init5:
-    @=call :<strat[0]$disconnect (&@#.bench_in.native) => (s);
+    @=call :<strat$disconnect (&@#.bench_in.native) => (s);
     @.check(!s, "disconnect failed");
 init4:
 #if 0
