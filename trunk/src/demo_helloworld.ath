@@ -15,7 +15,8 @@ operation $output_init
 {
   if(@destr) {
     printf("Goodbye world!\n");
-  } else {
+  }
+  if(@constr) {
     printf("Hello world!\n");
   }
   @success = TRUE;

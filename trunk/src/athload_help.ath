@@ -10,7 +10,7 @@ output :>program
 
 operation $output_init
 {
-  if(!@destr) {
+  if(@constr) {
     printf(
 	   "ATHOMUX LOADER HELP\n"
 	   "-------------------\n\n"
