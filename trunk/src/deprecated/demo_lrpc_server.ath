@@ -1,0 +1,45 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: klinux
+
+brick #demo_lrpc_server
+purpose Demo Brick
+desc
+  provide LRPC services
+enddesc
+
+static_data {
+// change param for static wired brick instance
+#define init_lrpc_linux_server(brick, param, mand) \
+        init_lrpc_linux_server(brick, "1", mand)
+}
+
+
+instance #device_block_klinux as dbk;
+instance #lrpc_linux_server as lrpc1;
+wire #.dbk:>out as #.lrpc1:<in;
+
+
+output :>program
+
+
+operation $output_init
+{
+  if(!@constr) {
+    printf("Unloading "BASEFILE"\n");
+  } else {
+    printf("Starting "BASEFILE"\n");
+  }
+  @param = "/dev/ram0";
+  @=call #.dbk:>out$output_init @args;
+  if(@constr) {
+    if(@success) {
+      printf(BASEFILE" init ok\n");
+    } else {
+      printf(BASEFILE" init failed\n");
+    }
+  }
+  @success = TRUE;
+}

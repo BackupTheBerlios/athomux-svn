@@ -1,0 +1,26 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #lock_none
+purpose Locks
+desc
+  A dummy lock implementation - doesnt block!
+enddesc
+
+
+//input :<mem
+
+output :>lock
+
+operation $output_init,$unlock
+{
+  @success = TRUE;
+}
+
+operation $lock
+{
+  @try_addr = @log_addr;
+  @try_len = @log_len;
+  @success = TRUE;
+}

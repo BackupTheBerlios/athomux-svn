@@ -1,0 +1,16 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #thread_none
+purpose A dummy thread implementation - ignores the thread!
+
+
+input :<exec
+
+output :>cpu
+
+operation $op
+{
+  @success = TRUE;
+}

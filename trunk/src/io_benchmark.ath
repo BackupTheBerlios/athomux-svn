@@ -9,6 +9,7 @@ desc
 enddesc
 
 static_data {
+ #include "randomdata.c"
  #include <unistd.h>
  #define MY_TRANSFER      DEFAULT_TRANSFER
  #define MY_TRANSFER_MASK (MY_TRANSFER - 1)
@@ -21,9 +22,7 @@ data {
   addr_t total_bytes_done;
   volatile addr_t bytes_done;
   volatile addr_t next_unlock;
-#if 0
   uns4 randompos;
-#endif
 }
 
 
@@ -74,11 +73,9 @@ output :>out
   int i;
 
   for(i=0; i<TRANSFERS; i++) {
-#if 0
     if(randomorder) {
       position = ((position + randomdata[@#randompos++]) % RANDOM_RANGE) & ~MY_TRANSFER_MASK;
     }
-#endif
     @=call #.lock:>lock$lock [1] (@#next_unlock, 1) => (mysuccess);
     @#next_unlock++;
     @.check(!mysuccess, "obtaining lock failed");
@@ -110,7 +107,7 @@ operation $output_init
       @=call #.thread:>cpu$output_init (FALSE, TRUE) => (@success);
       @.check(!@success, "initializing thread failed");
 
-      do_benchmark(FALSE);
+      do_benchmark(TRUE);
 
       @=call :>dummy$output_init (TRUE, FALSE) => (); // terminate thread
     } else {

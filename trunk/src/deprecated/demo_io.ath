@@ -1,0 +1,81 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #demo_io
+purpose Demo Brick
+desc
+  Do read and write operations
+enddesc
+
+static_data {
+ #define MY_TRANSFER DEFAULT_TRANSFER
+ //#define MY_TRANSFER 1111
+  static char buf2[MY_TRANSFER] = "overwritten";
+}
+
+
+instance #io_demo_file as demo;
+wire #.demo:>out as :<bdev;
+
+local input :<bdev
+
+output :>program
+
+@.func dd_transfer ()
+{
+  char buf [MY_TRANSFER];
+  plen_t phys_len;
+  addr_t position = 0;
+
+  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @.check(!@success, "read failed");
+  printf("DATA: %s\nread 1 ok\n", buf);
+
+#if 1
+  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
+  @.check(!@success, "write failed");
+  printf("write 1.5 ok\n");
+
+#if 1
+  @=call :<bdev$transfer (position, 16, (paddr_t)buf, direct_write,prio_urgent) => (@success, phys_len);
+  @.check(!@success, "write2 failed");
+  printf("write 2 ok\n");
+#endif
+#if 0
+  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_stop) => (@success);
+  @.check(!@success, "stop write failed");
+  printf("stop write 1.5 ok\n");
+#endif
+
+  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @.check(!@success, "read3 failed");
+  printf("DATA: %s\nread 3 ok\n", buf);
+
+  printf("dump all\n");
+  extern void main;
+  @=call :<bdev$transfer (0, 0x40000, (paddr_t)&main & ~(511), direct_write) => (@success, phys_len);
+  @.check(!@success, "write failed");
+  printf("0x%lx bytes written\n", phys_len);
+#endif
+}
+
+operation $output_init
+{
+  if(!@constr) {
+    @=call :<bdev$wait (0, -1, prio_background) => (); // sync
+    printf("Unloading "BASEFILE"\n");
+  } else {
+    printf("Starting "BASEFILE"\n");
+  }
+  @=call :<bdev$output_init @args;
+  @success = TRUE;
+  if(@constr) {
+    if(@success) {
+      printf("init ok\n");
+      dd_transfer();
+    } else {
+      printf("init failed\n");
+    }
+  }
+}

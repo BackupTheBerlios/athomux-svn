@@ -1,0 +1,37 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #chargen
+purpose Implementation of the character generation device
+desc
+  This brick implements a device which provides the same service
+  as the chargen network service.
+  (It returns the last byte of the offset of the read operation)
+enddesc
+
+
+output :>out
+
+
+operation $output_init,$wait
+{
+  @success = TRUE;
+}
+
+operation $transfer,$tr
+{
+  len_t i;
+  switch(@direction) {
+    case direct_read:
+      for(i=0; i<@log_len; i++)
+        ((uns1 *)MAKE_PTR(@phys_addr))[i] = (@log_addr+i) % 256;
+      @phys_len = i;
+    case direct_stop:
+      @success = TRUE;
+      break;
+    case direct_write:
+    default:
+      @success = FALSE;
+  }
+}

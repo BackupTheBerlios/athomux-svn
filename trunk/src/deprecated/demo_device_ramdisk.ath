@@ -1,0 +1,76 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: klinux
+
+brick #demo_device_ramdisk
+purpose Demo Brick
+desc
+  Do read and write operations on /dev/ram0
+enddesc
+
+static_data {
+  static char buf2[DEFAULT_TRANSFER] = "overwritten";
+}
+
+
+instance #device_block_klinux as dbk;
+instance #adapt_complete as acomp;
+wire #.dbk:>out as #.acomp:<in;
+wire #.acomp:>out as :<bdev;
+
+local input :<bdev
+
+output :>program
+
+
+@.func dd_transfer ()
+{
+  char buf [DEFAULT_TRANSFER];
+  plen_t phys_len;
+  addr_t position = 0;
+
+  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @.check(!@success, "read failed");
+  printf("DATA: %s\n", buf);
+
+#if 1
+  @=call :<bdev$transfer (position, sizeof(buf2), (paddr_t)buf2, direct_write) => (@success, phys_len);
+  @.check(!@success, "write failed");
+#if 0
+  @=call :<bdev$wait (position, sizeof(buf2)) => (@success);
+  @.check(!@success, "wait2 failed");
+#endif
+
+  @=call :<bdev$tr (position, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @.check(!@success, "read3 failed");
+  printf("DATA: %s\n", buf);
+
+  printf("dump all\n");
+  @=call :<bdev$transfer (0, -1, (paddr_t)&panic & ~(511), direct_write) => (@success, phys_len);
+  @.check(!@success, "write failed");
+  printf("0x%lx bytes written\n", phys_len);
+#endif
+}
+
+
+operation $output_init
+{
+  if(!@constr) {
+    printf("Unloading "BASEFILE"\n");
+  } else {
+    printf("Starting "BASEFILE"\n");
+  }
+  @param = "/dev/ram0";
+  @=call :<bdev$output_init @args;
+  if(@constr) {
+    if(@success) {
+      printf("init ok\n");
+      dd_transfer();
+    } else {
+      printf("init failed\n");
+    }
+  }
+  @success = TRUE;
+}

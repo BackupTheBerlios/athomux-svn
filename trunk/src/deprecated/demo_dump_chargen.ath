@@ -1,0 +1,53 @@
+  Author: Jens-Christian Korth
+  Copyright: Jens-Christian Korth
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+
+brick #demo_dump_chargen
+purpose Demo Brick
+desc
+  Copy and move demo
+enddesc
+
+
+instance #chargen as chargen;
+wire #.chargen:>out as :<src;
+
+instance #device_dummy_linux as testfile;
+wire #.testfile:>out as :<dest;
+
+local input :<src
+
+local input :<dest
+
+
+output :>program
+
+
+@.func dd_transfer ()
+{
+  char buf[DEFAULT_TRANSFER*8];
+  plen_t phys_len;
+	
+  @=call :<src$tr (0, sizeof(buf), (paddr_t)buf, direct_read) => (@success, phys_len);
+  @.check(!@success, "read failed");
+  @=call :<dest$tr (0, phys_len, (paddr_t)buf, direct_write) => (@success, phys_len);
+  @.check(!@success, "write failed");
+}
+
+
+operation $output_init
+{
+  if(!@constr) {
+    printf("Unloading "BASEFILE"\n");
+  } else {
+    printf("Starting "BASEFILE"\n");
+  }
+  @=call :<src$output_init @args;
+  @=call :<dest$output_init @args;
+  if(@constr) {
+    dd_transfer();
+  }
+  @success = TRUE;
+}
