@@ -19,6 +19,8 @@ all : all_targets
 
 defs.make: Makefile makegen.pl pconf.* cconf.* target.* *.ath
 	./makegen.pl
+	@$(MAKE) -isf defs.make check_broken 2>/dev/null
+	@$(MAKE) -isf defs.make show_broken
 
 allobjs=$(objs) strat.o
 
@@ -29,6 +31,7 @@ common.c : common.ath
 
 %/*/control_dummy_linux.o: %/control_dummy_linux.c %/control_dummy_linux.h %/*/defs.h %/*/loaders.h
 
+.PHONY: clean
 clean:
 	rm -f defs.make testfile* *~ core* gmon.out
 	rm -rf $(pconf_list)

@@ -1,5 +1,4 @@
 #context pconf: klinux
-#defaultbuild cmd "uname -i": i386
 
 include cconf-include.klinux
 

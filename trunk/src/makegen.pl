@@ -301,6 +301,9 @@ print DEFS "\n$text\n";
 
 ###################
 
-print DEFS "all_targets : \$(target_list)\n";
+print DEFS ".IGNORE: check_broken\n";
+print DEFS ".PHONY: check_broken show_broken all_targets\n";
+print DEFS "show_broken:\n\t\@echo Ignoring broken targets: \$(broken_targets)|sed -e's/:\\s*\$\$/: (none)/'\n\n";
+print DEFS "all_targets: \$(filter-out \$(broken_targets),\$(target_list))\n";
 
 close DEFS;
