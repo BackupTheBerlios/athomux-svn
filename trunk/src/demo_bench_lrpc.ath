@@ -278,7 +278,7 @@ operation $output_init
 
   success_t s;
   if(@constr) {
-    myinstbrick (1, "io_demo_file", "/dev/athomux-partition") => (@#device_ref);
+    myinstbrick (1, "io_demo_file", @param) => (@#device_ref);
     @.check(!@#device_ref, "generic_instbrick(1) failed");
 
     myinstbrick (0, "io_benchmark", @param) => (@#bench_ref);

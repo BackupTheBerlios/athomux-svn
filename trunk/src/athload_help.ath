@@ -25,10 +25,10 @@ operation $output_init
 	   "\nPROGRAM NAMES AND PARAMETERS:\n\n"
 #ifdef __KERNEL__
 	   "lrpc_server\n\tstart the LRPC server\n\n"
-	   "demo_bench_io\n\ta kernelspace IO benchmark\n\n"
+	   "demo_bench_io transfers_per_second\n\ta kernelspace IO benchmark on /dev/athomux-partition\n\n"
 #else
-	   "demo_bench_io\n\tan userspace IO benchmark\n\n"
-	   "demo_bench_lrpc device\n\ta block device IO benchmark using the LRPC bridge\n\n"
+	   "demo_bench_io transfers_per_second\n\tan userspace IO benchmark on testfile\n\n"
+	   "demo_bench_lrpc transfers_per_second\n\ta block device IO benchmark on /dev/athomux-partition using the LRPC bridge\n\n"
 #endif
 	   "demo_helloworld\n\ta hello world implementation\n\n"
 	   "demo_echo [text]\n\t/bin/echo - do I need to say more?\n\n"
