@@ -139,10 +139,12 @@ typedef enum {
   opcode_transwaitput,
   opcode_putwait,
   opcode_createget,
+  opcode_gadrcreate,
   opcode_gadrcreateget,
   opcode_gadrgettranswait,
   opcode_putpadr,
   opcode_putdelete,
+  opcode_deletepadr,
   opcode_putdeletepadr,
   opcode_gadrtranswaitdeletepadr,
   opcode_gadrcreatetranswaitpadr,
@@ -289,10 +291,12 @@ DEF_SINGLE_OP(sect##_gettranswait)                                            \
 DEF_SINGLE_OP(sect##_transwaitput)                                            \
 DEF_SINGLE_OP(sect##_putwait)                                                 \
 DEF_SINGLE_OP(sect##_createget)                                               \
+DEF_SINGLE_OP(sect##_gadrcreate)                                              \
 DEF_SINGLE_OP(sect##_gadrcreateget)                                           \
 DEF_SINGLE_OP(sect##_gadrgettranswait)                                        \
 DEF_SINGLE_OP(sect##_putpadr)                                                 \
 DEF_SINGLE_OP(sect##_putdelete)                                               \
+DEF_SINGLE_OP(sect##_deletepadr)                                              \
 DEF_SINGLE_OP(sect##_putdeletepadr)                                           \
 DEF_SINGLE_OP(sect##_gadrtranswaitdeletepadr)                                 \
 DEF_SINGLE_OP(sect##_gadrcreatetranswaitpadr)                                 \
@@ -349,10 +353,12 @@ MAKE_ALL_ALIAS(gettranswait)
 MAKE_ALL_ALIAS(transwaitput)
 MAKE_ALL_ALIAS(putwait)
 MAKE_ALL_ALIAS(createget)
+MAKE_ALL_ALIAS(gadrcreate)
 MAKE_ALL_ALIAS(gadrcreateget)
 MAKE_ALL_ALIAS(gadrgettranswait)
 MAKE_ALL_ALIAS(putpadr)
 MAKE_ALL_ALIAS(putdelete)
+MAKE_ALL_ALIAS(deletepadr)
 MAKE_ALL_ALIAS(putdeletepadr)
 MAKE_ALL_ALIAS(gadrtranswaitdeletepadr)
 MAKE_ALL_ALIAS(gadrcreatetranswaitpadr)

@@ -159,10 +159,12 @@ UNINITIALIZED(gettranswait)
 UNINITIALIZED(transwaitput)
 UNINITIALIZED(putwait)
 UNINITIALIZED(createget)
+UNINITIALIZED(gadrcreate)
 UNINITIALIZED(gadrcreateget)
 UNINITIALIZED(gadrgettranswait)
 UNINITIALIZED(putpadr)
 UNINITIALIZED(putdelete)
+UNINITIALIZED(deletepadr)
 UNINITIALIZED(putdeletepadr)
 UNINITIALIZED(gadrtranswaitdeletepadr)
 UNINITIALIZED(gadrcreatetranswaitpadr)
@@ -281,6 +283,19 @@ void missing_createget(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_get](on, args, param);
 }
 
+void missing_gadrcreate(const union connector * on, struct args * args, const char * param)
+{
+  args->where = FALSE;
+  args->op_code = opcode_gadr;
+  on->output.ops[args->sect_code][opcode_gadr](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->op_code = opcode_create;
+  on->output.ops[args->sect_code][opcode_create](on, args, param);
+}
+
 void missing_gadrcreateget(const union connector * on, struct args * args, const char * param)
 {
   args->where = FALSE;
@@ -332,6 +347,19 @@ void missing_putdelete(const union connector * on, struct args * args, const cha
   args->success = FALSE;
   args->op_code = opcode_delete;
   on->output.ops[args->sect_code][opcode_delete](on, args, param);
+}
+
+void missing_deletepadr(const union connector * on, struct args * args, const char * param)
+{
+  args->op_code = opcode_delete;
+  on->output.ops[args->sect_code][opcode_delete](on, args, param);
+  if(!args->success) {
+    return;
+  }
+  args->success = FALSE;
+  args->where = FALSE;
+  args->op_code = opcode_padr;
+  on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
 void missing_putdeletepadr(const union connector * on, struct args * args, const char * param)
@@ -436,10 +464,12 @@ void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * a
   ADD_UNINITIALIZED(transwaitput,sect,),                                      \
   ADD_UNINITIALIZED(putwait,sect,),                                           \
   ADD_UNINITIALIZED(createget,sect,),                                         \
+  ADD_UNINITIALIZED(gadrcreate,sect,),                                        \
   ADD_UNINITIALIZED(gadrcreateget,sect,),                                     \
   ADD_UNINITIALIZED(gadrgettranswait,sect,),                                  \
   ADD_UNINITIALIZED(putpadr,sect,),                                           \
   ADD_UNINITIALIZED(putdelete,sect,),                                         \
+  ADD_UNINITIALIZED(deletepadr,sect,),                                        \
   ADD_UNINITIALIZED(putdeletepadr,sect,),                                     \
   ADD_UNINITIALIZED(gadrtranswaitdeletepadr,sect,),                           \
   ADD_UNINITIALIZED(gadrcreatetranswaitpadr,sect,),                           \
@@ -508,10 +538,12 @@ name_t op_names[opcode_brick_max+1] = {
   "transwaitput",
   "putwait",
   "createget",
+  "gadrcreate",
   "gadrcreateget",
   "gadrgettranswait",
   "putpadr",
   "putdelete",
+  "deletepadr",
   "putdeletepadr",
   "gadrtranswaitdeletepadr",
   "gadrcreatetranswaitpadr",

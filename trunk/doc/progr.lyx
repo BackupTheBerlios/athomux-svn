@@ -32,7 +32,7 @@ Programming in the ATHOMUX Environment
 Thomas Schöbel-Theuer
 \layout Date
 
-Version 0.29, 9 December 2004
+Version 0.30, 10 December 2004
 \layout Standard
 
 
@@ -1804,7 +1804,7 @@ Reader
 
 \family typewriter 
 $gadrtranswaitdeletepadr (paddr_t phys_addr, plen_t phys_len, action_t action
- := action_wait) => (success_t success)
+ := action_wait) => (success_t success, len_t log_len)
 \layout Standard
 
 This corresponds to conventional Unix 
@@ -1820,7 +1820,7 @@ Writer
 
 \family typewriter 
 $gadrcreatetranswaitpadr (paddr_t phys_addr, plen_t phys_len, action_t action
- := action_wait, bool melt := TRUE) => (success_t success)
+ := action_wait, bool melt := TRUE) => (success_t success, len_t log_len)
 \layout Standard
 
 This corresponds to conventional Unix 
@@ -1828,6 +1828,25 @@ This corresponds to conventional Unix
 write()
 \family default 
  with copy semantics.
+\layout Paragraph
+
+Preparations of Both Kinds of IO on Pipes
+\layout Standard
+
+The following are straightforward combinations which can be used to prepare
+ both logiocal and physical IO on a pipe:
+\layout Standard
+\noindent 
+
+\family typewriter 
+$gadrcreatet (len_t log_len, bool clear := FALSE, bool exclu := TRUE, action_t
+ action := action_wait, bool melt := TRUE, len_t try_len := log_len) =>
+ (success_t success, addr_t log_addr, len_t log_len)
+\layout Standard
+\noindent 
+
+\family typewriter 
+$deletepadr (addr_t log_addr, len_t log_len) => (success_t success)
 \layout Subsection
 
 Operations Defined on Inputs
