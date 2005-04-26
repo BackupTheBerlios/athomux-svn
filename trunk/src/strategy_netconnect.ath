@@ -750,9 +750,7 @@ operation $deinstbrick
     if (v->vaddr==@log_addr) {
       // deinstantiate part of virtual brick
       @log_addr = v->addr;
-//      printf("deinstantiating %lld\n", @log_addr);
       @=call :<istrat$op [@mandate] (@args);
-//      printf("done deinstantiating %lld\n", @log_addr);
       @.check(@success!=TRUE, "deinstbrick of vpart failed");
 
       // remove entry
@@ -764,9 +762,7 @@ operation $deinstbrick
   }
 
   @log_addr = baddr;
-  printf("deinstantiating %lld\n", @log_addr);
   @=call :<istrat$op [@mandate] (@args);
-  printf("done deinstantiating %lld\n", @log_addr);
 }
 
 
@@ -774,7 +770,5 @@ operation $deinstbrick
 
 operation $gadr,$padr,$instbrick,$get,$put,$create,$delete,$instconn,$deinstconn,$connect,$disconnect,$getconn,$findconn
 {
-  printf("snc: OP_NAME [%d] \n", @mandate);
   @=call :<istrat$OP_NAME [@mandate] (@args);
-  printf("snc: done OP_NAME [%d] \n", @mandate);
 }

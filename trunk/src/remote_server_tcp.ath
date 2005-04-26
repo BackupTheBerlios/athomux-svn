@@ -12,25 +12,29 @@ purpose using a tcp connection for transportation of marshalled operation calls
 desc
   - $brick_init expects port number in @param ("port=<port>")
 
-       +---------------------------------------------------------------------------------------+
-       |                                                                                       |
-       |                                +--------------------------------+  +---------------+  |
-       |                                |                                |  |               |  |
-       |  +-------------------+         |     +--------------------+     +--+               |  |
-       |  | device_mem_ulinux +---------+-----+                    |        |               |  |
-       |  +-------------------+         |     | adapt_strmr_packet +--------+               |  |
-       |                                |  +--+                    |        |               |  |
-       |  +--------------------------+  |  |  +--------------------+  +-----+ remote_server |  |
-       |  | device_tcp_server_ulinux +-----+                          |     |               |  |
-       |  +--------------------------+  |  |  +--------------------+  |  +--+               |  |
-       |                                |  +--+                    |  |  |  |               |  |
-       |                                |     | adapt_strmw_packet +--+  |  +---------------+  |
-       |                                +-----+                    |     |                     |
-       |                                      +--------------------+     |                     |
-       |                                                                 |                     |
-  in --+-----------------------------------------------------------------+                     |
-       |                                                                                       |
-       +---------------------------------------------------------------------------------------+
+       +-----------------------------------------------------------------------------------------+
+       |                                                                                         |
+       |                                  +--------------------------------+  +---------------+  |
+       |                                  |                                |  |               |  |
+       |  +-------------------+           |     +--------------------+     +--+               |  |
+       |  | device_mem_ulinux +-----------+-----+                    |        |               |  |
+       |  +-------------------+           |     | adapt_strmr_packet +--------+               |  |
+       |                                  |  +--+                    |        |               |  |
+       |  +--------------------------+    |  |  +--------------------+  +-----+ remote_server |  |
+       |  |                          +-------+                          |     |               |  |
+       |  | device_tcp_server_ulinux |    |  |  +--------------------+  |  +--+               |  |
+       |  |                          +-+  |  +--+                    |  |  |  |               |  |
+       |  +--------------------------+ |  |     | adapt_strmw_packet +--+  |  +---------------+  |
+       |                               |  +-----+                    |     |                     |
+       |                               |        +--------------------+     |                     |
+       |                               |                                   |                     |
+       |                               |        +---------------+          |                     |
+       |                               +--------+ thread_ulinux +--        |                     |
+       |                                        +---------------+          |                     |
+       |                                                                   |                     |
+  in --+-------------------------------------------------------------------+                     |
+       |                                                                                         |
+       +-----------------------------------------------------------------------------------------+
 
 enddesc
 
@@ -57,6 +61,8 @@ wire :<mem as #remote_server_tcp#mem:>out;
 wire :<strmr as #remote_server_tcp#ar:>strmr;
 wire :<strmw as #remote_server_tcp#aw:>strmw;
 
+instance #thread_ulinux as th;
+wire :<exec as :>conn;
 
 
 
@@ -76,13 +82,27 @@ operation $output_init
 {
   if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
 
+  // FIXME: init on local output
+  @=call :>conn$output_init [@mandate] (@args) : "";
+  @.check(@success!=TRUE, "init failed on local output");
+
   // FIXME: init brick
-  @=call #remote_server_tcp#tcps:>init$output_init [@mandate] (@args) : @param;
-  @.check(@success!=TRUE, "init failed on local instance");
+  @=call #remote_server_tcp#th:>cpu$wait [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "cannot start thread");
   @=call #remote_server_tcp#ar:>init$output_init [@mandate] (@args) : "";
   @.check(@success!=TRUE, "init failed on local instance");
   @=call #remote_server_tcp#rpcs:>init$output_init [@mandate] (@args) : "";
   @.check(@success!=TRUE, "init failed on local instance");
 
   @success = TRUE;
+}
+
+
+
+
+local output :>conn
+operation $wait
+{
+  @=call #remote_server_tcp#tcps:>init$output_init [@mandate] (@args) : @param;
+  @.check(@success!=TRUE, "init failed on local instance");
 }

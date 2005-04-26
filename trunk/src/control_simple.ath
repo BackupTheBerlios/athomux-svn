@@ -52,6 +52,8 @@ struct brick_header {
   struct connector_header connector[0];
 };
 
+extern struct brick_header * boot;
+extern char *root_sid;
 }
 
 static_data {
@@ -68,6 +70,7 @@ struct output * root_strategy;
 struct brick_control_simple * root_instance = NULL;
 
 struct brick_header * boot = NULL;
+char *root_sid = NULL;
 
 volatile mand_t base_mand = 1;
 
@@ -122,6 +125,7 @@ int main_dir_info(char * buf, int len)
 {
   int res = 0;
   PR("brick=ATHOMUX_MAINDIR {\n");
+  PR("b_param ATHOMUX_MAINDIR=%s\n", root_sid);
   int i;
   for(i = 0; i < MAINDIR_MAX; i++) {
     struct main_dir_entry * tmp = &main_dir[i];
@@ -324,7 +328,7 @@ void insert_conn(struct brick_header * brick, struct connector_header * conn)
 
 mand_t create_brick(struct brick_header * brick, const struct loader * loader, const char * b_param, mand_t mand)
 {
-  strcpy(brick->b_param, b_param);
+  // strcpy(brick->b_param, b_param);
   brick->loader = loader;
 
   mand = loader->dynamic_init(GET_BRICK(brick), b_param, mand);
@@ -363,14 +367,17 @@ struct brick_header * new_brick(char * name, const char * b_param, mand_t * _man
   memset(space, 0, total_size);
   brick = (void*)space;
   brick->instance = space + pre_len;
-  brick->b_param = malloc(strlen(b_param)+1);
+  if (root_sid) brick->b_param = malloc(strlen(b_param)+strlen(root_sid)+1);
+  else brick->b_param = malloc(strlen(b_param)+1);
   rawtrace("malloc 2\n");
   if(!brick->b_param) {
     free(brick);
     rawtrace("free 1\n");
     return NULL;
   }
-  *_mand = create_brick(brick, loader, b_param, *_mand);
+  strcpy(brick->b_param, b_param);
+  if (root_sid) strcat(brick->b_param, root_sid);
+  *_mand = create_brick(brick, loader, brick->b_param, *_mand);
   return brick;
 }
 

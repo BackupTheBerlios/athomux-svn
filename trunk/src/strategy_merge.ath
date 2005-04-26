@@ -32,6 +32,8 @@ endexample
 
 
 static_data {
+  #include "param_scanner.h"
+
   #define MIN(a,b) ((a)<(b)?(a):(b))
   #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -39,6 +41,7 @@ static_data {
 
   // FIXME: maximum length of param string
   #define PARAMSIZE 256
+  #define SIDSIZE 32
 
   typedef char param_t[PARAMSIZE];
 
@@ -61,6 +64,12 @@ static_data {
     addr_t  dst_addr;
     addr_t  dst_vaddr;
   };
+
+  struct g_ssid_t {
+    struct link link;
+    uns1    source;
+    char    sid[SIDSIZE];
+  };
 }
 
 
@@ -69,6 +78,7 @@ static_data {
 data {
   addr_t lb_hook;
   addr_t lc_hook;
+  addr_t ls_hook;
   addr_t next_vaddr;
 }
 
@@ -89,6 +99,7 @@ wire :<strat as :>lostrat;
 
 
 
+@.include "param_scanner.inc"
 @.include "li.inc"
 
 
@@ -123,6 +134,7 @@ operation $output_init
     PC_FLUSH(M_PC);
     PC_FREE(M_PC, @#.lb_hook, sizeof(struct g_brick_t));
     PC_FREE(M_PC, @#.lc_hook, sizeof(struct g_conn_t));
+    PC_FREE(M_PC, @#.ls_hook, sizeof(struct g_ssid_t));
   }
   else if (@constr) {
     // instantiate output
@@ -131,6 +143,9 @@ operation $output_init
 
     PC_ALLOC(M_PC, sizeof(struct g_conn_t)) => (@#.lc_hook);
     LI_INIT(M_PC, @#.lc_hook);
+
+    PC_ALLOC(M_PC, sizeof(struct g_ssid_t)) => (@#.ls_hook);
+    LI_INIT(M_PC, @#.ls_hook);
 
     //build_graph();
   }
@@ -167,6 +182,7 @@ local output :>lostrat
 {
   struct g_brick_t *_clearbcprefix_b;
   struct g_conn_t *_clearbcprefix_c;
+  struct g_ssid_t *_clearbcprefix_s;
   addr_t _clearbcprefix_elem_ptr;
 
   LI_NEXT(M_PC, @#.lb_hook) => (_clearbcprefix_elem_ptr);
@@ -187,6 +203,17 @@ local output :>lostrat
     _clearbcprefix_c = LI_GET(M_PC, _clearbcprefix_elem_ptr, FALSE);
     LI_REMOVE(M_PC, _clearbcprefix_elem_ptr);
     PC_FREE(M_PC, _clearbcprefix_elem_ptr, sizeof(struct g_conn_t));
+
+    _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
+  }
+
+  LI_NEXT(M_PC, @#.ls_hook) => (_clearbcprefix_elem_ptr);
+  while (_clearbcprefix_elem_ptr != @#.ls_hook) {
+    addr_t _clearbcprefix_next_ptr;
+    LI_NEXT(M_PC, _clearbcprefix_elem_ptr) => (_clearbcprefix_next_ptr);
+    _clearbcprefix_s = LI_GET(M_PC, _clearbcprefix_elem_ptr, FALSE);
+    LI_REMOVE(M_PC, _clearbcprefix_elem_ptr);
+    PC_FREE(M_PC, _clearbcprefix_elem_ptr, sizeof(struct g_ssid_t));
 
     _clearbcprefix_elem_ptr = _clearbcprefix_next_ptr;
   }
@@ -257,6 +284,24 @@ local output :>lostrat
   _insertbrickprefix_buf = PC_ALLOC(M_PC, sizeof(struct g_brick_t)) => (_insertbrickprefix_elem_ptr);
   memcpy(_insertbrickprefix_buf, _insertbrickprefix_b, sizeof(struct g_brick_t));
   LI_PREPEND(M_PC, @#.lb_hook, _insertbrickprefix_elem_ptr);
+
+  struct g_ssid_t *_insertbrickprefix_s;
+
+  _insertbrickprefix_s = PC_ALLOC(M_PC, sizeof(struct g_ssid_t)) => (_insertbrickprefix_elem_ptr);
+  _insertbrickprefix_s->source = _insertbrickprefix_b->source;
+
+  const char *val_ptr;
+  int val_len;
+  bool found;
+
+  param_getopt(_insertbrickprefix_b->bparam, "sid", &found, &val_ptr, &val_len);
+  if ((found==TRUE) && (val_len>0)) {
+    strncpy(_insertbrickprefix_s->sid, val_ptr, val_len);
+    _insertbrickprefix_s->sid[val_len] = 0;
+  }
+//  else @.errmsg(brick does not have a sid!!!);
+  
+  LI_PREPEND(M_PC, @#.ls_hook, _insertbrickprefix_elem_ptr);
 }
 
 
@@ -568,21 +613,47 @@ operation $wait
 
 operation $gadr
 {
-  // FIXME: do not know where to route operation call - using :<istrat1
+  struct g_brick_t b;
 
-  @=call :<istrat1$gadr [@mandate] (@args);
+  const char *val_ptr;
+  int val_len;
+  bool found;
+
+  b.source = 0; // in case no destination sid is specified
+
+  param_getopt(@param, "dsid", &found, &val_ptr, &val_len);
+  if ((found==TRUE) && (val_len>0)) {
+    // destination sid was specified
+    struct g_ssid_t *s;
+    addr_t elem_ptr;
+
+    LI_NEXT(M_PC, @#.ls_hook) => (elem_ptr);
+    while (elem_ptr != @#.ls_hook) {
+      addr_t next_ptr;
+      LI_NEXT(M_PC, elem_ptr) => (next_ptr);
+      s = LI_GET(M_PC, elem_ptr, FALSE);
+
+      if (strncmp(s->sid, val_ptr, val_len) == 0) {
+        // got source for destination sid
+        b.source = s->source;
+        break;
+      }
+      
+      elem_ptr = next_ptr;
+    }
+  }
+
+  if (b.source==0) @=call :<istrat1$gadr [@mandate] (@args);
+  else @=call :<istrat2$gadr [@mandate] (@args);
 
   if (@success==TRUE) {
-    struct g_brick_t b;
-
     new_vaddr() => (b.vaddr);
-    b.source=0;
     b.addr=@log_addr;
     b.name[0]=0;
     b.bparam[0]=0;
 
     insert_brick(&b);
-    printf("sm:gadr returned %llx [%d]\n", b.addr, @mandate);
+    @log_addr=b.vaddr;
   }
 }
 
@@ -638,8 +709,6 @@ operation $instbrick
   vaddr=@log_addr;
   @log_addr = b->addr;
 
-  printf("sm:calling instbrick at %llx in %d [%d]\n", b->addr, b->source, @mandate);
-
   if (b->source==0) @=call :<istrat1$OP_NAME [@mandate] (@args);
   else @=call :<istrat2$OP_NAME [@mandate] (@args);
   @log_addr = vaddr;
@@ -667,12 +736,18 @@ operation $connect
   find_vbrick(boutvaddr) => (succ, boutaddr);
   @.check(succ!=TRUE, "invalid address");
 
+//  printf("sm 1: conn1->addr=%llx\n", @conn1->conn_addr);
+//  printf("sm 2: conn2->addr=%llx\n", @conn2->conn_addr);
+
   struct g_brick_t *bin = LI_GET(M_PC, binaddr, FALSE);
   uns1 binsource = bin->source;
   @conn1->conn_addr = bin->addr;
   struct g_brick_t *bout = LI_GET(M_PC, boutaddr, FALSE);
   uns1 boutsource = bout->source;
-  @conn1->conn_addr = bout->addr;
+  @conn2->conn_addr = bout->addr;
+
+//  printf("sm 3: conn1->addr=%llx\n", @conn1->conn_addr);
+//  printf("sm 4: conn2->addr=%llx\n", @conn2->conn_addr);
 
   if (binsource==boutsource) {
     // is in the same view
@@ -680,14 +755,98 @@ operation $connect
     else @=call :<istrat2$OP_NAME [@mandate] (@args);
   }
   else {
-    // connection crosses views
-    // using remote brick...
+    // connection crosses views...
+    printf("connection accross views: \n");
+
+    #define STRBUFLEN 256
+    char binsid[STRBUFLEN];
+    char boutsid[STRBUFLEN];
+    char binvarn[STRBUFLEN];
+    char boutvarn[STRBUFLEN];
+    char binhost[STRBUFLEN];
+    char bouthost[STRBUFLEN];
+    char rs_par[STRBUFLEN];
+    char rc_par[STRBUFLEN];
+
+    // get sids
+    getoptval(bin->bparam, "sid", binsid, STRBUFLEN);
+    getoptval(bout->bparam, "sid", boutsid, STRBUFLEN);
+
+    // get host names for sids
+    snprintf(binvarn, STRBUFLEN, "host_%s", binsid);
+    snprintf(boutvarn, STRBUFLEN, "host_%s", boutsid);
+    getoptval(@param, binvarn, binhost, STRBUFLEN);
+    getoptval(@param, boutvarn, bouthost, STRBUFLEN);
+
+    // FIXME: using random port and random rid might not work!
+    int port=rand()%50000+10000;
+    int rid=rand()%50000+10000;
+    snprintf(rs_par, STRBUFLEN, "port=%d rid=%d", port, rid);
+    snprintf(rc_par, STRBUFLEN, "host=%s port=%d rid=%d", bouthost, port, rid);
+
+    // instantiating remote_server
+    addr_t rs_addr;
+    if (boutsource==0) @=call :<istrat1$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, rs_addr);
+    else @=call :<istrat2$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, rs_addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rs_in = { .conn_addr = rs_addr, .conn_index = 0, .conn_name = "in" };
+    if (boutsource==0) @=call :<istrat1$instbrick [@mandate] (rs_addr, "remote_server_tcp", FALSE, FALSE) : rs_par => (succ);
+    else @=call :<istrat2$instbrick [@mandate] (rs_addr, "remote_server_tcp", FALSE, FALSE) : rs_par => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    if (boutsource==0) @=call :<istrat1$instconn [@mandate] (&rs_in) => (succ);
+    else @=call :<istrat2$instconn [@mandate] (&rs_in) => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    if (boutsource==0) @=call :<istrat1$connect [@mandate] (&rs_in, @conn2) => (succ);
+    else @=call :<istrat2$connect [@mandate] (&rs_in, @conn2) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    if (boutsource==0) @=call :<istrat1$instbrick [@mandate] (rs_addr, "remote_server_tcp", TRUE, FALSE) : rs_par => (succ);
+    else @=call :<istrat2$instbrick [@mandate] (rs_addr, "remote_server_tcp", TRUE, FALSE) : rs_par => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    struct conn_info rs_init = { .conn_addr = rs_addr, .conn_index = 0, .conn_name = "init" };
+    if (boutsource==0) @=call :<istrat1$instconn [@mandate] (&rs_init) : rs_par => (succ);
+    else @=call :<istrat2$instconn [@mandate] (&rs_init) : rs_par => (succ);
+    @.check(succ!=TRUE, "instconn failed");
     
-    @.err("connection across views not yet implemented\n");
+    // instantiating remote_client
+    addr_t rc_addr;
+    struct conn_info amd_hook = { .conn_addr = 0, .conn_index = 0, .conn_name = "hook" };
+    if (binsource==0) @=call :<istrat1$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, rc_addr);
+    else @=call :<istrat2$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, rc_addr);
+    @.check(succ!=TRUE, "gadr failed");
+    struct conn_info rc_hook = { .conn_addr = rc_addr, .conn_index = 0, .conn_name = "hook" };
+    struct conn_info rc_out = { .conn_addr = rc_addr, .conn_index = 0, .conn_name = "out" };
+    if (binsource==0) @=call :<istrat1$instbrick [@mandate] (rc_addr, "remote_client_tcp", FALSE, FALSE) : rc_par => (succ);
+    else @=call :<istrat2$instbrick [@mandate] (rc_addr, "remote_client_tcp", FALSE, FALSE) : rc_par => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    if (binsource==0) @=call :<istrat1$instconn [@mandate] (&rc_hook) => (succ);
+    else @=call :<istrat2$instconn [@mandate] (&rc_hook) => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    if (binsource==0) @=call :<istrat1$instconn [@mandate] (&rc_out) => (succ);
+    else @=call :<istrat2$instconn [@mandate] (&rc_out) => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    if (binsource==0) @=call :<istrat1$connect [@mandate] (&rc_hook, &amd_hook) => (succ);
+    else @=call :<istrat2$connect [@mandate] (&rc_hook, &amd_hook) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    if (binsource==0) @=call :<istrat1$connect [@mandate] (@conn1, &rc_out) => (succ);
+    else @=call :<istrat2$connect [@mandate] (@conn1, &rc_out) => (succ);
+    @.check(succ!=TRUE, "connect failed");
+    if (binsource==0) @=call :<istrat1$instbrick [@mandate] (rc_addr, "remote_client_tcp", TRUE, FALSE) : rc_par => (succ);
+    else @=call :<istrat2$instbrick [@mandate] (rc_addr, "remote_client_tcp", TRUE, FALSE) : rc_par => (succ);
+    @.check(succ!=TRUE, "instbrick failed");
+    struct conn_info rc_init = { .conn_addr = rc_addr, .conn_index = 0, .conn_name = "init" };
+    if (binsource==0) @=call :<istrat1$instconn [@mandate] (&rc_init) : rc_par => (succ);
+    else @=call :<istrat2$instconn [@mandate] (&rc_init) : rc_par => (succ);
+    @.check(succ!=TRUE, "instconn failed");
+    
+    @success=TRUE;
   }
 
+//  printf("sm: old1 in  vaddr=%llx\n", @conn1->conn_addr);
+//  printf("sm: old1 out vaddr=%llx\n", @conn2->conn_addr);
   @conn1->conn_addr = binvaddr;
   @conn2->conn_addr = boutvaddr;
+//  printf("sm: old2 in  vaddr=%llx\n", @conn1->conn_addr);
+//  printf("sm: old2 out vaddr=%llx\n", @conn2->conn_addr);
 }
 
 

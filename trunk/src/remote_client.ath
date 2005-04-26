@@ -246,7 +246,7 @@ operation $op
   success_t succ;
 
   encode(@args, @param) => (succ);
-  @.check(succ!=TRUE, "cannot encode");
+  @.check(succ!=TRUE, "OP_NAME failed");
 
   @success = TRUE;
 }

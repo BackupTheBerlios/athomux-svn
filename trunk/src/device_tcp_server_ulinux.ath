@@ -50,6 +50,20 @@ static_data {
 
 
 
+data {
+  volatile bool connected;
+}
+
+
+
+
+init {
+  @#.connected = FALSE;
+}
+
+
+
+
 instance #device_socket_ulinux as sl;
 instance #device_tcp_listen_ulinux as tl;
 
@@ -86,6 +100,8 @@ operation $output_init
     // FIXME: init brick
     @=call #device_tcp_server_ulinux#sl:>init$output_init [@mandate] (@args) : "";
     @.check(@success!=TRUE, "init failed on local instance");
+
+    @#.connected = FALSE;
   }
   else if (@constr) {
     // instantiate brick
@@ -103,6 +119,8 @@ operation $output_init
     // FIXME: init brick
     @=call #device_tcp_server_ulinux#sl:>init$output_init [@mandate] (@args) : buf;
     @.check(@success!=TRUE, "init failed on local instance");
+
+    @#.connected = TRUE;
   }
 
   @success = TRUE;
@@ -118,6 +136,7 @@ output :>pstrm
 
 operation $op
 {
+  while (@#.connected == FALSE) ;
   @=call #device_tcp_server_ulinux#sl:>pstrm$op [@mandate] (@args);
 }
 

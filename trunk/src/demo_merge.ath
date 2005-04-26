@@ -62,26 +62,59 @@ data {
   char buf[DEFAULT_TRANSFER];
   memset(buf, 0, DEFAULT_TRANSFER);
 
-  sleep(10);
+  sleep(5);
   addr_t a;
-  printf("dm: gadr [%d]\n", @mandate);
+  printf("instatiating mem brick...");
   @=call :<mstrat$gadr [@mandate] (DEFAULT_TRANSFER) => (succ, a);
   @.check(succ!=TRUE, "gadr failed");
-  printf("instbrick1 [%d] \n", @mandate);
   @=call :<mstrat$instbrick [@mandate] (a, "device_mem_ulinux", FALSE, FALSE) => (succ);
   @.check(succ!=TRUE, "instbrick failed");
-  printf("instbrick2 [%d]\n", @mandate);
   @=call :<mstrat$instbrick [@mandate] (a, "device_mem_ulinux", TRUE, FALSE) => (succ);
   @.check(succ!=TRUE, "instbrick failed");
-  printf("instbrick3\n");
+  printf("done.\n");
 
-/*
-  sleep(10);
-  printf("deinst...\n");
-  @=call :<mstrat$deinstbrick(3*DEFAULT_TRANSFER) => (succ);
+  sleep(1);
+  struct conn_info amd_hook = { .conn_addr = 0, .conn_index = 0, .conn_name = "hook" };
+  struct conn_info mem_hook = { .conn_addr = a, .conn_index = 0, .conn_name = "hook" };
+  printf("connecting mem brick to ATHOMUX_MAINDIR...");
+  @=call :<mstrat$connect [@mandate] (&mem_hook, &amd_hook) => (succ);
+  @.check(succ!=TRUE, "connect failed");
+  printf("done.\n");
+
+  sleep(1);
+  printf("disconnecting mem brick...");
+  // xxxxxxxxxxxxxx FIXME: uaaaaaahhhhhhhhhhhh!!!! warum aendert sich mem_hook.conn_addr???????????
+  mem_hook.conn_addr = a;
+  @=call :<mstrat$disconnect [@mandate] (&mem_hook) => (succ);
+  @.check(succ!=TRUE, "disconnect failed");
+  printf("done.\n");
+
+  sleep(1);
+  printf("deinstantiating mem brick...");
+  @=call :<mstrat$deinstbrick [@mandate] (a) => (succ);
   @.check(succ!=TRUE, "deinstbrick failed");
-  printf("deinst done.\n");
-*/
+  printf("done.\n");
+
+  sleep(1);
+  printf("disconnecting virtual remote brick...");
+  struct conn_info con = { .conn_addr = 16*DEFAULT_TRANSFER, .conn_index=0, .conn_name="rmem" };
+  @=call :<mstrat$disconnect [@mandate] (&con) => (succ);
+  @.check(succ!=TRUE, "disconnect failed");
+  printf("done.\n");
+
+  sleep(1);
+  printf("deinstantiating virtual remote brick...");
+  @=call :<mstrat$deinstbrick [@mandate] (11*DEFAULT_TRANSFER) => (succ);
+  @.check(succ!=TRUE, "deinstbrick failed");
+  printf("done.\n");
+
+  sleep(1);
+  printf("connecting over remote boundaries...");
+  struct conn_info dsc_rmem = { .conn_addr = 16*DEFAULT_TRANSFER, .conn_index=0, .conn_name="rmem" };
+  struct conn_info am_out   = { .conn_addr = 10*DEFAULT_TRANSFER, .conn_index = 0, .conn_name = "out" };
+  @=call :<mstrat$connect [@mandate] (&dsc_rmem, &am_out) : "host_1=localhost host_2=localhost host_3=localhost host_4=localhost" => (succ);  // FIXME: fixed hostnames!!
+  @.check(succ!=TRUE, "connect failed");
+  printf("done.\n");
 
   printf("-> ");
   while (fgets(buf, DEFAULT_TRANSFER-1, stdin)!=NULL) {
@@ -133,7 +166,7 @@ operation $brick_init
     @=call :<strat$instconn [@mandate] (&amd_hook) : "" => (succ);
     @.check(succ!=TRUE, "instconn failed");
 
-
+    
     // -----------------------------------------
     // instantiate bricks and inputs and outputs
     // -----------------------------------------
@@ -445,18 +478,18 @@ operation $brick_init
     @=call :<strat$instconn [@mandate] (&asnt_init) : "" => (succ);
     @.check(succ!=TRUE, "instconn failed");
 
-    struct conn_info gd1_init = { .conn_addr = @#.gd1addr, .conn_index = 0, .conn_name = "init" };
-    @=call :<strat$instconn [@mandate] (&gd1_init) : "fname=graph_merge_local" => (succ);
-    @.check(succ!=TRUE, "instconn failed");
+//    struct conn_info gd1_init = { .conn_addr = @#.gd1addr, .conn_index = 0, .conn_name = "init" };
+//    @=call :<strat$instconn [@mandate] (&gd1_init) : "fname=graph_merge_local" => (succ);
+//    @.check(succ!=TRUE, "instconn failed");
     struct conn_info gd2_init = { .conn_addr = @#.gd2addr, .conn_index = 0, .conn_name = "init" };
     @=call :<strat$instconn [@mandate] (&gd2_init) : "fname=graph_merge" => (succ);
     @.check(succ!=TRUE, "instconn failed");
     struct conn_info gd3_init = { .conn_addr = @#.gd3addr, .conn_index = 0, .conn_name = "init" };
     @=call :<strat$instconn [@mandate] (&gd3_init) : "fname=graph_merge_nc" => (succ);
     @.check(succ!=TRUE, "instconn failed");
-    struct conn_info gd4_init = { .conn_addr = @#.gd4addr, .conn_index = 0, .conn_name = "init" };
-    @=call :<strat$instconn [@mandate] (&gd4_init) : "fname=graph_merge_nt" => (succ);
-    @.check(succ!=TRUE, "instconn failed");
+//    struct conn_info gd4_init = { .conn_addr = @#.gd4addr, .conn_index = 0, .conn_name = "init" };
+//    @=call :<strat$instconn [@mandate] (&gd4_init) : "fname=graph_merge_nt" => (succ);
+//    @.check(succ!=TRUE, "instconn failed");
 
     sh_loop();
   }

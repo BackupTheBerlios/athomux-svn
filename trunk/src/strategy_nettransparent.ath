@@ -54,7 +54,7 @@ static_data {
     addr_t  src_addr;
     sname_t dst_name;
     addr_t  dst_addr;
-    addr_t  net_baddr;  // is set to virtual remote/mirror brick if the connection is a replacement for it, otherwise 0x00
+    addr_t  net_baddr;  // is set to virtual remote/mirror brick if the connection is a replacement for it, 0x00 otherwise
   };
 }
 
@@ -191,6 +191,32 @@ local output :>lostrat
     }
 
     _findbrickprefix_elem_ptr = _findbrickprefix_next_ptr;
+  }
+}
+
+
+
+
+@.func find_conn(const addr_t _findconnprefix_addr, const char * const _findconnprefix_name) => (success_t _findconnprefix_success, addr_t _findconnprefix_ptr)
+{
+  _findconnprefix_success = FALSE;
+
+  struct g_conn_t *_findconnprefix_c;
+  addr_t _findconnprefix_elem_ptr;
+
+  LI_NEXT(ASNT_PC, @#.lc_hook) => (_findconnprefix_elem_ptr);
+  while (_findconnprefix_elem_ptr != @#.lc_hook) {
+    addr_t _findconnprefix_next_ptr;
+    LI_NEXT(ASNT_PC, _findconnprefix_elem_ptr) => (_findconnprefix_next_ptr);
+    _findconnprefix_c = LI_GET(ASNT_PC, _findconnprefix_elem_ptr, FALSE);
+
+    if ((_findconnprefix_c->src_addr == _findconnprefix_addr) && (strcmp(_findconnprefix_c->src_name, _findconnprefix_name) == 0)) {
+      _findconnprefix_success = TRUE;
+      _findconnprefix_ptr = _findconnprefix_elem_ptr;
+      return;
+    }
+
+    _findconnprefix_elem_ptr = _findconnprefix_next_ptr;
   }
 }
 
@@ -599,11 +625,45 @@ operation $wait
 
 operation $disconnect
 {
-  @.errmsg("FIXME: disconnect not yet implemented correctly!\n");
-  // If the wire replaces virtual a remote or mirror brick:
-  //   -> disconnect and deinstantiate this brick in input nest
+  success_t succ;
+  addr_t elem_ptr;
+  struct g_conn_t *c;
+  addr_t netb;
 
-  @=call :<istrat$op [@mandate] (@args);
+  // 1. remove wire from virtual view
+  // 2. if it was the last one for its virtual remote brick remove this brick in input
+
+  // find conn
+  find_conn(@conn1->conn_addr, @conn1->conn_name) => (succ, elem_ptr);
+  @.check(succ!=TRUE, "cannot find conn");
+  c = LI_GET(ASNT_PC, elem_ptr, FALSE);
+  netb = c->net_baddr;
+
+  if (netb==0) @=call :<istrat$op [@mandate] (@args);
+  else {
+    // delete conn
+    LI_REMOVE(ASNT_PC, elem_ptr);
+    PC_FREE(ASNT_PC, elem_ptr, sizeof(struct g_conn_t));
+
+    // are there more conns as replacement for the same virtual remote/mirror brick?
+    LI_NEXT(ASNT_PC, @#.lc_hook) => (elem_ptr);
+    while (elem_ptr != @#.lc_hook) {
+      addr_t next_ptr;
+      LI_NEXT(ASNT_PC, elem_ptr) => (next_ptr);
+      c = LI_GET(ASNT_PC, elem_ptr, FALSE);
+
+      if (c->net_baddr == netb) {
+        // yes, there are. done!
+        @success = TRUE;
+        return;
+      }
+
+      elem_ptr = next_ptr;
+    }
+
+    // no more conns. delete virtual remote/mirror brick
+    @=call :<istrat$deinstbrick [@mandate] (netb) => (@success);
+  }
 }
 
 

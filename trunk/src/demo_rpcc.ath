@@ -41,7 +41,7 @@ wire :>out as :<rmem;
   @.check(_testprefix_len!=_testprefix_plen, "cannot allocate buffer");
 
   // fill memory with string
-  char *_testprefix_s = "This is a test!";
+  char *_testprefix_s = "This is a TEST!";
   memcpy(MAKE_PTR(_testprefix_pstart), _testprefix_s, strlen(_testprefix_s)+1);
 
   printf("<----'%s'\n", _testprefix_s);

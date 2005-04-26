@@ -14,7 +14,7 @@
   len_t _encodeprefix_buflen = _encodeprefix_args->log_len;
   struct packet_t _encodeprefix_packet;
   struct args *_encodeprefix_rsp_args;
-  
+
   if (((_encodeprefix_args->op_code==opcode_trans) || (_encodeprefix_args->op_code==opcode_transwait)) && (_encodeprefix_args->direction == direct_write)) send_req(cpw, _encodeprefix_args, _encodeprefix_param, _encodeprefix_bufstart, _encodeprefix_buflen) => (_encodeprefix_succ);
   else send_req(cpw, _encodeprefix_args, _encodeprefix_param, 0, 0) => (_encodeprefix_succ);
 
