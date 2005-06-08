@@ -5,7 +5,7 @@ License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 context pconf: !klinux
 context cconf: !klinux
 
-brick #split_strm
+brick #strm_simplex
 
 purpose splits a bidirectional stream into two unidirectional streams
 

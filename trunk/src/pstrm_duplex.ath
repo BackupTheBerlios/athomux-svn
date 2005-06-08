@@ -5,7 +5,7 @@ License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 context pconf: !klinux
 context cconf: !klinux
 
-brick #merge_pstrm
+brick #pstrm_duplex
 
 purpose merges two unidirectional streams into one bidirectional stream
 
