@@ -15,6 +15,8 @@ static_header {
 //#define PERSISTENT
 //#define DIRECT_MEM
 #define UNIFY
+
+// WARNING: set this number (# KB) lower on machines without huge amounts of (virtual) memory!
 #define MAX_ELEMS (1024*200)
 
 typedef char block_t[DEFAULT_TRANSFER];
@@ -69,8 +71,16 @@ init {
   static char buf[1] = "";
   write(@#.fh, buf, 1);
   @#.all = mmap(NULL, sizeof(struct all), PROT_READ|PROT_WRITE, MAP_SHARED, @#.fh, 0);
+  if (@#.all == MAP_FAILED) {
+    fputs("Could not create mapped memory file! MAX_ELEMS in map_dummy.ath possibly too high!\n", stderr);
+	exit(254);
+  }
 #else
   @#.all = malloc(sizeof(struct all));
+  if (!@#.all) {
+    fputs("Not enough memory available! Reduce MAX_ELEMS in map_dummy.ath!\n", stderr);
+	exit(254);
+  }
 #endif
   @#.loc = malloc(sizeof(struct local));
   if(!@#.all->max_index) {
