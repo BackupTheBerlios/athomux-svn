@@ -1484,7 +1484,7 @@ sub add_attr {
   "get"      => ["log_addr,log_len,forwrite:=FALSE", "success,phys_addr,phys_len,version"],
   "put"      => ["log_addr,log_len,prio:=prio_none", "success"],
   "lock"     => ["log_addr,log_len,data_lock:=lock_write,addr_lock:=lock_read,try_addr:=_tmp_.log_addr,try_len:=_tmp_.log_len,action:=action_wait", "success,try_addr,try_len" ],
-  "unlock"   => ["log_addr,log_len,try_addr:=_args->log_addr,try_len:=_tmp_.log_len", "success,try_addr,try_len"],
+  "unlock"   => ["log_addr,log_len,try_addr:=_tmp_.log_addr,try_len:=_tmp_.log_len", "success,try_addr,try_len"],
   "gadr"     => ["log_len,reader:=FALSE,exclu:=TRUE,action:=action_wait,try_len:=_tmp_.log_len", "success,log_addr,log_len"],
   "padr"     => ["log_addr,log_len,reader:=FALSE", "success"],
 # dynamic ops
