@@ -1,0 +1,117 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux*
+context: cconf ulinux*
+
+brick #test_adapt_multi
+
+purpose Verifies the #adapt_multi brick
+
+desc
+	           +- ##multi ----+
+	:>l_out----+ #adapt_multi +----------:<l_in
+	           +--------------+
+
+	           +- ##thread -----+
+	:>conc-----+ #thread_ulinux +--
+	           +----------------+
+	
+	           +- ##sync -----------+
+	         --+ #lock_mutex_ulinux +--
+	           +--------------------+
+
+	* a number of simultaneous control flows are forked via operation calls to ##thread's output
+	* those flows each (asynchronously) call an operation either on ##multi's input or output
+	* ##multi should serialize those calls once they reach :>l_out or :<l_in, respectively
+	* correct serialization is shown by the order of the messages being written
+	* ##sync is used only to join all threads in the end (each thread unlocks one byte in ##sync)
+enddesc
+
+instance #adapt_multi as multi;
+wire :<in as #:>l_out;
+wire :>out as #:<l_in;
+
+instance #thread_ulinux as fork;
+wire :<exec as #:>conc;
+
+instance #lock_mutex_ulinux as sync;
+
+operation $brick_init {
+	trace ("#test_adapt_multi$init_brick!\n");
+	INIT_ALL_INPUTS ();
+	INIT_ALL_INSTANCES ();
+	INIT_ALL_OUTPUTS ();
+	@=outputcall ##multi:>out$output_init (@destr, @constr) => (@success);
+	@.check (!@success, "Error init\'ing ##multi!");
+	@=outputcall ##fork:>cpu$output_init (@destr, @constr) => (@success);
+	@.check (!@success, "Error init\'ing ##thread!");
+}
+
+local input :<l_in
+
+	// 'generic' operation
+	// @log_addr = sync lock address
+	// @log_len = sleep length [ms] between calls
+	operation $retract {
+		long ns = (long)@log_len * 1000000;
+		struct timespec t = { ns / 1000000000, ns % 1000000000 };
+		@.msg ("INFO: ", "#:<l_in$retract [%d] pausing for %lld ms", @mandate, @log_len);
+		nanosleep(&t, NULL);
+		@.msg ("INFO: ", "#:<l_in$retract [%d] finished pausing", @mandate);
+		@=outputcall ##sync:>out$unlock (@log_addr, 1) => (@success);
+	}
+
+local output :>l_out
+
+	// 'generic' operation
+	// @log_addr = sync lock address
+	// @log_len = sleep length [ms] between calls
+	operation $wait {
+		long ns = (long)@log_len * 1000000;
+		struct timespec t = { ns / 1000000000, ns % 1000000000 };
+		@.msg ("INFO: ", "#:<l_out$wait [%d] pausing for %lld ms", @mandate, @log_len);
+		nanosleep(&t, NULL);
+		@.msg ("INFO: ", "#:<l_out$wait [%d] finished pausing", @mandate);
+		@=outputcall ##sync:>out$unlock (@log_addr, 1) => (@success);
+	}
+
+local output :>conc
+	
+	operation $get {
+		@.msg ("INFO: ", "call ##multi:<in$retract [%d]", (mand_t)@log_addr);
+		@=inputcall :>l_out$retract [(mand_t)@log_addr] (@log_addr, @log_len) => (@success);
+	}
+	
+	operation $put {
+		@.msg ("INFO: ", "call ##multi:>out$wait [%d]", (mand_t)@log_addr);
+		@=outputcall :<l_in$wait [(mand_t)@log_addr] (@log_addr, @log_len) => (@success);
+	}
+
+input :<strat
+
+output :>program
+
+	operation $output_init {
+		int i;
+
+		@=outputcall #:>l_out$output_init (FALSE, TRUE) => (@success);
+		@=outputcall #:>conc$output_init (FALSE, TRUE) => (@success);
+		@=outputcall ##multi:>out$output_init (FALSE, TRUE) => (@success);
+		@.check (!@success, "Error init\'ing ##multi!");
+		@=outputcall ##fork:>cpu$output_init (FALSE, TRUE) => (@success);
+		@.check (!@success, "Error init\'ing ##thread!");
+		@=outputcall ##sync:>out$output_init (FALSE, TRUE) => (@success);
+
+		@=outputcall ##sync:>out$lock (0, 20) => (@success);
+		@.check (!@success, "Could not initialize #sync!");
+		
+		for (i = 10; i > 0; i--) {
+			@=outputcall ##fork:>cpu$put (i - 1, 20) => (@success);
+			//@=outputcall ##fork:>cpu$get (i + 9, i * 100) => (@success);
+		}
+		
+		// Join all threads.
+		@=outputcall ##sync:>out$lock (0, 10) => (@success);
+	}
