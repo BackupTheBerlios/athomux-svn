@@ -1,92 +1,82 @@
-Author: Hardy Kahl
+Author: Hardy Kahl, modified by Roland Niese
 Copyright: Hardy Kahl
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
-context cconf: !klinux
+context pconf: ulinux*
+context cconf: ulinux*
 
 brick #adapt_multi
 
-purpose adds multi user capability
+purpose Allows multiple users on a single-user nest
 
 desc
+	Outputs not capable of handling multiple simultaneous operation calls can use this adapter to gain this capability.
+	Input and output calls are locked separately, so at most one input and one output call can pass this brick at the same time.
+	Modification by nieserd Dez 2005:
+	Brick used #lock_ulinux to implement mutual exclusion, what failed when two incoming
+	simulteneous operation calls used the same mandate (#lock_ulinux is mandate-oriented).
+	#lock_mutex_ulinux ignores mandates, so this won't happen anymore.
+	
+	Note:
+		Bricks should try to implement concurrency safety in a more distributed way, e.g.
+		called operations could lock only the ranges of the status nest they actually access.
 
-          +-------------------------+
-          |                         |
-     in --+--                     --+-- out
-          |                         |
-          |   +-------------+       |  
-          |   | lock_ulinux +--     |  
-          |   +-------------+       |
-          |                         |
-          +-------------------------+
-
+	     +-------------------------+
+	     |                         |
+	in --+--                     --+-- out
+	     |                         |
+	     |   +-------------+       |  
+	     |   | #lock_mutex +--     |  
+	     |   +-------------+       |
+	     |                         |
+	     +-------------------------+
 enddesc
 
-example
-endexample
+
+instance #lock_mutex_ulinux as lock;
 
 
-
-
-instance #lock_ulinux as l;
-wire :>lock as :<ilock;
-
-
-
-
-local input :<ilock
-
-
+operation $brick_init {
+	INIT_ALL_INPUTS ();
+	INIT_ALL_INSTANCES ();
+	INIT_ALL_OUTPUTS();
+	@=call ##lock:>out$output_init (@destr, @constr) => (@success);
+}
 
 
 input :<in
 
 
-
-
-operation $input_init
-{
-  @success = TRUE;
-}
-
-
-
-
 operation $op
 {
   success_t succ;
 
   // get lock
-  @=call :<ilock$lock [@mandate] (1, 1) => (succ);
-  @.check(succ!=TRUE, "cannot get lock");
+  @=call ##lock:>out$lock (1, 1) => (succ);
+  @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
   @=inputcall :>out$op [@mandate] (@args);
 
   // release lock
-  @=call :<ilock$unlock [@mandate] (1, 1) => (succ);
-  if (succ!=TRUE) @.err("FIXME: switch to error state");
+  @=call ##lock:>out$unlock (1, 1) => (succ);
+  @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
-
-
 
 
 output :>out
 
 
-
-
 operation $op
 {
   success_t succ;
 
   // get lock
-  @=call :<ilock$lock [@mandate] (0, 1) => (succ);
-  @.check(succ!=TRUE, "cannot get lock");
+  @=call ##lock:>out$lock (0, 1) => (succ);
+  @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
-  @=call :<in$op [@mandate] (@args);
-
+  @=outputcall :<in$op (@args);
+  
   // release lock
-  @=call :<ilock$unlock [@mandate] (0, 1) => (succ);
-  if (succ!=TRUE) @.err("FIXME: switch to error state");
+  @=call ##lock:>out$unlock [@mandate] (0, 1) => (succ);
+  @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
