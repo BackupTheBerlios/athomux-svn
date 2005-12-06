@@ -46,6 +46,14 @@ static_header {
 	#endif
 }
 
+static_data {
+	pthread_cond_t null_cond;
+}
+
+init {
+	memset(&null_cond, 0, sizeof null_cond);
+}
+
 input :<in
 
 	// Route $retract calls to :>out. The underlying nest might need retraction of other resources than locks.
@@ -63,9 +71,6 @@ output :>out
 		ref_t lock_starting_last;
 		// Reference to the start of the list of unallocated blocks (first element has no 'previous' element).
 		ref_t free_lock_recs;
-// FIXME: this 'trash' should not be necessary! I use this to keep a reference to all used-up lock records that
-// I cannot reuse as long as I cannot destroy their pthread_cond variable.
-		ref_t lock_trash;
 		// Mutex to protect lock list from concurrent use. */
 		pthread_mutex_t lock_list_access;
 	}
@@ -80,23 +85,35 @@ output :>out
 	@.define prev_start_from (HERE) (HERE->prev_start)
 	@.define next_end_from (HERE) (HERE->next_end)
 	@.define prev_end_from (HERE) (HERE->prev_end)
+	@.define get_lock_start (LOCK) (LOCK->start)
+	@.define get_lock_end (LOCK) (LOCK->end)
+	@.define set_lock_start (LOCK, START) (LOCK->start = START)
+	@.define set_lock_end (LOCK, END) (LOCK->end = END)
+	@.define set_lock_bounds (LOCK, START, END) {
+		LOCK->start = START;
+		LOCK->end = END;
+	}
 	
-	// Allocates a new lock from the storage. Lock is not initialized anyhow.
+	// Allocates a new lock from the storage.
 	@.define new_lock_rec () => (LOCK) {
 		trace ("mand=%d allocate new lock record...\n", (int)@mandate);
 		LOCK = @:>.free_lock_recs;
-		@.fatal (!LOCK, "No more lock records!");
+		@.fatal (!LOCK, "No more free lock records!");
 		@:>.free_lock_recs = LOCK->next_start;
+		#ifdef DEBUG
+		LOCK->next_start = NULL_REF;
+		LOCK->prev_start = NULL_REF;
+		set_lock_bounds(LOCK, 0, 0);
+		#endif
 	}
 	
 	// Returns a lock record to the list of free records.
 	// The record is not touched otherwise! It must not be part of the list!
 	@.define free_lock_rec (LOCK) {
 		trace ("mand=%d free lock [0x%llX..0x%llX]...\n", (int)@mandate, LOCK->start, LOCK->end);
-// FIXME: freed locks should be returned to the free_lock_recs instead of this silly trash.
-		LOCK->next_start = @:>.lock_trash;
+		LOCK->next_start = @:>.free_lock_recs;
 		LOCK->prev_start = NULL_REF;
-		@:>.lock_trash = LOCK;
+		@:>.free_lock_recs = LOCK;
 	}
 
 	// Activates (creates condition) a lock record and adds it to the list.
@@ -104,7 +121,15 @@ output :>out
 		ref_t scan;
 		trace ("mand=%d activate lock [0x%llX..0x%llX]...\n", (int)@mandate, lock->start, lock->end);
 		for (scan = @:>.lock_starting_first; scan != NULL_REF && scan->start < lock->start; scan = scan->next_start);
-		@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
+// FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
+		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
+			trace("mand=%d this is a fresh lock record. Creating new condition variable.\n", (int)@mandate);
+			// This record's condition variable has not been init'ed yet.
+			@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
+		}
+		else {
+			trace("mand=%d this lock record has been used before. Using the existing condition variable.\n", (int)@mandate);
+		}
 		lock->next_start = scan;
 		if (lock->next_start != NULL_REF) {
 			lock->prev_start = lock->next_start->prev_start;
@@ -137,29 +162,28 @@ output :>out
 		else {
 			@:>.lock_starting_last = lock->prev_start;
 		}
-		trace ("mand=%d broadcast unlock...\n", (int)@mandate);
 		@.fatal (pthread_cond_broadcast(&lock->unlocked) != 0, "Could not release POSIX lock!");
-		trace ("mand=%d destroy condition variable...\n", (int)@mandate);
-// FIXME: this call seems to block when multiple threads were waiting for the signal just broadcasted,
-// although a broadcast should make all of them wait for the mutex instead.
-// Having an increasing number of undestroyed pthread_conds doesn't seem to me like a wise idea either.
+// FIXME: pthread_cond_destroy blocks if more than 1 thread were waiting
+//        for the condition when it was broadcasted (after the broadcast,
+//        no thread is waiting for the condition anymore, but for the
+//        mutex instead, so I consider this a bug in pthread).
+//        So we don't destroy the condition but rather will reuse it later on.
 //		@.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
-		trace ("mand=%d done deactivating...\n", (int)@mandate);
 	}
 
 	// Creates a new lock record and adds it to the lock list.
 	@.func add_new_lock (addr_t start, addr_t end) => (ref_t lock) {
 		new_lock_rec () => (lock);
-		lock->start = start;
-		lock->end = end;
+		set_lock_bounds(lock, start, end);
 		add_lock_rec (lock);
 	}
 
-	// Allocates a new lock 'COPY' from the storage and copies all fields from LOCK to COPY.
-	// The new record does _not_ get an own condition variable!
+	// Allocates a new lock 'COPY' from the storage and copies
+	// LOCK's characteristics to COPY. Storage and condition variables
+	// are not touched.
 	@.define copy_lock_rec (LOCK) => (COPY) {
 		new_lock_rec () => (COPY);
-		memcpy(COPY, LOCK, sizeof *LOCK);
+		set_lock_bounds(COPY, get_lock_start(LOCK), get_lock_end(LOCK));
 	}
 	
 	// Returns the first (=lowest start address) overlapping lock (NULL=>none found).
@@ -227,7 +251,7 @@ output :>out
 			int i;
 			@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
 			
-			memset(@:>.lock_rec_storage, sizeof @:>.lock_rec_storage, 0);
+			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
 			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
 				@:>.lock_rec_storage[i].next_start = &@:>.lock_rec_storage[i + 1];
 			}
@@ -235,7 +259,6 @@ output :>out
 			@:>.lock_starting_first = NULL_REF;
 			@:>.lock_starting_last = NULL_REF;
 			@:>.free_lock_recs = @:>.lock_rec_storage;
-			@:>.lock_trash = NULL_REF;
 			@success = TRUE;
 		}
 	}
@@ -263,7 +286,7 @@ output :>out
 		find_first_lock (obl_start, obl_end) => (conflictor);	
 		if (obl_end - obl_start > 0) {
 			if (conflictor != NULL_REF && @action != action_wait) {
-				pthread_unlock_mutex(&@:>lock_list_access);
+				pthread_mutex_unlock(&@:>.lock_list_access);
 				return;
 			}
 			while (conflictor != NULL_REF) {
@@ -275,14 +298,17 @@ output :>out
 			}
 		}
 		else {
-			// This is the very special case of a zero-length obligatory part truly inside a conflicting lock,
-			// What results in a successful lock of zero bytes.
-			// (Code below relies on no locks across the obligatory part)
-			@try_addr = @log_addr;
-			@try_len = 0;
-			@success = TRUE;
-			pthread_mutex_unlock(&@:>.lock_list_access);
-			return;
+			if (conflictor != NULL_REF) {
+				// This is the very special case of a zero-length obligatory part truly inside a conflicting lock,
+				// What results in a successful lock of zero bytes.
+				// (Code below relies on no locks across the obligatory part)
+				@try_addr = @log_addr;
+				@try_len = 0;
+				@success = TRUE;
+				pthread_mutex_unlock(&@:>.lock_list_access);
+				trace ("Address 0x%llX truly contained inside another lock, \"locked\" 0 bytes.\n", obl_start);
+				return;
+			}
 		}
 		
 		// Cut the optional parts until nothing conflicts with them anymore.
@@ -307,7 +333,7 @@ output :>out
 			add_new_lock (opt_start, opt_end) => (lock);
 		}
 
-		trace ("mand=%d Lock [?0x%llX [!0x%llX..0x%llX!] 0x%llX?] granted.\n", (int)@mandate, opt_start, obl_start, opt_end, obl_end);
+		trace ("mand=%d Lock [0x%llX..0x%llX] granted.\n", (int)@mandate, opt_start, opt_end);
 		print_lock_list ();
 		pthread_mutex_unlock(&@:>.lock_list_access);
 		
