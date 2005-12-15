@@ -1,0 +1,153 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #test_lock_mutex
+
+purpose Verify #lock_mutex_ulinux
+
+desc
+Some test procedures to verify the brick #lock_mutex_ulinux.
+enddesc
+
+instance #lock_mutex_ulinux as mutex;
+wire :<in as #:>dummy;
+instance #thread_ulinux as fork1;
+wire :<exec as #:>proc1;
+instance #thread_ulinux as fork2;
+wire :<exec as #:>proc2;
+instance #thread_ulinux as fork3;
+wire :<exec as #:>proc3;
+
+local output :>dummy
+
+local output :>proc1
+
+	operation $op {
+		success_t ok;
+		trace ("### proc1 at work!\n");
+		@=outputcall ##mutex:>out$lock [64] (0x1550, 0x10) => (ok);
+		@.check (!ok, "Could not lock [0x1550..0x1560]!");
+		@.msg ("INFO: ", "################# COOL ########################\n");
+		@=outputcall ##mutex:>out$unlock [64] (0x1500, 0x10) => (ok);
+		@.check (!ok, "Could not unlock [0x1500..0x1510]!");
+	}
+
+local output :>proc2
+
+	operation $op {
+		success_t ok;
+		trace ("### proc2 at work!\n");
+		@=outputcall ##mutex:>out$lock [65] (0x1560, 0x10) => (ok);
+		@.check (!ok, "Could not lock [0x1560..0x1570]!");
+		@.msg ("INFO: ", "################# IS ##########################\n");
+		@=outputcall ##mutex:>out$unlock [65] (0x1550, 0x10) => (ok);
+		@.check (!ok, "Could not unlock [0x1550..0x1560]!");
+		@=outputcall ##mutex:>out$unlock [65] (0x1510, 0x10) => (ok);
+		@.check (!ok, "Could not unlock [0x1510..0x1520]!");
+	}
+
+local output :>proc3
+
+	operation $op {
+		success_t ok;
+		trace ("### proc3 at work!\n");
+		@=outputcall ##mutex:>out$lock [66] (0x1570, 0x10) => (ok);
+		@.check (!ok, "Could not lock [0x1570..0x1580]!");
+		@.msg ("INFO: ", "################# THIS ########################\n");
+		@=outputcall ##mutex:>out$unlock [66] (0x1560, 0x10) => (ok);
+		@.check (!ok, "Could not unlock [0x1560..0x1570]!");
+		@=outputcall ##mutex:>out$unlock [66] (0x1520, 0x10) => (ok);
+		@.check (!ok, "Could not unlock [0x1520..0x1530]!");
+	}
+
+input :<strat
+
+output :>program
+
+	operation $output_init {
+		success_t ok;
+		addr_t addr;
+		addr_t len;
+		if (@constr && !@destr) {
+			@=outputcall :>dummy$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init local output :>dummy_resource!");
+			@=outputcall :>proc1$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init local output :>proc1!");
+			@=outputcall :>proc2$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init local output :>proc2!");
+			@=outputcall :>proc3$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init local output :>proc3!");
+
+			@=outputcall ##mutex:>out$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init #mutex:>out!");
+			@=outputcall ##fork1:>cpu$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init #fork1:>out!");
+			@=outputcall ##fork2:>cpu$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init #fork2:>out!");
+			@=outputcall ##fork3:>cpu$output_init (FALSE, TRUE) => (ok);
+			@.check (!ok, "Could not init #fork3:>out!");
+			
+			// ### Test 1: test correct thread blocking.
+			@.msg ("INFO: ", "Test 1: Concurrent operation blocking.");
+			// Make all threads block initially.
+			@=outputcall ##mutex:>out$lock (0x1500, 0x100) => (ok);
+			@.check (!ok, "Initial lock failed!");
+			@=outputcall ##fork1:>cpu$wait (0, 0) => (ok);
+			@=outputcall ##fork2:>cpu$wait (0, 0) => (ok);
+			@=outputcall ##fork3:>cpu$wait (0, 0) => (ok);
+			
+			// Unlock proc3 (that will unlock proc2 that will unlock proc1).
+			@=outputcall ##mutex:>out$unlock (0x1570, 0x10) => (ok);
+			@.check (!ok, "Could not unlock [0x1570..0x1580]!");
+			
+			// Wait until threads proc1..proc3 have all finished.
+			@=outputcall ##mutex:>out$lock (0x1500, 0x30) => (ok);
+			@.check (!ok, "Wait lock failed!");
+			
+			// Clean up.
+			@=outputcall ##mutex:>out$unlock (0x1500, 0x100) => (ok);
+			@.check (!ok, "Clean up failed!");
+			
+			// ### Test 2: optional locking.
+			@.msg ("INFO: ", "Test 2: Optional locking.");
+			@=outputcall ##mutex:>out$lock (0x2000, 0x100, lock_write, lock_write, 0x1D00, 0x500) => (ok, addr, len);
+			@.check (!ok, "Lock [0x1D00..0x2200] failed!");
+			@.check (addr != 0x1D00 || len != 0x500, "Lock [0x1D00..0x2200] resulted in [0x%llX..0x%llX]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x3000, 0x0, lock_write, lock_write, 0x2E00, 0x200) => (ok, addr, len);
+			@.check (!ok, "Lock [0x2E00..0x3000] failed!");
+			@.check (addr != 0x2E00 || len != 0x200, "Lock [0x2E00..0x3000] resulted in [0x%llX..0x%llX]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x2FFF, 0x0, lock_write, lock_write, 0x0, (len_t)-1) => (ok, addr, len);
+			@.check (!ok, "Lock [everything] failed!");
+			@.check (addr != 0x2FFF || len != 0x0, "Lock [everything] resulted in [0x%llX..0x%llX] instead of [0x2FFF..0x2FFF]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x2400, 0x300, lock_write, lock_write, 0x0, (len_t)-1) => (ok, addr, len);
+			@.check (!ok, "Lock [everything] failed!");
+			@.check (addr != 0x2200 || len != 0xC00, "Lock [everything] resulted in [0x%llX..0x%llX] instead of [0x2300..0x2E00]!", addr, addr + len);
+			@=outputcall ##mutex:>out$unlock (0, (len_t)-1) => (ok);
+			@.check (!ok, "Could not unlock [everything]!");
+						
+			// ### Test 3: independent data & address locks.
+			@.msg ("INFO: ", "Test 3: Independence of data and address locks.");
+			@=outputcall ##mutex:>out$lock (0x2000, 0x200, lock_write, lock_none) => (ok, addr, len);
+			@.check (!ok, "Data lock [0x2000..0x2200] failed!");
+			@.check (addr != 0x2000 || len != 0x200, "Data lock [0x2000..0x2200] resulted in [0x%llX..0x%llX]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x2100, 0x200, lock_none, lock_write) => (ok, addr, len);
+			@.check (!ok, "Address lock [0x2100..0x2300] failed!");
+			@.check (addr != 0x2100 || len != 0x200, "Address lock [0x2100..0x2300] resulted in [0x%llX..0x%llX]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x1B00, 0x200, lock_read, lock_read, 0x1300, 0x1000) => (ok, addr, len);
+			@.check (!ok, "Data+address lock [0x1300..0x2300] failed!");
+			@.check (addr != 0x1300 || len != 0xD00, "Data+address lock [0x1300..0x2300] resulted in [0x%llX..0x%llX] instead of [0x1300..0x2000]]!", addr, addr + len);
+			@=outputcall ##mutex:>out$unlock (addr, len) => (ok);
+			@.check (!ok, "Could not unlock [0x%llX..0x%llX]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x1B00, 0x200, lock_none, lock_read, 0x1B00, 0x700) => (ok, addr, len);
+			@.check (!ok, "Address lock [0x1B00..0x2200] failed!");
+			@.check (addr != 0x1B00 || len != 0x600, "Adress lock [0x1B00..0x2200] resulted in [0x%llX..0x%llX] instead of [0x1B00..0x2100]!", addr, addr + len);
+			@=outputcall ##mutex:>out$lock (0x2500, 0x200, lock_read, lock_none, 0x2000, 0x700) => (ok, addr, len);
+			@.check (!ok, "Data lock [0x2000..0x2700] failed!");
+			@.check (addr != 0x2200 || len != 0x500, "Data lock [0x2000..0x2700] resulted in [0x%llX..0x%llX] instead of [0x2200..0x2700]!", addr, addr + len);
+			
+			@.msg ("INFO: ", "All tests succeeded!");
+			
+			@success = TRUE;
+		}		
+	}
