@@ -2,17 +2,22 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-brick #lock_mand_ulinux
+context: pconf ulinux*,klinux*
+context: cconf ulinux*,klinux*
+
+brick #lock_mand
 
 purpose Mandate-owned locks
 
 desc
-* Implements locks with an 'owner' id, the mandates.
-* Distinguishes data and address locks, e.g. a pure address lock does not conflict with a pure data lock.
-* Distinguishes read and write locks. Read locks do not conflict with each other, but write locks always conflict with any other lock.
-* Locks accumulate ('melt') when owned by the same operator (same mandate).
-* Forwards all operations (also $retract) except $lock and $unlock.
-* Does not generate own $lock, $unlock or $retract calls.
+* Implements locks with an 'owner' id: mandates.
+* Locks owned by the same operator do not block but melt together.
+* Weaker (read) locks are overwritten by stronger (write) locks on melt (enstrengthment).
+* Read locks do not conflict with each other on $lock, but write locks always conflict with any other lock.
+* Pure address locks do not conflict with pure data locks and v.v.
+* Forwards all operations except $lock and $unlock to the 'protected' resource on :<in.
+* Does not generate own $lock or $unlock calls.
+* Generates $retract operation calls on conflicting lock requests.
 * granularity is 1.
 
       +--------+
@@ -25,8 +30,14 @@ enddesc
 static_header {
 	#ifndef __LOCK_BRICK_STUFF__
 	#define __LOCK_BRICK_STUFF__
-	
+
+#ifndef __KERNEL__	
 	#include <pthread.h>
+#else
+	#include <linux/sched.h>
+	#include <linux/wait.h>
+	#include <asm/semaphore.h>
+#endif
 
 	// Abstract reference type to ease later conversion to Pointer Cache.
 	typedef struct lock_rec *ref_t;
@@ -43,7 +54,11 @@ static_header {
 		ref_t next_start;
 		ref_t prev_start;
 		// Signal broadcasted when a locked block is [partially] unlocked.
+#ifndef __KERNEL__
 		pthread_cond_t unlocked;
+#else
+		wait_queue_head_t wait_queue;
+#endif
 		struct lock_desc desc;
 	};
 	// Filter for locks in the active list.
@@ -94,7 +109,9 @@ static_header {
 }
 
 static_data {
+#ifndef __KERNEL__
 	static pthread_cond_t null_cond;
+#endif
 	// lock_type = ((addr_lock << 2) + data_lock)
 	// conflict <==> (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -119,19 +136,27 @@ static_data {
 }
 
 init {
+#ifndef __KERNEL__
 	memset(&null_cond, 0, sizeof null_cond);
+#endif	
 }
 
 input :<in
 
-	// Route $retract calls to :>out. The underlying nest might need retraction of other resources than locks.
+	// Currently, this brick does not hold any data in this input nest, so $retract ops succeed.
 	operation $retract {
-		@=inputcall :>out$retract @args;
+		@success = TRUE;
 	}
 
 output :>out
 
 	data {
+		// Mutex to protect lock list from concurrent use. */
+#ifndef __KERNEL__
+		pthread_mutex_t lock_list_access;
+#else
+		DECLARE_MUTEX (mutex);
+#endif
 		// Storage for doubly linked list of locks. Could (should) later be stored in an input nest nest instead.
 		struct lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
 		// Reference to the lock with the lowest address.
@@ -139,8 +164,6 @@ output :>out
 		ref_t lock_starting_last;
 		// Reference to the start of the list of unallocated blocks (first element has no 'previous' element).
 		ref_t free_lock_recs;
-		// Mutex to protect lock list from concurrent use. */
-		pthread_mutex_t lock_list_access;
 	}
 
 	// Allocates a new lock from the storage.
@@ -170,6 +193,7 @@ output :>out
 		ref_t scan;
 		trace ("mand=%d activate lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock));
 		for (scan = @:>.lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = scan->next_start);
+#ifndef __KERNEL__		
 // FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
 		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
 			trace("mand=%d this is a fresh lock record. Creating new condition variable.\n", (int)@mandate);
@@ -179,6 +203,9 @@ output :>out
 		else {
 			trace("mand=%d this lock record has been used before. Using the existing condition variable.\n", (int)@mandate);
 		}
+#else
+		init_waitqueue_head (&lock->wait_queue);
+#endif
 		lock->next_start = scan;
 		if (lock->next_start != NULL_REF) {
 			lock->prev_start = lock->next_start->prev_start;
@@ -211,6 +238,7 @@ output :>out
 		else {
 			@:>.lock_starting_last = lock->prev_start;
 		}
+#ifndef __KERNEL__
 		@.fatal (pthread_cond_broadcast(&lock->unlocked) != 0, "Could not release POSIX lock!");
 // FIXME: (or better: fix pthreads)
 //        pthread_cond_destroy blocks the caller if multiple threads were waiting
@@ -220,6 +248,9 @@ output :>out
 //        I consider this a bug in pthreads.
 //        So we don't destroy the condition but rather will reuse it later on.
 //		@.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
+#else
+		wake_up_all (&lock->wait_queue);
+#endif
 	}
 
 	// Allocates a new lock 'COPY' from the storage and copies
@@ -294,12 +325,16 @@ output :>out
 	// Stores status in brick variables. TODO: use a nest instead!
 	operation $output_init {
 		if (!@constr && @destr) {
+#ifndef __KERNEL__
 			pthread_mutex_destroy(&@:>.lock_list_access);
+#endif
 			@success = TRUE;
 		}
 		if (@constr && !@destr) {
 			int i;
+#ifndef __KERNEL__
 			@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
+#endif			
 			
 			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
 			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
@@ -332,7 +367,11 @@ output :>out
 		
 		set_desc (desc, obl_start, obl_end, @mandate, make_lock_type (@data_lock, @addr_lock));
 		
-		pthread_mutex_lock(&@:>.lock_list_access);		
+#ifndef __KERNEL__		
+		pthread_mutex_lock(&@:>.lock_list_access);
+#else
+		down(&mutex);
+#endif
 		trace ("mand=%d Lock [?0x%llX..[!0x%llX..0x%llX!]..0x%llX?] requested.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end);
 		
 		// Look for locks overlapping with the obligatory part of our requested lock.
@@ -341,12 +380,20 @@ output :>out
 			if (conflictor != NULL_REF) {
 				if (@action != action_wait) {
 					// There is a conflict and we are not supposed to wait for it, so break.
+#ifndef __KERNEL__
 					pthread_mutex_unlock(&@:>.lock_list_access);
+#else
+					up(&mutex);
+#endif
 					return;
 				}
 				do {
 					// Wait for the lock to be released.
+#ifndef __KERNEL__
 					pthread_cond_wait(&conflictor->unlocked, &@:>.lock_list_access);
+#else
+					sleep_on(&lock->wait_queue);
+#endif
 					trace ("mand=%d got condition signal!\n", (int)@mandate);
 					// Start all over again, the list has changed in the meantime
 					// and 'conflictor' has become invalid.
@@ -363,7 +410,11 @@ output :>out
 				@try_len = 0;
 				@success = TRUE;
 				trace ("Address 0x%llX truly contained inside lock [0x%llX..0x%llX], \"locked\" 0 bytes.\n", obl_start, get_lock_start (conflictor), get_lock_end (conflictor));
+#ifndef __KERNEL__				
 				pthread_mutex_unlock(&@:>.lock_list_access);
+#else
+				up(&mutex);
+#endif
 				return;
 			}
 		}
@@ -426,7 +477,8 @@ output :>out
 					if (get_lock_end (lock) > get_desc_end (desc)) {
 						// The existing lock exceeds the new lock and might need to be split.
 						if (!is_stronger_or_equal (lock, desc)) {
-							// It is (partly) too weak and needs enstrengthment, so split it.
+							// It is (partly) weaker, and the overlapping part needs
+							// enstrengthment, so split it.
 							ref_t new_lock;
 							new_lock_rec () => (new_lock);
 							@.check (new_lock == NULL_REF, "Out of lock records!");
@@ -446,7 +498,11 @@ output :>out
 
 		trace ("mand=%d Lock [0x%llX..0x%llX] granted.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		print_lock_list ();
+#ifndef __KERNEL__		
 		pthread_mutex_unlock(&@:>.lock_list_access);
+#else
+		up(&mutex);
+#endif
 		
 		@try_addr = get_desc_start (desc);
 		@try_len = get_desc_end (desc) - get_desc_start (desc);
@@ -461,7 +517,11 @@ output :>out
 		set_desc (desc, @try_addr, @try_addr + @try_len, @mandate, make_lock_type (lock_write, lock_write));
 		@.check (get_desc_start (desc) > @log_addr || get_desc_end (desc) < @log_addr + @log_len, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", get_desc_start (desc), get_desc_end (desc), @log_addr, @log_addr + @log_len);
 
+#ifndef __KERNEL__
 		pthread_mutex_lock(&@:>.lock_list_access);
+#else
+		down(&mutex);
+#endif
 		trace ("mand=%d Unlock of [0x%llX..0x%llX] requested.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		
 		find_first_lock (&desc, is_own) => (lock);
@@ -488,7 +548,11 @@ output :>out
 		}
 		trace ("mand=%d Lock [0x%llX..0x%llX] released.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		print_lock_list ();
+#ifndef __KERNEL__		
 		pthread_mutex_unlock(&@:>.lock_list_access);
+#else
+		up(&mutex);
+#endif
 		@success = TRUE;
 	}
 
