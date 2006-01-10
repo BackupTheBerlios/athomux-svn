@@ -13,7 +13,7 @@ LDFLAGS=-lrt
 #CFLAGS=-Wall -O3 -DSILENT
 TIME=
 #TIME=/usr/bin/time --format="%E"
-CC=$(TIME)  gcc-3.3
+CC=$(TIME)  gcc
 
 all : all_targets
 
