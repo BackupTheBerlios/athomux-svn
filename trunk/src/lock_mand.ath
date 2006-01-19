@@ -29,9 +29,33 @@ in ---+        +--- out
 enddesc
 
 static_header {
-	#ifndef __LOCK_BRICK_STUFF__
-	#define __LOCK_BRICK_STUFF__
+	// Abstract reference type to ease later conversion to Pointer Cache.
+	typedef struct lock_mand_lock_rec *lock_mand_ref_t;
+	// Essential properties of a lock.
+	struct lock_mand_lock_desc {
+		addr_t start;
+		addr_t end;
+		mand_t mandate;
+		unsigned short flags;
+	};
+	// Record in a doubly linked list of locks.
+	// Also contains implementation of thread blocking.
+	struct lock_mand_lock_rec {
+		lock_mand_ref_t next_start;
+		lock_mand_ref_t prev_start;
+		// Signal broadcasted when a locked block is [partially] unlocked.
+#ifndef __KERNEL__
+		pthread_cond_t unlocked;
+#else
+		wait_queue_head_t wait_queue;
+#endif
+		struct lock_mand_lock_desc desc;
+	};
+	// Filter for locks in the active list.
+	typedef bool (*lock_test_t) (lock_mand_ref_t lock, struct lock_mand_lock_desc *desc);
+}
 
+static_data {
 #ifndef __KERNEL__	
 	#include <pthread.h>
 #else
@@ -40,34 +64,23 @@ static_header {
 	#include <asm/semaphore.h>
 #endif
 
-	// Abstract reference type to ease later conversion to Pointer Cache.
-	typedef struct lock_rec *ref_t;
-	// Essential properties of a lock.
-	struct lock_desc {
-		addr_t start;
-		addr_t end;
-		mand_t mandate;
-		unsigned short flags;
-	};
-	// Record in a doubly linked list of locks.
-	// Also contains implementation of thread blocking.
-	struct lock_rec {
-		ref_t next_start;
-		ref_t prev_start;
-		// Signal broadcasted when a locked block is [partially] unlocked.
 #ifndef __KERNEL__
-		pthread_cond_t unlocked;
-#else
-		wait_queue_head_t wait_queue;
+	static pthread_cond_t null_cond;
 #endif
-		struct lock_desc desc;
+	// lock_type = ((addr_lock << 2) + data_lock)
+	// conflict <==> (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
+	static unsigned short lock_conflict_def[] = {
+		0x000, 0x444, 0x666, 0x000,
+		0x700, 0x744, 0x766, 0x000,
+		0x770, 0x774, 0x776
 	};
-	// Filter for locks in the active list.
-	typedef bool (*lock_test_t) (ref_t lock, struct lock_desc *desc);
+	
+	static const char ch_lock_types[] = { '-', 'r', 'w' };
 
 	@.define LOCK_STORAGE_SIZE (1024)
+
 	// Abstract reference values/querys/operations.
-	@.define NULL_REF ((ref_t)NULL)
+	@.define NULL_REF ((lock_mand_ref_t)NULL)
 	
 	// Abstract operations on the lock list.
 	@.define has_next (REF) (REF->next_start != 0)
@@ -108,34 +121,17 @@ static_header {
 	@.define is_stronger_or_equal (REF, DESC) (get_lock_data_type (REF) >= get_desc_data_type (DESC) && get_lock_addr_type (REF) >= get_desc_addr_type (DESC))
 	@.define set_strongest_lock_type (REF, DESC) (set_lock_type (REF, make_lock_type (get_lock_data_type (REF) > get_desc_data_type (DESC) ? get_lock_data_type (REF) : get_desc_data_type (DESC), get_lock_addr_type (REF) > get_desc_addr_type (DESC) ? get_lock_addr_type (REF) : get_desc_addr_type (DESC))))
 
-	#endif
-}
-
-static_data {
-#ifndef __KERNEL__
-	static pthread_cond_t null_cond;
-#endif
-	// lock_type = ((addr_lock << 2) + data_lock)
-	// conflict <==> (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
-	static unsigned short lock_conflict_def[] = {
-		0x000, 0x444, 0x666, 0x000,
-		0x700, 0x744, 0x766, 0x000,
-		0x770, 0x774, 0x776
-	};
-	
-	static const char ch_lock_types[] = { '-', 'r', 'w' };
-
 	// Tests a lock record in a list for conflict with a given lock descriptor.
 	// Used to find conflicting locks in $lock.
 	// No need to test overlap, that is a precondition for the call of this filter.
-	static bool is_conflict(ref_t lock, struct lock_desc *desc) {
+	static bool is_conflict(lock_mand_ref_t lock, struct lock_mand_lock_desc *desc) {
 		return (get_lock_mand (lock) != get_desc_mand (*desc) && lock_conflict_def[get_desc_type (*desc)] & (1 << get_lock_type (lock))) != 0;
 	}
 	
 	// Tests a lock record in a list for 'ownage' by the same individual owning desc.
 	// Used to find own locks in $lock (to melt them) and in $unlock (to split them).
 	// No need to test overlap, that is a precondition for the call of this filter.
-	static bool is_own (ref_t lock, struct lock_desc *desc) {
+	static bool is_own (lock_mand_ref_t lock, struct lock_mand_lock_desc *desc) {
 		return get_lock_mand (lock) == get_desc_mand (*desc);
 	}
 }
@@ -163,12 +159,12 @@ output :>out
 		DECLARE_MUTEX (mutex);
 #endif
 		// Storage for doubly linked list of locks. Could (should) later be stored in an input nest nest instead.
-		struct lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
+		struct lock_mand_lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
 		// Reference to the lock with the lowest address.
-		ref_t lock_starting_first;
-		ref_t lock_starting_last;
+		lock_mand_ref_t lock_starting_first;
+		lock_mand_ref_t lock_starting_last;
 		// Reference to the start of the list of unallocated blocks (first element has no 'previous' element).
-		ref_t free_lock_recs;
+		lock_mand_ref_t free_lock_recs;
 	}
 
 	// Allocates a new lock from the storage.
@@ -194,8 +190,8 @@ output :>out
 	}
 
 	// Activates (creates condition) a lock record and adds it to the list.
-	@.func add_lock_rec (ref_t lock) {
-		ref_t scan;
+	@.func add_lock_rec (lock_mand_ref_t lock) {
+		lock_mand_ref_t scan;
 		trace ("mand=%d activate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		for (scan = @:>.lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = scan->next_start);
 #ifndef __KERNEL__		
@@ -225,7 +221,7 @@ output :>out
 	}
 	
 	// Deactivates (signals and destroys condition) and removes a lock record from the list.
-	@.func remove_lock_rec (ref_t lock) {
+	@.func remove_lock_rec (lock_mand_ref_t lock) {
 		trace ("mand=%d deactivate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		if (lock->prev_start != NULL_REF) {
 			lock->prev_start->next_start = lock->next_start;
@@ -271,7 +267,7 @@ output :>out
 	
 	// Returns the next (=next-higher start address from 'lock') lock record in the list that
 	// overlaps the specified descriptor and fulfills the specified requirement.
-	@.func find_next_lock_from (ref_t lock, struct lock_desc *desc, lock_test_t requirement) => (ref_t result) {
+	@.func find_next_lock_from (lock_mand_ref_t lock, struct lock_mand_lock_desc *desc, lock_test_t requirement) => (lock_mand_ref_t result) {
 		for (result = lock; result != NULL_REF; result = next_start_from (result)) {
 			if (get_lock_end (result) > get_desc_start (*desc)) {
 				if (get_lock_start (result) >= get_desc_end (*desc)) {
@@ -297,7 +293,7 @@ output :>out
 		char buf[1024];
 		int n;
 		char *buf_end;
-		ref_t lock, prev_lock;
+		lock_mand_ref_t lock, prev_lock;
 		addr_t prev_start;
 
 		ok = FALSE;
@@ -379,8 +375,8 @@ output :>out
 		addr_t obl_end = @log_addr + @log_len;
 		addr_t opt_start = @try_addr;
 		addr_t opt_end = @try_addr + @try_len;
-		struct lock_desc desc;
-		ref_t conflictor;
+		struct lock_mand_lock_desc desc;
+		lock_mand_ref_t conflictor;
 		@.check (opt_end < opt_start || obl_end < obl_start, "Lock  [0x%llX..[0x%llX..0x%llX]..0x%llX] exceeds address space!", opt_start, obl_start, obl_end, opt_end);
 		@.check (opt_start > obl_start || opt_end < obl_end, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", opt_start, opt_end, obl_start, obl_end);
 		
@@ -468,20 +464,20 @@ output :>out
 		@try_addr = get_desc_start (desc);
 		@try_len = get_desc_end (desc) - get_desc_start (desc);
 		if (get_desc_end (desc) > get_desc_start (desc) && @action != action_ask) {
-			ref_t lock;
+			lock_mand_ref_t lock;
 			// Split the new lock so that only the gaps between existing own locks are filled.
 			// This is to prevent unnecessary wake-ups of operations waiting for those locks (what
 			// would only result in an immediate new slept on the replacement lock).
 			find_first_lock (&desc, is_own) => (lock);
 			if (lock != NULL_REF) {
-				ref_t prev_lock = NULL_REF;
+				lock_mand_ref_t prev_lock = NULL_REF;
 				if (get_lock_start (lock) < get_desc_start (desc)) {
 					// The lock only partly overlaps the new lock. It may be necessary to split it.
 					if (!is_stronger_or_equal (lock, desc)) {
 						trace ("mand=%d Split partly overlapping lock:\n", (int)@mandate);
 						// The lock is (partly) weaker than the new lock and 
 						// only the overlapping part has to be enstrengthened.
-						ref_t new_lock;
+						lock_mand_ref_t new_lock;
 						new_lock_rec () => (new_lock);
 						@.check (new_lock == NULL_REF, "Out of lock records!");
 						remove_lock_rec (lock);
@@ -508,7 +504,7 @@ output :>out
 							set_lock_end (prev_lock, get_lock_start (lock));
 						}
 						else {
-							ref_t new_lock;
+							lock_mand_ref_t new_lock;
 							trace ("mand=%d filling gap with a new record:\n", (int)@mandate);
 							new_lock_rec () => (new_lock);
 							@.check (new_lock == NULL_REF, "Out of lock records!");
@@ -523,7 +519,7 @@ output :>out
 						if (!is_stronger_or_equal (lock, desc)) {
 							// It is (partly) weaker, and the overlapping part needs
 							// enstrengthment, so split it.
-							ref_t new_lock;
+							lock_mand_ref_t new_lock;
 							new_lock_rec () => (new_lock);
 							@.check (new_lock == NULL_REF, "Out of lock records!");
 							remove_lock_rec (lock);
@@ -545,7 +541,7 @@ output :>out
 				}
 			}
 			if (get_desc_start (desc) < get_desc_end (desc)) {
-				ref_t lock;
+				lock_mand_ref_t lock;
 				new_lock_rec () => (lock);
 				@.check (lock == NULL_REF, "Out of lock records!");
 				set_lock_desc (lock, desc);
@@ -568,8 +564,8 @@ output :>out
 	
 	// See description in brick header.
 	operation $unlock {
-		ref_t lock;
-		struct lock_desc desc;
+		lock_mand_ref_t lock;
+		struct lock_mand_lock_desc desc;
 		// Unlocking will always succeed, so we unlock the whole optional part right away.
 		set_desc (desc, @try_addr, @try_addr + @try_len, @mandate, make_lock_type (lock_write, lock_write));
 		@.check (get_desc_start (desc) > @log_addr || get_desc_end (desc) < @log_addr + @log_len, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", get_desc_start (desc), get_desc_end (desc), @log_addr, @log_addr + @log_len);
@@ -583,17 +579,17 @@ output :>out
 		
 		find_first_lock (&desc, is_own) => (lock);
 		while (lock != NULL_REF) {
-			ref_t next_lock = next_start_from (lock);
+			lock_mand_ref_t next_lock = next_start_from (lock);
 			// If the block is not completely covered by this $unlock, it must be split.
 			// Create the (potential) lower and the upper leftovers as separate new locks.
 			if (get_lock_start (lock) < get_desc_start (desc)) {
-				ref_t lower_part;
+				lock_mand_ref_t lower_part;
 				copy_lock_rec (lock) => (lower_part);
 				set_lock_end (lower_part, get_desc_start (desc));
 				add_lock_rec (lower_part);
 			}
 			if (get_lock_end (lock) > get_desc_end (desc)) {
-				ref_t upper_part;
+				lock_mand_ref_t upper_part;
 				copy_lock_rec (lock) => (upper_part);
 				set_lock_start (upper_part, get_desc_end (desc));
 				add_lock_rec (upper_part);
