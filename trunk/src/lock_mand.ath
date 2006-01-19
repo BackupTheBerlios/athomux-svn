@@ -123,9 +123,7 @@ static_data {
 		0x770, 0x774, 0x776
 	};
 	
-#ifdef DEBUG
 	static const char ch_lock_types[] = { '-', 'r', 'w' };
-#endif
 
 	// Tests a lock record in a list for conflict with a given lock descriptor.
 	// Used to find conflicting locks in $lock.

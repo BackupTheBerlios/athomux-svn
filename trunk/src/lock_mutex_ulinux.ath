@@ -227,27 +227,14 @@ output :>out
 	// overlaps the specified descriptor and fulfills the specified requirement.
 	@.func find_next_lock_from (ref_t lock, struct lock_desc *desc, lock_test_t requirement) => (ref_t result) {
 		for (result = lock; result != NULL_REF; result = next_start_from (result)) {
-			trace ("Checking lock [0x%llX..0x%llX]...", get_lock_start (result), get_lock_end (result));
 			if (get_lock_end (result) > get_desc_start (*desc)) {
-				trace ("Its end lies ahead...");
 				if (get_lock_start (result) >= get_desc_end (*desc)) {
-					trace("But its start, too.");
 					result = NULL_REF;
 					break;
 				}
-				else {
-					trace("Yes, an overlap!");
-				}
 				if (requirement (result, desc)) {
-					trace("And it fulfills the requirements!");
 					break;
 				}
-				else {
-					trace("But it does not fullfill the requirements.");
-				}
-			}
-			else {
-				trace("Its end lies behind.");
 			}
 		}
 		if (result != NULL_REF) {

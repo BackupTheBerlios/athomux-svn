@@ -1,0 +1,26 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #retract_dummy
+
+purpose to test correct retract dispatch
+
+desc
+	Make any op on :>out bounce as a $retract
+enddesc
+
+output :>out
+
+	operation $output_init {
+		@success = TRUE;
+	}
+	
+	operation $op {
+		trace ("Sending out an S O S (%lld, %lld)...\n", @log_addr, @log_len);
+		@=inputcall :>out$retract (prio_normal, @log_addr, @log_len) => (@success);
+		trace ("$retract returned %d\n", @success);
+	}

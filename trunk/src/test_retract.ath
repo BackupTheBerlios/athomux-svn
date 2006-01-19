@@ -1,0 +1,53 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #test_retract
+
+purpose test retract dispatch
+
+output :>program
+
+	// 0=ROOT, 1=CONTROL, 2=TEST_RETRACT, 3=RETRACT_DUMMY
+	@.define ADDR_TEST_RETRACT (2 * DEFAULT_TRANSFER)
+
+	operation $output_init {
+		char strbuf[DEFAULT_TRANSFER];
+		success_t ok;
+		addr_t addr;
+		len_t len;
+		@=outputcall :<strat$gadrcreate (DEFAULT_TRANSFER) => (ok, addr, len);
+		@.check (!ok || len < DEFAULT_TRANSFER, "retract_dummy allocation failed!");
+		sprintf(strbuf, "brick:=retract_dummy{\noutput:=out{\n}\n}\n");
+		@=outputcall :<strat$transwait (addr, sizeof strbuf, MAKE_PADDR (strbuf), direct_write) => (ok);
+		@.check (!ok, "retract_dummy\'s initialization failed!");
+		sprintf(strbuf, "brick=test_retract{\ninput=bounce1{\nconnect bounce1:=0x%llx:out\n}\ninput=bounce2{\nconnect bounce2:=0x%llx:out\n}\n}\n", addr, addr);
+		@=outputcall :<strat$transwait (ADDR_TEST_RETRACT, sizeof strbuf, MAKE_PADDR (strbuf), direct_write) => (ok);
+		@.check (!ok, "retract_dummy\'s connection to test_retract failed!");
+		@=outputcall :<bounce1$wait (1500, 0) => (ok);
+		@.check (ok, ":<bounce1$wait (1500, 0) unexpectedly succeeded!");
+		@=outputcall :<bounce1$wait (3500, 0) => (ok);
+		@.check (ok, ":<bounce1$wait (3500, 0) unexpectedly succeeded!");
+		@=outputcall :<bounce1$wait (2500, 0) => (ok);
+		@.check (!ok, ":<bounce1$wait (2500, 0) unexpectedly failed!");
+		@success = TRUE;
+	}
+
+input :<strat
+
+input :<bounce1
+
+	operation $retract {
+		trace (":<bounce1$retract called with log_addr==%lld\n", @log_addr);
+		@success = (@log_addr >= 1000 && @log_addr < 3000);
+	}
+
+input :<bounce2
+
+	operation $retract {
+		trace (":<bounce2$retract called with log_addr==%lld\n", @log_addr);
+		@success = (@log_addr >= 2000 && @log_addr < 4000);
+	}

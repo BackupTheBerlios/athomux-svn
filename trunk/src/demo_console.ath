@@ -121,5 +121,7 @@ output:>program
 
 			@=outputcall #:<workA$wait [40] @args;
 			@=outputcall #:<workB$wait [50] @args;
+			
+			fgetc(stdin);
 		}
 	}
