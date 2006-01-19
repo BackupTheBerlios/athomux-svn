@@ -52,13 +52,13 @@ operation $op
   success_t succ;
 
   // get lock
-  @=call ##lock:>out$lock (1, 1) => (succ);
+  @=call ##lock:>out$lock (1, 1, lock_write, lock_write) => (succ);
   @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
   @=inputcall :>out$op [@mandate] (@args);
 
   // release lock
-  @=call ##lock:>out$unlock (1, 1) => (succ);
+  @=call ##lock:>out$unlock (1, 1, lock_write, lock_write) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
 
@@ -71,12 +71,12 @@ operation $op
   success_t succ;
 
   // get lock
-  @=call ##lock:>out$lock (0, 1) => (succ);
+  @=call ##lock:>out$lock (0, 1, lock_write, lock_write) => (succ);
   @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
   @=outputcall :<in$op (@args);
   
   // release lock
-  @=call ##lock:>out$unlock [@mandate] (0, 1) => (succ);
+  @=call ##lock:>out$unlock [@mandate] (0, 1, lock_write, lock_write) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
