@@ -22,7 +22,7 @@ desc
 	This will change as soon as a fully functional memory device brick (see below)
 	is available.
 	
-	The input "buf" is used by this brick to store it's status and as a
+	The input "buf" is used by this brick to store its status and as a
 	memory source for the outputs (all memory io is redirected to "buf"),
 	so a dynamic nest with memory semantics and address allocation capabilities
 	is necessary there.
@@ -36,7 +36,9 @@ static_header {
 	#include <fcntl.h>
 
 	// An executable communicating with the calling brick via stdin/stdout.
-	#define DEFAULT_CHILD_PROGRAM "ulinux/ulinux/graph_console"
+	#define MAKE_STRING(VAR) #VAR
+	#define MAKE_EXPANDED_STRING(VAR) MAKE_STRING(VAR)
+	#define DEFAULT_CHILD_PROGRAM "PCONF/" MAKE_EXPANDED_STRING(CCONF) "/graph_console"
 	// Indices into file descriptor arrays holding the pipes to the child prog.
 	#define READ 0
 	#define WRITE 1
@@ -54,12 +56,12 @@ data {
 init {
 	@#.child_pid = -1;
 	if (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0) {
-		fputs("Error creating pipes for connection to child program!", stderr);
+		fputs("Error creating pipes for connection to child program!\n", stderr);
 		exit(1);
 	}
 	int pid = fork();
 	if (pid < 0) {
-		 fputs("Error creating child process!", stdout);
+		 fputs("Error creating child process!\n", stdout);
 		 exit(1);
 	}
 	else if (pid == 0) {
@@ -68,12 +70,12 @@ init {
 		close(@#.to_child[WRITE]);
 		close(@#.from_child[READ]);
 		if (dup2(@#.to_child[READ], STDIN_FILENO) < 0 || dup2(@#.from_child[WRITE], STDOUT_FILENO) < 0) {
-			fputs("Error linking the pipes to child process!", stderr);
+			fputs("Error linking the pipes to child process!\n", stderr);
 			exit(1);
 		}
 		// ...and start the specified child terminal program.
 		execl(DEFAULT_CHILD_PROGRAM, DEFAULT_CHILD_PROGRAM, NULL);
-		fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!", stderr);
+		fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!\n", stderr);
 		exit(1);
 	}
 	else {
@@ -111,9 +113,9 @@ output:>read
 		if (@constr == TRUE && @destr == FALSE) {
 			success_t ok;
 			@=outputcall :<buf$gadr (READ_BUF_SIZE) => (ok, @:>.read_buf_addr, @:>.read_buf_len);
-			@.fatal (!ok || @:>.read_buf_len < READ_BUF_SIZE, "Error allocating read buffer!");
+			@.check (!ok || @:>.read_buf_len < READ_BUF_SIZE, "Error allocating read buffer!");
 			@=outputcall :<buf$create (@:>.read_buf_addr, @:>.read_buf_len) => (ok);
-			@.fatal (!ok, "Error creating read buffer!");
+			@.check (!ok, "Error creating read buffer!");
 			@:>.read_buf_pos = @:>.read_buf_len;
 		}
 		else if (@constr == FALSE && @destr == TRUE) {
