@@ -13,9 +13,9 @@ desc
 * Implements locks with an 'owner' id: mandates.
 * Locks owned by the same operator do not block but melt together.
 * Weaker (read) locks are overwritten by stronger (write) locks on melt (enstrengthment).
-* Read locks do not conflict with each other on $lock, but write locks always conflict with any other lock.
+* Read locks do not conflict with each other on $lock, but write locks do always conflict with any other lock.
 * Pure address locks do not conflict with pure data locks and v.v.
-* Forwards all operations except $lock and $unlock to the 'protected' resource on :<in.
+* Forwards all operations except $lock and $unlock to the 'protected' resource in :<in.
 * Does not generate own $lock or $unlock calls.
 * Generates $retract operation calls on conflicting lock requests.
 * granularity is 1.
@@ -29,6 +29,14 @@ in ---+        +--- out
 enddesc
 
 static_header {
+#ifndef __KERNEL__
+	#include <pthread.h>
+#else
+	#include <linux/sched.h>
+	#include <linux/wait.h>
+	#include <asm/semaphore.h>
+#endif
+
 	// Abstract reference type to ease later conversion to Pointer Cache.
 	typedef struct lock_mand_lock_rec *lock_mand_ref_t;
 	// Essential properties of a lock.
@@ -56,13 +64,6 @@ static_header {
 }
 
 static_data {
-#ifndef __KERNEL__	
-	#include <pthread.h>
-#else
-	#include <linux/sched.h>
-	#include <linux/wait.h>
-	#include <asm/semaphore.h>
-#endif
 
 #ifndef __KERNEL__
 	static pthread_cond_t null_cond;
@@ -120,17 +121,32 @@ static_data {
 	@.define is_equally_strong (REF, DESC) (get_lock_type (REF) == get_desc_type (DESC))
 	@.define is_stronger_or_equal (REF, DESC) (get_lock_data_type (REF) >= get_desc_data_type (DESC) && get_lock_addr_type (REF) >= get_desc_addr_type (DESC))
 	@.define set_strongest_lock_type (REF, DESC) (set_lock_type (REF, make_lock_type (get_lock_data_type (REF) > get_desc_data_type (DESC) ? get_lock_data_type (REF) : get_desc_data_type (DESC), get_lock_addr_type (REF) > get_desc_addr_type (DESC) ? get_lock_addr_type (REF) : get_desc_addr_type (DESC))))
+}
+
+static_data {
+#ifndef __KERNEL__
+	static pthread_cond_t null_cond;
+#endif
+	// lock_type = ((addr_lock << 2) + data_lock)
+	// conflict(A,B) <==> (lock_conflict_def[A.lock_type] & (1 << B.lock_type)) != 0
+	static unsigned short lock_conflict_def[] = {
+		0x000, 0x444, 0x666, 0x000,
+		0x700, 0x744, 0x766, 0x000,
+		0x770, 0x774, 0x776
+	};
+	
+	static const char ch_lock_types[] = { '-', 'r', 'w' };
 
 	// Tests a lock record in a list for conflict with a given lock descriptor.
 	// Used to find conflicting locks in $lock.
-	// No need to test overlap, that is a precondition for the call of this filter.
+	// No need to test for overlap, that is a precondition for the call of this filter.
 	static bool is_conflict(lock_mand_ref_t lock, struct lock_mand_lock_desc *desc) {
 		return (get_lock_mand (lock) != get_desc_mand (*desc) && lock_conflict_def[get_desc_type (*desc)] & (1 << get_lock_type (lock))) != 0;
 	}
 	
 	// Tests a lock record in a list for 'ownage' by the same individual owning desc.
 	// Used to find own locks in $lock (to melt them) and in $unlock (to split them).
-	// No need to test overlap, that is a precondition for the call of this filter.
+	// No need to test for overlap, that is a precondition for the call of this filter.
 	static bool is_own (lock_mand_ref_t lock, struct lock_mand_lock_desc *desc) {
 		return get_lock_mand (lock) == get_desc_mand (*desc);
 	}
@@ -286,8 +302,7 @@ output :>out
 			trace ("mand=%d Found no lock in region [0x%llX..0x%llX].\n", (int)@mandate, get_desc_start (*desc), get_desc_end (*desc));
 		}
 	}
-	
-#ifdef DEBUG
+
 	// Checks consistency of and prints out the lock list.
 	@.func print_lock_list () => (success_t ok) {
 		char buf[1024];
@@ -340,7 +355,6 @@ output :>out
 		}
 		ok = TRUE;
 	}
-#endif
 	
 	// Initializes/destroys status variables.
 	// Stores status in brick variables. TODO: use a nest instead!
