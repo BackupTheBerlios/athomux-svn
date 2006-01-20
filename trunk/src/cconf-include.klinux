@@ -2,7 +2,7 @@ $(cconf)_LINSRC=$(LINSRC)
 $(cconf)_MODPOST=$($(cconf)_LINSRC)/scripts/mod/modpost
 
 $(pconf)/$(cconf)/%.o: $(pconf)/%.c common.h strat.h Makefile $(pconf)/$(cconf)/asm
-	$(CC) -c -I$(pconf)/$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
+	$(CC) -c -I$(pconf)/$(cconf) -DCCONF=$(cconf) $($(cconf)_CFLAGS) -DKBUILD_BASENAME=$(patsubst $(pconf)/%.c,%,$<) -DKBUILD_MODNAME=athomux $< -o $@
 
 .PRECIOUS: $(pconf)/%-$(cconf).mod.c
 $(pconf)/%-$(cconf).mod.c: $(pconf)/$(cconf)/%.linked.o $($(cconf)_MODPOST)
