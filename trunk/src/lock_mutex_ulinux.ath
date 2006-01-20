@@ -7,13 +7,13 @@ brick #lock_mutex_ulinux
 purpose Mandate-independent locks
 
 desc
-* Implements simple locking for local use: bricks can use it e.g. to protect their status nest against concurrent op calls.
-* Ignores mandates (lock calls with the same mandate block each other!)
-* Distinguishes data and address locks, e.g. a pure address lock does not conflict with a pure data lock.
-* No accumulating locks (impossible without any individual identification).
-* Forwards all operations, even $lock, $unlock and $retract.
-* Operations $trans, $wait, $get, $put, $create, $delete and $move can potentially block the call.
-* Does not generate own $lock, $unlock or $retract ops.
+* Read locks conflict with write locks only.
+* Write locks conflict with any locks.
+* A lock conflict causes the later requesting operation to either be blocked or to fail, depending on the action parameter.
+* Ignores mandates (conflicting lock calls with the same mandate block!)
+* No accumulating locks (impossible without operator identification), use lock_mand for this.
+* $unlock releases only one of (possible) multiple overlapping locks (always pairwise $lock/ $unlock).
+* Data and address locks are orthogonal and independant.
 * granularity is 1.
 
       +--------+
@@ -84,18 +84,20 @@ static_data {
 	pthread_cond_t null_cond;
 	// lock_type = (addr_lock * 4 + data_lock)
 	// conflict on (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
-	unsigned short lock_conflict_def[] = {
-		0x0000, 0x0666, 0x0666, 0x0000, 0x0770, 0x0776, 0x0776, 0x0000, 0x0770, 0x0776, 0x0776, 0x0000
+	static unsigned short lock_conflict_def[] = {
+		0x000, 0x444, 0x666, 0x000,
+		0x700, 0x744, 0x766, 0x000,
+		0x770, 0x774, 0x776
 	};
 	
 	// Tests a lock record in a list for conflict with a given lock descriptor.
-	// It is assumed that the two lock records overlap.
+	// Assumption is that the two lock records overlap.
 	bool is_conflict(lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc) {
 		return (lock_conflict_def[get_desc_type (*desc)] & (1 << get_lock_type (lock))) != 0;
 	}
 	
 	// Tests a lock record in a list, if it is 'owned' (was set by) the same individual owning desc.
-	// It is assumed that the two lock records overlap.
+	// Assumption is that the two lock records overlap.
 	bool is_own (lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc) {
 		return TRUE;
 	}
@@ -398,6 +400,7 @@ output :>out
 			lock_mutex_ref_t next_lock = next_start_from (lock);
 			// If the block is not completely covered by this $unlock, it must be split.
 			// Create the (potential) lower and the upper leftovers as separate new locks.
+			// Adjust start of 'desc' so that only one lock per address gets removed.
 			if (get_lock_start (lock) < get_desc_start (desc)) {
 				lock_mutex_ref_t lower_part;
 				copy_lock_rec (lock) => (lower_part);
@@ -409,10 +412,18 @@ output :>out
 				copy_lock_rec (lock) => (upper_part);
 				set_lock_start (upper_part, get_desc_end (desc));
 				add_lock_rec (upper_part);
+				set_desc_start (desc, get_desc_end (desc));
+			}
+			else {
+				set_desc_start (desc, get_lock_end (lock));
 			}
 			// Now remove the original lock. 
 			remove_lock_rec (lock);
 			free_lock_rec (lock);
+			if (get_desc_start (desc) == get_desc_end (desc)) {
+				// Any more overlapping locks don't need to be touched.
+				break;
+			}
 			find_next_lock_from (next_lock, &desc, is_own) => (lock);
 		}
 		trace ("mand=%d Lock [0x%llX..0x%llX] released.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
