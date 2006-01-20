@@ -58,7 +58,7 @@ operation $op
   @=inputcall :>out$op [@mandate] (@args);
 
   // release lock
-  @=call ##lock:>out$unlock (1, 1, lock_write, lock_write) => (succ);
+  @=call ##lock:>out$unlock (1, 1) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
 
@@ -77,6 +77,6 @@ operation $op
   @=outputcall :<in$op (@args);
   
   // release lock
-  @=call ##lock:>out$unlock [@mandate] (0, 1, lock_write, lock_write) => (succ);
+  @=call ##lock:>out$unlock [@mandate] (0, 1) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
