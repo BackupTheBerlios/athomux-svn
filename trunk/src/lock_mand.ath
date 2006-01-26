@@ -19,7 +19,10 @@ desc
 * Does not generate own $lock or $unlock calls.
 * Generates $retract operation calls on conflicting lock requests.
 * granularity is 1.
-* FIXME: attempts to lock the highest byte of the nest will fail due to integer overflow!
+* FIXME: attempts to lock the highest byte (2^64-1) of the nest will fail due to integer overflow!
+
+* Developers: low-level lock mechanisms are encapsulated in macros and should be easy to adapt to
+              new runtime environments (currently ulinux and klinux environments implemented).
 
       +--------+
       |        |
@@ -64,10 +67,11 @@ static_header {
 }
 
 static_data {
-
-#ifndef __KERNEL__
+	#ifndef __KERNEL__
+	// A pthread condition is compared to this determine if it's 'uninitialized'.
+	// Necessary due to the pcond_destroy bug.
 	static pthread_cond_t null_cond;
-#endif
+	#endif
 	// lock_type = ((addr_lock << 2) + data_lock)
 	// conflict <==> (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -79,6 +83,77 @@ static_data {
 	static const char ch_lock_types[] = { '-', 'r', 'w' };
 
 	@.define LOCK_STORAGE_SIZE (1024)
+
+	// 'Primes' a lock: initialize the native lock mechanism.
+	@.define activate_lock (LOCK) {
+		#ifndef __KERNEL__		
+		// FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
+		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
+			// This record's condition variable has not been init'ed yet.
+			@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
+		}
+		#else
+		init_waitqueue_head (&lock->wait_queue);
+		#endif
+	}
+	
+	// Releases all threads waiting for this lock, then deactivate the native lock mechanism.
+	@.define deactivate_lock (LOCK) {
+		#ifndef __KERNEL__
+		@.fatal (pthread_cond_broadcast(&(LOCK)->unlocked) != 0, "Could not release POSIX lock!");
+		// FIXME: (or better: fix pthreads)
+		//        pthread_cond_destroy() directly after pthread_cond_broadcast() 
+		//        blocks the caller if multiple threads were waiting
+		//        for the condition before the broadcast.
+		//        I consider this a pthreads bug because after a broadcast, no more threads should
+		//        be waiting for this condition anymore (they should be locked in the mutex instead).
+		//        So we don't destroy the condition variable but rather keep it for reuse later on.
+		// @.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
+		#else
+		wake_up_all (&(LOCK)->wait_queue);
+		#endif
+	}
+
+	// Makes a thread wait for removal of this lock.
+	@.define wait_for_lock (LOCK) {
+		#ifndef __KERNEL__
+		pthread_cond_wait(&(LOCK)->unlocked, &@:>.lock_list_access);
+		#else
+		sleep_on(&(LOCK)->wait_queue);
+		#endif
+	}
+	
+	// Initializes a mutex lock to protect the lock list.
+	@.define activate_mutex () {
+		#ifndef __KERNEL__
+		@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
+		#endif			
+	}
+	
+	// Destroys the mutex protecting the lock list.
+	@.define deactivate_mutex() {
+		#ifndef __KERNEL__
+		pthread_mutex_destroy(&@:>.lock_list_access);
+		#endif
+	}
+
+	// Reserve exclusive access to the lock list.
+	@.define lock_mutex () {
+		#ifndef __KERNEL__		
+		pthread_mutex_lock(&@:>.lock_list_access);
+		#else
+		down(&mutex);
+		#endif
+	}
+	
+	// Release exclusive access to the lock list.
+	@.define unlock_mutex () {
+		#ifndef __KERNEL__
+		pthread_mutex_unlock(&@:>.lock_list_access);
+		#else
+		up(&mutex);
+		#endif
+	}
 
 	// Abstract reference values/querys/operations.
 	@.define NULL_REF ((lock_mand_ref_t)NULL)
@@ -97,17 +172,20 @@ static_data {
 	@.define get_desc_type (DESC) ((DESC).flags & 0x000F)
 	@.define get_desc_data_type (DESC) ((DESC).flags & 0x0003)
 	@.define get_desc_addr_type (DESC) (((DESC).flags & 0x000C) >> 2)
+	@.define is_desc_obligatory (DESC) (((DESC).flags & 0x0010) >> 4)
 	@.define set_desc_start (DESC, ADDR) ((DESC).start = (ADDR))
 	@.define set_desc_end (DESC, ADDR) ((DESC).end = (ADDR))
+	@.define set_desc_obligatory (DESC, IS_OBLIG) ((DESC).flags = (((DESC).flags & ~0x0010) | (IS_OBLIG << 4)))
 	@.define set_desc_bounds (DESC, START_ADDR, END_ADDR) (set_desc_start (DESC, START_ADDR), set_desc_end (DESC, END_ADDR))
 	@.define set_desc (DESC, ADDR_START, ADDR_END, MAND, TYPE) ((DESC).start = ADDR_START, (DESC).end = ADDR_END, (DESC).mandate = MAND, (DESC).flags = TYPE)
-	
+		
 	@.define get_lock_start (REF) (get_desc_start ((REF)->desc))
 	@.define get_lock_end (REF) (get_desc_end ((REF)->desc))
 	@.define get_lock_mand (REF) (get_desc_mand ((REF)->desc))
 	@.define get_lock_type (REF) (get_desc_type ((REF)->desc))
 	@.define get_lock_data_type (REF) (get_desc_data_type ((REF)->desc))
 	@.define get_lock_addr_type (REF) (get_desc_addr_type ((REF)->desc))
+	@.define is_lock_obligatory (REF) (is_desc_obligatory ((REF)->desc))
 	@.define get_lock_desc (REF) ((REF)->desc)
 	@.define set_lock_start (REF, ADDR) (set_desc_start ((REF)->desc, ADDR))
 	@.define set_lock_end (REF, ADDR) (set_desc_end ((REF)->desc, ADDR))
@@ -116,17 +194,18 @@ static_data {
 	@.define set_lock_type (LOCK, LOCK_TYPE) ((LOCK)->desc.flags = (((LOCK)->desc.flags & ~0x000F) | (LOCK_TYPE)))	
 	@.define set_lock_desc (LOCK, DESC) ((LOCK)->desc = (DESC))
 
-	@.define make_lock_type (DATA_LOCK, ADDR_LOCK) (((ADDR_LOCK) << 2) | (DATA_LOCK))
-	@.define is_weaker_or_equal (REF, DESC) (get_lock_data_type (REF) <= get_desc_data_type (DESC) && get_lock_addr_type (REF) <= get_desc_data_type (DESC))
+	@.define make_lock_type (DATA_LOCK, ADDR_LOCK, IS_OPT) (((IS_OPT) << 4) | ((ADDR_LOCK) << 2) | (DATA_LOCK))
+	@.define is_weaker_or_equal (REF, DESC) (get_lock_data_type (REF) <= get_desc_data_type (DESC) && get_lock_addr_type (REF) <= get_desc_data_type (DESC) && is_lock_obligatory (REF) <= is_desc_obligatory (DESC))
 	@.define is_equally_strong (REF, DESC) (get_lock_type (REF) == get_desc_type (DESC))
-	@.define is_stronger_or_equal (REF, DESC) (get_lock_data_type (REF) >= get_desc_data_type (DESC) && get_lock_addr_type (REF) >= get_desc_addr_type (DESC))
-	@.define set_strongest_lock_type (REF, DESC) (set_lock_type (REF, make_lock_type (get_lock_data_type (REF) > get_desc_data_type (DESC) ? get_lock_data_type (REF) : get_desc_data_type (DESC), get_lock_addr_type (REF) > get_desc_addr_type (DESC) ? get_lock_addr_type (REF) : get_desc_addr_type (DESC))))
+	@.define is_stronger_or_equal (REF, DESC) (get_lock_data_type (REF) >= get_desc_data_type (DESC) && get_lock_addr_type (REF) >= get_desc_addr_type (DESC) && is_lock_obligatory (REF) >= is_desc_obligatory (DESC))
+	@.define set_strongest_lock_type (REF, DESC) (set_lock_type (REF, make_lock_type (get_lock_data_type (REF) > get_desc_data_type (DESC) ? get_lock_data_type (REF) : get_desc_data_type (DESC), get_lock_addr_type (REF) > get_desc_addr_type (DESC) ? get_lock_addr_type (REF) : get_desc_addr_type (DESC), is_lock_obligatory (REF) | is_desc_obligatory (DESC))))
 }
 
 static_data {
-#ifndef __KERNEL__
+	#ifndef __KERNEL__
+	// Variable necessary because of the pthread_cond_destroy() bug.
 	static pthread_cond_t null_cond;
-#endif
+	#endif
 	// lock_type = ((addr_lock << 2) + data_lock)
 	// conflict(A,B) <==> (lock_conflict_def[A.lock_type] & (1 << B.lock_type)) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -158,22 +237,42 @@ init {
 #endif	
 }
 
+// For asynchronous retracts. $lock calls to this brick will cause an asynchronous $retract
+// on :>out. The operation $lock has only been chosen because it takes
+// log_addr, log_len, try_addr, and try_len, just like $retract.
+@.if ("PCONF" =~ m/^ulinux/) {
+	instance #thread_ulinux as fork;
+}
+@.else {
+	instance #thread_klinux as fork;
+}
+wire :<exec as #:>bounce;
+wire :>cpu as #:<async;
+
+local input :<async
+
+local output :>bounce
+
+	operation $lock {
+		@=inputcall :>out$retract @args;
+	}
+
 input :<in
 
-	// Currently, this brick does not hold any data in this input nest, so $retract ops succeed.
-	operation $retract {
-		@success = TRUE;
+	// Any callbacks from the resource this brick is applied to are redirected to the output.
+	operation $op {
+		@=inputcall $op @args;
 	}
 
 output :>out
 
 	data {
-		// Mutex to protect lock list from concurrent use. */
-#ifndef __KERNEL__
+		// Mutex to protect lock list from concurrent use.
+		#ifndef __KERNEL__
 		pthread_mutex_t lock_list_access;
-#else
+		#else
 		DECLARE_MUTEX (mutex);
-#endif
+		#endif
 		// Storage for doubly linked list of locks. Could (should) later be stored in an input nest nest instead.
 		struct lock_mand_lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
 		// Reference to the lock with the lowest address.
@@ -205,20 +304,12 @@ output :>out
 		@:>.free_lock_recs = LOCK;
 	}
 
-	// Activates (creates condition) a lock record and adds it to the list.
+	// Activates a lock record and adds it to the list.
 	@.func add_lock_rec (lock_mand_ref_t lock) {
 		lock_mand_ref_t scan;
 		trace ("mand=%d activate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		for (scan = @:>.lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = scan->next_start);
-#ifndef __KERNEL__		
-		// FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
-		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
-			// This record's condition variable has not been init'ed yet.
-			@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
-		}
-#else
-		init_waitqueue_head (&lock->wait_queue);
-#endif
+		activate_lock (lock);
 		lock->next_start = scan;
 		if (lock->next_start != NULL_REF) {
 			lock->prev_start = lock->next_start->prev_start;
@@ -251,19 +342,7 @@ output :>out
 		else {
 			@:>.lock_starting_last = lock->prev_start;
 		}
-#ifndef __KERNEL__
-		@.fatal (pthread_cond_broadcast(&lock->unlocked) != 0, "Could not release POSIX lock!");
-// FIXME: (or better: fix pthreads)
-//        pthread_cond_destroy blocks the caller if multiple threads were waiting
-//        for the condition when it was broadcasted (after the broadcast,
-//        no thread should be waiting for the condition anymore but for the
-//        mutex instead, so it should be possible to destroy the condition variable.
-//        I consider this a bug in pthreads.
-//        So we don't destroy the condition but rather will reuse it later on.
-//		@.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
-#else
-		wake_up_all (&lock->wait_queue);
-#endif
+		deactivate_lock (lock);
 	}
 
 	// Allocates a new lock 'COPY' from the storage and copies
@@ -301,6 +380,100 @@ output :>out
 		else {
 			trace ("mand=%d Found no lock in region [0x%llX..0x%llX].\n", (int)@mandate, get_desc_start (*desc), get_desc_end (*desc));
 		}
+	}
+	
+	// Melts the lock described into the existing lock list.
+	// This function ignores conflicting locks. The lock gets molten with existing own locks.
+	// Write locks override read locks.
+	// Obligatory locks override optional locks.
+	// Existing locks are kept where possible, simply 'upgrading' them, to avoid unnecessary wake-ups.
+	// At desc's borders however, existing locks possibly have to be split (replaced by two locks of different grade).
+	// Gaps are filled with new lock records with desc's grade.
+	@.func melt_lock_into_list (struct lock_mand_lock_desc desc) => (success_t ok) {
+		lock_mand_ref_t lock;
+		ok = FALSE;
+		find_first_lock (&desc, is_own) => (lock);
+		if (lock != NULL_REF) {
+			// There is at least one block with the same mandate overlapping the new lock.
+			lock_mand_ref_t prev_lock = NULL_REF;
+			if (get_lock_start (lock) < get_desc_start (desc)) {
+				// The lock only partly overlaps the new lock. It may be necessary to split it.
+				if (!is_stronger_or_equal (lock, desc)) {
+					trace ("mand=%d Split partly overlapping lock:\n", (int)@mandate);
+					// The lock is (partly) weaker than the new lock and 
+					// only the overlapping part has to be enstrengthened.
+					lock_mand_ref_t new_lock;
+					new_lock_rec () => (new_lock);
+					@.check (new_lock == NULL_REF, "Out of lock records!");
+					remove_lock_rec (lock);
+					set_lock_desc (new_lock, get_lock_desc (lock));
+					set_lock_end (new_lock, get_desc_start (desc));
+					set_lock_start (lock, get_desc_start (desc));
+					set_strongest_lock_type (lock, desc);
+					add_lock_rec (lock);
+					add_lock_rec (new_lock);
+				}
+				set_desc_start (desc, get_lock_end (lock));
+				find_next_lock_from (lock, &desc, is_own) => (lock);
+			}
+			while (lock != NULL_REF) {
+				// Loop invariant: there is no own lock between start of 'desc' and start of 'lock'.
+				if (get_lock_start (lock) > get_desc_start (desc)) {
+					// There is a gap to fill to the next existing lock.
+					if (is_weaker_or_equal (lock, desc)) {
+						trace ("mand=%d filling gap by stretching that lock.\n", (int)@mandate);
+						set_lock_start (lock, get_desc_start (desc));
+					}
+					else if (prev_lock != NULL_REF && is_equally_strong (prev_lock, desc)) {
+						trace ("mand=%d filling gap by stretching previous lock.\n", (int)@mandate);
+						set_lock_end (prev_lock, get_lock_start (lock));
+					}
+					else {
+						lock_mand_ref_t new_lock;
+						trace ("mand=%d filling gap with a new record:\n", (int)@mandate);
+						new_lock_rec () => (new_lock);
+						@.check (new_lock == NULL_REF, "Out of lock records!");
+						set_lock_desc (new_lock, desc);
+						set_lock_end (new_lock, get_lock_start (lock));
+						add_lock_rec (new_lock);
+					}
+				}
+				if (get_lock_end (lock) > get_desc_end (desc)) {
+					trace ("mand=%d The final lock exceeds the region to be locked.\n", (int)@mandate);
+					// The existing lock exceeds the new lock and might need to be split.
+					if (!is_stronger_or_equal (lock, desc)) {
+						// It is (partly) weaker, and the overlapping part needs
+						// enstrengthment, so split it.
+						lock_mand_ref_t new_lock;
+						new_lock_rec () => (new_lock);
+						@.check (new_lock == NULL_REF, "Out of lock records!");
+						remove_lock_rec (lock);
+						set_lock_desc (new_lock, get_lock_desc (lock));
+						set_lock_start (new_lock, get_desc_end (desc));
+						set_lock_end (lock, get_desc_end (desc));
+						add_lock_rec (lock);
+						add_lock_rec (new_lock);
+					}
+				}
+				// If the lock is (partly) weaker, enstrengthen it.
+				set_strongest_lock_type (lock, desc);
+				set_desc_start (desc, get_lock_end (lock));
+				if (get_desc_start (desc) >= get_desc_end (desc)) {
+					break;
+				}
+				prev_lock = lock;
+				find_next_lock_from (lock, &desc, is_own) => (lock);
+			}
+		}
+		if (get_desc_start (desc) < get_desc_end (desc)) {
+			// Behind the last existing lock there is still some space left to lock.
+			lock_mand_ref_t lock;
+			new_lock_rec () => (lock);
+			@.check (lock == NULL_REF, "Out of lock records!");
+			set_lock_desc (lock, desc);
+			add_lock_rec (lock);
+		}
+		ok = TRUE;
 	}
 
 	// Checks consistency of and prints out the lock list.
@@ -342,7 +515,7 @@ output :>out
 		}
 		trace ("mand=%d %s (pointers consistent)\n", (int)@mandate, buf);
 		
-		// Check for disjunct locks with same mandate.
+		// Check for non-disjunct locks with same mandate.
 		prev_lock = @:>.lock_starting_first;
 		while (prev_lock != NULL_REF) {
 			for (lock = next_start_from (prev_lock); lock != NULL_REF && get_lock_start (lock) < get_lock_end (prev_lock); lock = next_start_from (lock)) {
@@ -357,20 +530,15 @@ output :>out
 	}
 	
 	// Initializes/destroys status variables.
-	// Stores status in brick variables. TODO: use a nest instead!
+	// TODO: Stores status in brick variables, use a nest instead!
 	operation $output_init {
 		if (!@constr && @destr) {
-#ifndef __KERNEL__
-			pthread_mutex_destroy(&@:>.lock_list_access);
-#endif
+			deactivate_mutex ();
 			@success = TRUE;
 		}
 		if (@constr && !@destr) {
 			int i;
-#ifndef __KERNEL__
-			@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
-#endif			
-			
+			activate_mutex ();			
 			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
 			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
 				@:>.lock_rec_storage[i].next_start = &@:>.lock_rec_storage[i + 1];
@@ -401,13 +569,9 @@ output :>out
 			return;
 		}
 		
-		set_desc (desc, obl_start, obl_end, @mandate, make_lock_type (@data_lock, @addr_lock));
-		
-#ifndef __KERNEL__		
-		pthread_mutex_lock(&@:>.lock_list_access);
-#else
-		down(&mutex);
-#endif
+		set_desc (desc, obl_start, obl_end, @mandate, make_lock_type (@data_lock, @addr_lock, TRUE));
+
+		lock_mutex ();		
 		trace ("mand=%d Lock [?0x%llX..[!0x%llX..0x%llX!]..0x%llX?]D%cA%c requested.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
 		
 		// Look for locks conflicting with the obligatory part of our requested lock.
@@ -416,20 +580,33 @@ output :>out
 			if (conflictor != NULL_REF) {
 				if (@action != action_wait) {
 					// There is a conflict and we are not supposed to wait for it, so break.
-#ifndef __KERNEL__
-					pthread_mutex_unlock(&@:>.lock_list_access);
-#else
-					up(&mutex);
-#endif
+					unlock_mutex ();
 					return;
 				}
 				do {
+					if (!is_lock_obligatory (conflictor)) {
+						// It's an optional lock, so we will try to $retract it.
+						// $retract returning TRUE does not release the locks, because FALSE could mean
+						// partial success, then we don't know what part of the resources have been released.
+						// Only an explicit $unlock does release locks.
+						// So a $retract could cause immediate $unlock ops, what would cause a deadlock.
+						// Therefore, a separate thread solves this situation (the result is irrelevant, anyway).
+						success_t ok;
+						addr_t start;
+						addr_t end;
+						start = get_lock_start (conflictor);
+						end = get_lock_end (conflictor);
+						if (start < obl_start) {
+							start = obl_start;
+						}
+						if (end > obl_end) {
+							end = obl_end;
+						}
+						// A $lock call through ##async becomes an asynchronous inputcall :>out$retract
+						@=outputcall :<async$lock [get_lock_mand (conflictor)] (start, end - start) => (ok);
+					}
 					// Wait for the lock to be released.
-#ifndef __KERNEL__
-					pthread_cond_wait(&conflictor->unlocked, &@:>.lock_list_access);
-#else
-					sleep_on(&lock->wait_queue);
-#endif
+					wait_for_lock (conflictor);
 					trace ("mand=%d got condition signal!\n", (int)@mandate);
 					// Start all over again, the list has changed in the meantime
 					// and 'conflictor' has become invalid.
@@ -441,16 +618,12 @@ output :>out
 			if (conflictor != NULL_REF) {
 				// This is the very special case of a zero-length obligatory part truly inside a conflicting lock,
 				// What results in a successful lock of zero bytes.
-				// (Code below relies on no locks across the whole obligatory part)
+				// (Later code relies on no locks spanning across the obligatory part)
 				@try_addr = @log_addr;
 				@try_len = 0;
 				@success = TRUE;
 				trace ("mand=%d Address 0x%llX truly contained inside lock [0x%llX..0x%llX], \"locked\" 0 bytes.\n", (int)@mandate, obl_start, get_lock_start (conflictor), get_lock_end (conflictor));
-#ifndef __KERNEL__				
-				pthread_mutex_unlock(&@:>.lock_list_access);
-#else
-				up(&mutex);
-#endif
+				unlock_mutex ();
 				return;
 			}
 		}
@@ -473,107 +646,47 @@ output :>out
 			trace ("mand=%d Optional lock [0x%llX..0x%llX] cut to [0x%llX..0x%llX].\n", (int)@mandate, opt_start, opt_end, get_desc_start (desc), get_desc_end (desc));
 		}
 		
+		
 		// Now the way is free to add the lock. Add new lock records only where there is none
 		// yet owned by this mandate.
 		@try_addr = get_desc_start (desc);
 		@try_len = get_desc_end (desc) - get_desc_start (desc);
 		if (get_desc_end (desc) > get_desc_start (desc) && @action != action_ask) {
-			lock_mand_ref_t lock;
-			// Split the new lock so that only the gaps between existing own locks are filled.
-			// This is to prevent unnecessary wake-ups of operations waiting for those locks (what
-			// would only result in an immediate new slept on the replacement lock).
-			find_first_lock (&desc, is_own) => (lock);
-			if (lock != NULL_REF) {
-				lock_mand_ref_t prev_lock = NULL_REF;
-				if (get_lock_start (lock) < get_desc_start (desc)) {
-					// The lock only partly overlaps the new lock. It may be necessary to split it.
-					if (!is_stronger_or_equal (lock, desc)) {
-						trace ("mand=%d Split partly overlapping lock:\n", (int)@mandate);
-						// The lock is (partly) weaker than the new lock and 
-						// only the overlapping part has to be enstrengthened.
-						lock_mand_ref_t new_lock;
-						new_lock_rec () => (new_lock);
-						@.check (new_lock == NULL_REF, "Out of lock records!");
-						remove_lock_rec (lock);
-						set_lock_desc (new_lock, get_lock_desc (lock));
-						set_lock_end (new_lock, get_desc_start (desc));
-						set_lock_start (lock, get_desc_start (desc));
-						set_strongest_lock_type (lock, desc);
-						add_lock_rec (lock);
-						add_lock_rec (new_lock);
-					}
-					set_desc_start (desc, get_lock_end (lock));
-					find_next_lock_from (lock, &desc, is_own) => (lock);
-				}
-				while (lock != NULL_REF) {
-					// Loop invariant: there is no own lock between start of 'desc' and start of 'lock'.
-					if (get_lock_start (lock) > get_desc_start (desc)) {
-						// There is a gap to fill to the next existing lock.
-						if (is_weaker_or_equal (lock, desc)) {
-							trace ("mand=%d filling gap by stretching that lock.\n", (int)@mandate);
-							set_lock_start (lock, get_desc_start (desc));
-						}
-						else if (prev_lock != NULL_REF && is_equally_strong (prev_lock, desc)) {
-							trace ("mand=%d filling gap by stretching previous lock.\n", (int)@mandate);
-							set_lock_end (prev_lock, get_lock_start (lock));
-						}
-						else {
-							lock_mand_ref_t new_lock;
-							trace ("mand=%d filling gap with a new record:\n", (int)@mandate);
-							new_lock_rec () => (new_lock);
-							@.check (new_lock == NULL_REF, "Out of lock records!");
-							set_lock_desc (new_lock, desc);
-							set_lock_end (new_lock, get_lock_start (lock));
-							add_lock_rec (new_lock);
-						}
-					}
-					if (get_lock_end (lock) > get_desc_end (desc)) {
-						trace ("mand=%d The final lock exceeds the region to be locked.\n", (int)@mandate);
-						// The existing lock exceeds the new lock and might need to be split.
-						if (!is_stronger_or_equal (lock, desc)) {
-							// It is (partly) weaker, and the overlapping part needs
-							// enstrengthment, so split it.
-							lock_mand_ref_t new_lock;
-							new_lock_rec () => (new_lock);
-							@.check (new_lock == NULL_REF, "Out of lock records!");
-							remove_lock_rec (lock);
-							set_lock_desc (new_lock, get_lock_desc (lock));
-							set_lock_start (new_lock, get_desc_end (desc));
-							set_lock_end (lock, get_desc_end (desc));
-							add_lock_rec (lock);
-							add_lock_rec (new_lock);
-						}
-					}
-					// If the lock is (partly) weaker, enstrengthen it.
-					set_strongest_lock_type (lock, desc);
-					set_desc_start (desc, get_lock_end (lock));
-					if (get_desc_start (desc) >= get_desc_end (desc)) {
-						break;
-					}
-					prev_lock = lock;
-					find_next_lock_from (lock, &desc, is_own) => (lock);
+			if (opt_start < obl_start) {
+				success_t ok;
+				set_desc_bounds (desc, opt_start, obl_start);
+				set_desc_obligatory (desc, FALSE);
+				melt_lock_into_list (desc) => (ok);
+				if (!ok) {
+					return;
 				}
 			}
-			if (get_desc_start (desc) < get_desc_end (desc)) {
-				lock_mand_ref_t lock;
-				new_lock_rec () => (lock);
-				@.check (lock == NULL_REF, "Out of lock records!");
-				set_lock_desc (lock, desc);
-				add_lock_rec (lock);
+			if (obl_end > obl_start) {
+				success_t ok;
+				set_desc_bounds (desc, obl_start, obl_end);
+				set_desc_obligatory (desc, TRUE);
+				melt_lock_into_list (desc) => (ok);
+				if (!ok) {
+					return;
+				}
+			}
+			if (opt_end > obl_end) {
+				success_t ok;
+				set_desc_bounds (desc, obl_end, opt_end);
+				set_desc_obligatory (desc, FALSE);
+				melt_lock_into_list (desc) => (ok);
+				if (!ok) {
+					return;
+				}
 			}
 		}
-		
 		trace ("mand=%d Lock [0x%llX..0x%llX]D%cA%c granted.\n", (int)@mandate, @try_addr, @try_addr + @try_len, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
 #ifdef DEBUG		
 		print_lock_list () => (@success);
 #else
 		@success = TRUE;
 #endif
-#ifndef __KERNEL__		
-		pthread_mutex_unlock(&@:>.lock_list_access);
-#else
-		up(&mutex);
-#endif
+		unlock_mutex ();
 	}
 	
 	// See description in brick header.
@@ -581,14 +694,9 @@ output :>out
 		lock_mand_ref_t lock;
 		struct lock_mand_lock_desc desc;
 		// Unlocking will always succeed, so we unlock the whole optional part right away.
-		set_desc (desc, @try_addr, @try_addr + @try_len, @mandate, make_lock_type (lock_write, lock_write));
+		set_desc (desc, @try_addr, @try_addr + @try_len, @mandate, make_lock_type (lock_write, lock_write, TRUE));
 		@.check (get_desc_start (desc) > @log_addr || get_desc_end (desc) < @log_addr + @log_len, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", get_desc_start (desc), get_desc_end (desc), @log_addr, @log_addr + @log_len);
-
-#ifndef __KERNEL__
-		pthread_mutex_lock(&@:>.lock_list_access);
-#else
-		down(&mutex);
-#endif
+		lock_mutex ();
 		trace ("mand=%d Unlock of [0x%llX..0x%llX] requested.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		
 		find_first_lock (&desc, is_own) => (lock);
@@ -619,11 +727,7 @@ output :>out
 #else
 		@success = TRUE;
 #endif
-#ifndef __KERNEL__		
-		pthread_mutex_unlock(&@:>.lock_list_access);
-#else
-		up(&mutex);
-#endif
+		unlock_mutex ();
 		@success = TRUE;
 	}
 
