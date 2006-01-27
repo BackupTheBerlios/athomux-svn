@@ -1,9 +1,10 @@
-Author: Hardy Kahl, modified by Roland Niese
+Author: Hardy Kahl
+Author: Roland Niese (modified to use lock_mutex instead of lock_ulinux)
 Copyright: Hardy Kahl
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: ulinux*
-context cconf: ulinux*
+context: pconf *
+context: cconf *
 
 brick #adapt_multi
 
@@ -33,7 +34,7 @@ desc
 enddesc
 
 
-instance #lock_mutex_ulinux as lock;
+instance #lock_mutex as lock;
 
 
 operation $brick_init {

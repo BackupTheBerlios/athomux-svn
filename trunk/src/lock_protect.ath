@@ -2,6 +2,9 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context: pconf *
+context: cconf *
+
 brick #lock_protect
 
 purpose automatic locking for status nests
@@ -14,7 +17,7 @@ desc
 	WARNING: This brick cannot give a singleuser nest multiuser capability! Use adapt_multi for that.
 enddesc
 
-instance #lock_mutex_ulinux as mutex;
+instance #lock_mutex as mutex;
 
 input :<in
 

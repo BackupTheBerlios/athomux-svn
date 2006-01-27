@@ -2,7 +2,10 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-brick #lock_mutex_ulinux
+context: pconf *
+context: cconf *
+
+brick #lock_mutex
 
 purpose Mandate-independent locks
 
@@ -15,6 +18,9 @@ desc
 * $unlock releases only one of (possible) multiple overlapping locks (always pairwise $lock/ $unlock).
 * Data and address locks are orthogonal and independant.
 * granularity is 1.
+
+* Developers: low-level lock mechanisms are encapsulated in macros and should be easy to adapt to
+              new runtime environments (currently ulinux and klinux environments implemented).
 
       +--------+
       |        |
@@ -38,7 +44,7 @@ static_header {
 		lock_mutex_ref_t next_start;
 		lock_mutex_ref_t prev_start;
 		// Signal broadcasted when a locked block is [partially] unlocked.
-		pthread_cond_t unlocked;
+		addr_t native_lock;
 		struct lock_mutex_lock_desc desc;
 	};
 	// Filter for locks in the active list.
@@ -46,9 +52,43 @@ static_header {
 }
 
 static_data {
-	#include <pthread.h>
+	// 'Primes' a lock: initialize the native lock mechanism.
+	@.define activate_lock (LOCK) {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$gadr (1) => (ok, (LOCK)->native_lock);
+		@.check (!ok, "Failed to obtain native lock!");
+	}
+	
+	// Releases all threads waiting for this lock, then deactivate the native lock mechanism.
+	@.define deactivate_lock (LOCK) {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$padr ((LOCK)->native_lock, 1) => (ok);
+		@.check (!ok, "Failed to drop native lock!");
+	}
+
+	// Makes a thread wait for removal of this lock.
+	@.define wait_for_lock (LOCK) {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$lock ((LOCK)->native_lock, 1) => (ok);
+		@.check (!ok, "Failed to wait on native lock!");
+	}
+	
+	// Reserve exclusive access to the lock list.
+	@.define lock_mutex () {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$lock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Failed to reserve native mutex!");
+	}
+	
+	// Release exclusive access to the lock list.
+	@.define unlock_mutex () {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$unlock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Failed to release native mutex!");
+	}
 
 	@.define LOCK_STORAGE_SIZE (1024)
+
 	// Abstract reference values/querys/operations.
 	@.define NULL_REF ((lock_mutex_ref_t)NULL)
 	
@@ -81,7 +121,6 @@ static_data {
 	@.define set_lock_type (LOCK, LOCK_TYPE) ((LOCK)->desc.flags = (((LOCK)->desc.flags & ~0x000F) | (LOCK_TYPE)))	
 	@.define set_lock (LOCK, DESC) ((LOCK)->desc = (DESC))
 
-	pthread_cond_t null_cond;
 	// lock_type = (addr_lock * 4 + data_lock)
 	// conflict on (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -103,9 +142,7 @@ static_data {
 	}
 }
 
-init {
-	memset(&null_cond, 0, sizeof null_cond);
-}
+instance #lock_native as lock_imp;
 
 input :<in
 
@@ -124,8 +161,6 @@ output :>out
 		lock_mutex_ref_t lock_starting_last;
 		// Reference to the start of the list of unallocated blocks (first element has no 'previous' element).
 		lock_mutex_ref_t free_lock_recs;
-		// Mutex to protect lock list from concurrent use. */
-		pthread_mutex_t lock_list_access;
 	}
 
 	// Allocates a new lock from the storage.
@@ -155,15 +190,7 @@ output :>out
 		lock_mutex_ref_t scan;
 		trace ("mand=%d activate lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock));
 		for (scan = @:>.lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = scan->next_start);
-// FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
-		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
-			trace("mand=%d this is a fresh lock record. Creating new condition variable.\n", (int)@mandate);
-			// This record's condition variable has not been init'ed yet.
-			@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
-		}
-		else {
-			trace("mand=%d this lock record has been used before. Using the existing condition variable.\n", (int)@mandate);
-		}
+		activate_lock (lock);
 		lock->next_start = scan;
 		if (lock->next_start != NULL_REF) {
 			lock->prev_start = lock->next_start->prev_start;
@@ -181,7 +208,7 @@ output :>out
 		}		
 	}
 	
-	// Deactivates (signals and destroys condition) and removes a lock record from the list.
+	// Removes a lock record from the list and releases all threads waiting for it.
 	@.func remove_lock_rec (lock_mutex_ref_t lock) {
 		trace ("mand=%d deactivate lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock));
 		if (lock->prev_start != NULL_REF) {
@@ -196,15 +223,7 @@ output :>out
 		else {
 			@:>.lock_starting_last = lock->prev_start;
 		}
-		@.fatal (pthread_cond_broadcast(&lock->unlocked) != 0, "Could not release POSIX lock!");
-// FIXME: (or better: fix pthreads)
-//        pthread_cond_destroy blocks the caller if multiple threads were waiting
-//        for the condition when it was broadcasted (after the broadcast,
-//        no thread should be waiting for the condition anymore but for the
-//        mutex instead, so it should be possible to destroy the condition variable.
-//        I consider this a bug in pthreads.
-//        So we don't destroy the condition but rather will reuse it later on.
-//		@.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
+		deactivate_lock (lock);
 	}
 
 	// Allocates a new lock 'COPY' from the storage and copies
@@ -277,14 +296,11 @@ output :>out
 	// Initializes/destroys status variables.
 	// Stores status in brick variables. TODO: use a nest instead!
 	operation $output_init {
-		if (!@constr && @destr) {
-			pthread_mutex_destroy(&@:>.lock_list_access);
-			@success = TRUE;
-		}
-		if (@constr && !@destr) {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
+		@.check (!ok, "##lock_imp:>out$output_init failed!");
+		if (@constr) {
 			int i;
-			@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
-			
 			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
 			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
 				@:>.lock_rec_storage[i].next_start = &@:>.lock_rec_storage[i + 1];
@@ -315,22 +331,20 @@ output :>out
 		}
 		
 		set_desc (desc, obl_start, obl_end, make_lock_type (@data_lock, @addr_lock));
-		
-		pthread_mutex_lock(&@:>.lock_list_access);		
-		trace ("mand=%d Lock [?0x%llX..[!0x%llX..0x%llX!]..0x%llX?] requested.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end);
+
+		lock_mutex ();		
 		
 		// Look for locks overlapping with the obligatory part of our requested lock.
 		find_first_lock (&desc, is_conflict) => (conflictor);
 		if (obl_end - obl_start > 0) {
 			if (conflictor != NULL_REF) {
 				if (@action != action_wait) {
-					pthread_mutex_unlock(&@:>.lock_list_access);
+					unlock_mutex ();
 					return;
 				}
 				do {
 					// Wait for the lock to be released.
-					pthread_cond_wait(&conflictor->unlocked, &@:>.lock_list_access);
-					trace ("mand=%d got condition signal!\n", (int)@mandate);
+					wait_for_lock (conflictor);
 					// Start all over again, there could be more locks in the way/ new locks may have appeared.
 					find_first_lock (&desc, is_conflict) => (conflictor);
 				} while (conflictor != NULL_REF);
@@ -345,7 +359,7 @@ output :>out
 				@try_len = 0;
 				@success = TRUE;
 				trace ("Address 0x%llX truly contained inside lock [0x%llX..0x%llX], \"locked\" 0 bytes.\n", obl_start, get_lock_start (conflictor), get_lock_end (conflictor));
-				pthread_mutex_unlock(&@:>.lock_list_access);
+				unlock_mutex ();
 				return;
 			}
 		}
@@ -377,7 +391,7 @@ output :>out
 
 		trace ("mand=%d Lock [0x%llX..0x%llX] granted.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		print_lock_list ();
-		pthread_mutex_unlock(&@:>.lock_list_access);
+		unlock_mutex ();
 		
 		@try_addr = get_desc_start (desc);
 		@try_len = get_desc_end (desc) - get_desc_start (desc);
@@ -392,7 +406,7 @@ output :>out
 		set_desc (desc, @try_addr, @try_addr + @try_len, make_lock_type (lock_write, lock_write));
 		@.check (get_desc_start (desc) > @log_addr || get_desc_end (desc) < @log_addr + @log_len, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", get_desc_start (desc), get_desc_end (desc), @log_addr, @log_addr + @log_len);
 
-		pthread_mutex_lock(&@:>.lock_list_access);
+		lock_mutex ();
 		trace ("mand=%d Unlock of [0x%llX..0x%llX] requested.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		
 		find_first_lock (&desc, is_own) => (lock);
@@ -428,7 +442,7 @@ output :>out
 		}
 		trace ("mand=%d Lock [0x%llX..0x%llX] released.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		print_lock_list ();
-		pthread_mutex_unlock(&@:>.lock_list_access);
+		unlock_mutex ();
 		@success = TRUE;
 	}
 

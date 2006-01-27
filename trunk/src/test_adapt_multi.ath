@@ -18,9 +18,9 @@ desc
 	:>conc-----+ #thread_ulinux +--
 	           +----------------+
 	
-	           +- ##sync -----------+
-	         --+ #lock_mutex_ulinux +--
-	           +--------------------+
+	           +- ##sync ----+
+	         --+ #lock_mutex +--
+	           +-------------+
 
 	* a number of simultaneous control flows are forked via operation calls to ##thread's output
 	* those flows each (asynchronously) call an operation either on ##multi's input or output
@@ -36,7 +36,7 @@ wire :>out as #:<l_in;
 instance #thread_ulinux as fork;
 wire :<exec as #:>conc;
 
-instance #lock_mutex_ulinux as sync;
+instance #lock_mutex as sync;
 
 operation $brick_init {
 	trace ("#test_adapt_multi$init_brick!\n");

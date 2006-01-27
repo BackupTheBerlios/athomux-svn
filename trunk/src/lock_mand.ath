@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context: pconf ulinux*,klinux*
-context: cconf ulinux*,klinux*
+context: pconf *
+context: cconf *
 
 brick #lock_mand
 
@@ -21,9 +21,6 @@ desc
 * granularity is 1.
 * FIXME: attempts to lock the highest byte (2^64-1) of the nest will fail due to integer overflow!
 
-* Developers: low-level lock mechanisms are encapsulated in macros and should be easy to adapt to
-              new runtime environments (currently ulinux and klinux environments implemented).
-
       +--------+
       |        |
 in ---+        +--- out
@@ -32,14 +29,6 @@ in ---+        +--- out
 enddesc
 
 static_header {
-#ifndef __KERNEL__
-	#include <pthread.h>
-#else
-	#include <linux/sched.h>
-	#include <linux/wait.h>
-	#include <asm/semaphore.h>
-#endif
-
 	// Abstract reference type to ease later conversion to Pointer Cache.
 	typedef struct lock_mand_lock_rec *lock_mand_ref_t;
 	// Essential properties of a lock.
@@ -54,12 +43,7 @@ static_header {
 	struct lock_mand_lock_rec {
 		lock_mand_ref_t next_start;
 		lock_mand_ref_t prev_start;
-		// Signal broadcasted when a locked block is [partially] unlocked.
-#ifndef __KERNEL__
-		pthread_cond_t unlocked;
-#else
-		wait_queue_head_t wait_queue;
-#endif
+		paddr_t native_lock;
 		struct lock_mand_lock_desc desc;
 	};
 	// Filter for locks in the active list.
@@ -67,11 +51,6 @@ static_header {
 }
 
 static_data {
-	#ifndef __KERNEL__
-	// A pthread condition is compared to this determine if it's 'uninitialized'.
-	// Necessary due to the pcond_destroy bug.
-	static pthread_cond_t null_cond;
-	#endif
 	// lock_type = ((addr_lock << 2) + data_lock)
 	// conflict <==> (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -86,73 +65,37 @@ static_data {
 
 	// 'Primes' a lock: initialize the native lock mechanism.
 	@.define activate_lock (LOCK) {
-		#ifndef __KERNEL__		
-		// FIXME: pthread_cond_init if'ed as a workaround for the pthread_destroy bug (see FIXME below)
-		if (memcmp(&lock->unlocked, &null_cond, sizeof lock->unlocked) == 0) {
-			// This record's condition variable has not been init'ed yet.
-			@.fatal (pthread_cond_init(&lock->unlocked, NULL) != 0, "Could not create POSIX lock!");
-		}
-		#else
-		init_waitqueue_head (&lock->wait_queue);
-		#endif
+		success_t ok;
+		@=outputcall ##lock_imp:>out$gadr (1) => (ok, (LOCK)->native_lock);
+		@.check (!ok, "Failed to obtain native lock!");
 	}
 	
 	// Releases all threads waiting for this lock, then deactivate the native lock mechanism.
 	@.define deactivate_lock (LOCK) {
-		#ifndef __KERNEL__
-		@.fatal (pthread_cond_broadcast(&(LOCK)->unlocked) != 0, "Could not release POSIX lock!");
-		// FIXME: (or better: fix pthreads)
-		//        pthread_cond_destroy() directly after pthread_cond_broadcast() 
-		//        blocks the caller if multiple threads were waiting
-		//        for the condition before the broadcast.
-		//        I consider this a pthreads bug because after a broadcast, no more threads should
-		//        be waiting for this condition anymore (they should be locked in the mutex instead).
-		//        So we don't destroy the condition variable but rather keep it for reuse later on.
-		// @.fatal (pthread_cond_destroy(&lock->unlocked) != 0, "Could not destroy POSIX lock!");
-		#else
-		wake_up_all (&(LOCK)->wait_queue);
-		#endif
+		success_t ok;
+		@=outputcall ##lock_imp:>out$padr ((LOCK)->native_lock, 1) => (ok);
+		@.check (!ok, "Failed to drop native lock!");
 	}
 
 	// Makes a thread wait for removal of this lock.
 	@.define wait_for_lock (LOCK) {
-		#ifndef __KERNEL__
-		pthread_cond_wait(&(LOCK)->unlocked, &@:>.lock_list_access);
-		#else
-		sleep_on(&(LOCK)->wait_queue);
-		#endif
+		success_t ok;
+		@=outputcall ##lock_imp:>out$lock ((LOCK)->native_lock, 1) => (ok);
+		@.check (!ok, "Failed to wait on native lock!");
 	}
 	
-	// Initializes a mutex lock to protect the lock list.
-	@.define activate_mutex () {
-		#ifndef __KERNEL__
-		@.check(pthread_mutex_init(&@:>.lock_list_access, NULL) != 0, "Could not initialize lock_list_access mutex!");
-		#endif			
-	}
-	
-	// Destroys the mutex protecting the lock list.
-	@.define deactivate_mutex() {
-		#ifndef __KERNEL__
-		pthread_mutex_destroy(&@:>.lock_list_access);
-		#endif
-	}
-
 	// Reserve exclusive access to the lock list.
 	@.define lock_mutex () {
-		#ifndef __KERNEL__		
-		pthread_mutex_lock(&@:>.lock_list_access);
-		#else
-		down(&mutex);
-		#endif
+		success_t ok;
+		@=outputcall ##lock_imp:>out$lock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Failed to reserve native mutex!");
 	}
 	
 	// Release exclusive access to the lock list.
 	@.define unlock_mutex () {
-		#ifndef __KERNEL__
-		pthread_mutex_unlock(&@:>.lock_list_access);
-		#else
-		up(&mutex);
-		#endif
+		success_t ok;
+		@=outputcall ##lock_imp:>out$unlock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Failed to release native mutex!");
 	}
 
 	// Abstract reference values/querys/operations.
@@ -202,10 +145,6 @@ static_data {
 }
 
 static_data {
-	#ifndef __KERNEL__
-	// Variable necessary because of the pthread_cond_destroy() bug.
-	static pthread_cond_t null_cond;
-	#endif
 	// lock_type = ((addr_lock << 2) + data_lock)
 	// conflict(A,B) <==> (lock_conflict_def[A.lock_type] & (1 << B.lock_type)) != 0
 	static unsigned short lock_conflict_def[] = {
@@ -231,11 +170,7 @@ static_data {
 	}
 }
 
-init {
-#ifndef __KERNEL__
-	memset(&null_cond, 0, sizeof null_cond);
-#endif	
-}
+instance #lock_native as lock_imp;
 
 // For asynchronous retracts. $lock calls to this brick will cause an asynchronous $retract
 // on :>out. The operation $lock has only been chosen because it takes
@@ -267,12 +202,6 @@ input :<in
 output :>out
 
 	data {
-		// Mutex to protect lock list from concurrent use.
-		#ifndef __KERNEL__
-		pthread_mutex_t lock_list_access;
-		#else
-		DECLARE_MUTEX (mutex);
-		#endif
 		// Storage for doubly linked list of locks. Could (should) later be stored in an input nest nest instead.
 		struct lock_mand_lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
 		// Reference to the lock with the lowest address.
@@ -532,13 +461,11 @@ output :>out
 	// Initializes/destroys status variables.
 	// TODO: Stores status in brick variables, use a nest instead!
 	operation $output_init {
-		if (!@constr && @destr) {
-			deactivate_mutex ();
-			@success = TRUE;
-		}
-		if (@constr && !@destr) {
+		success_t ok;
+		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
+		@.check (!ok, "##lock_imp:>out$output_init failed!");
+		if (@constr) {
 			int i;
-			activate_mutex ();			
 			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
 			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
 				@:>.lock_rec_storage[i].next_start = &@:>.lock_rec_storage[i + 1];
@@ -547,8 +474,8 @@ output :>out
 			@:>.lock_starting_first = NULL_REF;
 			@:>.lock_starting_last = NULL_REF;
 			@:>.free_lock_recs = @:>.lock_rec_storage;
-			@success = TRUE;
 		}
+		@success = TRUE;
 	}
 
 	// See description in brick header.
