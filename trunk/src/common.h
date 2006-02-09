@@ -1,4 +1,5 @@
 /* Author: Thomas Schoebel-Theuer
+ * Author: Roland Niese (added prototype of init_one_instance() )
  * Copyright: University of Stuttgart
  */
 
@@ -506,5 +507,7 @@ struct loader {
 
 void init_all_conns(const struct loader * loader, int type, void * brick, struct args * args, const char * param);
 void init_all_instances(const struct loader * loader, void * brick, struct args * args, const char * param);
+// Roland Niese: to be able to initialize sub-instances at a predetermined order, and to provide parameters on initialization.
+void init_one_instance(const struct loader * loader, void * brick, void * subbrick, struct args * args, const char * param);
 
 #endif
