@@ -189,17 +189,6 @@ instance #lock_native as lock_imp;
 wire :<exec as #:>bounce;
 wire :>cpu as #:<async;
 
-// FIXME: use $brick_init !!!
-operation $brick_init
-{
-  char const *param_orig=@param;
-  @param="WA";
-  INIT_ALL_INPUTS();
-  INIT_ALL_INSTANCES();
-  INIT_ALL_OUTPUTS();
-  @param=param_orig;
-}
-
 local input :<async
 
 local output :>bounce
@@ -308,7 +297,7 @@ output :>out
 	// are not copied.
 	@.define copy_lock_rec (STATE, LOCK) => (COPY) {
 		new_lock_rec (STATE) => (COPY);
-		@.check ((COPY) != NULL_REF, "Out of lock records!");
+		@.check ((COPY) == NULL_REF, "Out of lock records!");
 		set_lock_desc (COPY, get_lock_desc (LOCK));
 	}
 	
@@ -494,9 +483,9 @@ output :>out
 	operation $output_init {
 		success_t ok;
 		
-		trace ("#lock_mand:>out$output_init (constr==%d, destr==%d) : \"%s\"\n", @constr, @destr, @param);
+		trace ("#lock_mand:>out$output_init (destr==%d, constr==%d) : \"%s\" called\n", @destr, @constr, @param);
 		
-		if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
+		//if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
 		
 		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
 		@.check (!ok, "##lock_imp:>out$output_init failed!");
