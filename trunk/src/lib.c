@@ -1,4 +1,5 @@
 /* Author: Thomas Schoebel-Theuer
+ * Author: Roland Niese (added "init_one_instance()")
  * Copyright: University of Stuttgart
  */
 
@@ -106,6 +107,17 @@ void init_all_instances(const struct loader * loader, void * brick, struct args 
       return;
     }
   }
+}
+
+// Roland Niese: workaround for manual initialization of subinstances in the right order (from left to right).
+void init_one_instance (const struct loader * loader, void * brick, void *subbrick, struct args * args, const char * param) {
+	int i;
+	for (i = 0; i < loader->inst_count; i++) {
+		if (loader->instances[i].offset == (char *)subbrick - (char *)brick) {
+			loader->instances[i].loader->init_brick ((void *)brick + loader->instances[i].offset, args, param);
+			return;
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
