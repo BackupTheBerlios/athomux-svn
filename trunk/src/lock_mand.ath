@@ -11,19 +11,21 @@ purpose Mandate-owned locks
 
 desc
 * Implements locks with an 'owner' id: mandates.
+* granularity is 1.
 * Locks owned by the same operator do not block but melt together.
 * Weaker (read) locks are overwritten by stronger (write) locks on melt (enstrengthment).
 * Read locks do not conflict with each other on $lock, but write locks do always conflict with any other lock.
 * Pure address locks do not conflict with pure data locks and v.v.
 * Forwards all operations except $lock and $unlock to the 'protected' resource in :<in.
 * Does not generate own $lock or $unlock calls.
-* Generates $retract operation calls on conflicting lock requests.
-* granularity is 1.
+* Generates $retract operations on optional locks to attempt conflict solvation.
+* Brick is implemented statelessly. Needs an exclusive nest at :<tmp with nest semantics.
+* Brick is system-independent. Uses #lock_native for low-level locks. Adapt that brick for new runtime environments.
 * FIXME: attempts to lock the highest byte (2^64-1) of the nest will fail due to integer overflow!
 
       +--------+
-      |        |
-in ---+        +--- out
+tmp---+        |
+ in---+        +----out
       |        |
       +--------+  
 enddesc
@@ -110,7 +112,6 @@ static_data {
 	@.define NULL_REF ((lock_mand_rec_ref_t)0)
 
 	// A valid physical pointer "state" to the brick state must be declared for these macros to work.
-	// @.define MAKE_STATE_PTR (REF) ((struct lock_mand_lock_rec *)(MAKE_PTR (MAKE_PADDR (state) + (plen_t)(REF))))
 	@.define MAKE_STATE_PTR (REF) ((struct lock_mand_lock_rec *)((void *)((paddr_t)(state) + (plen_t)(REF))))
 	@.define MAKE_STATE_REF (PTR) ((lock_mand_rec_ref_t)((char *)(PTR) - (char *)state))
 	
@@ -238,8 +239,8 @@ output :>out
 
 	// Activates a lock record and adds it to the list.
 	@.func add_lock_rec (struct lock_mand_state *state, lock_mand_rec_ref_t lock) {
-		PC_DIRTY (tmp_state, 0);
 		lock_mand_rec_ref_t scan;
+		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d activate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		for (scan = state->lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = get_next_lock (scan));
 		activate_lock (lock);
@@ -431,7 +432,6 @@ output :>out
 			char *buf_end;
 			lock_mand_rec_ref_t lock, prev_lock;
 			addr_t prev_start;
-
 			ok = FALSE;
 			trace ("mand=%d lock list:\n", (int)@mandate);
 			memset(buf, 0, sizeof buf);
@@ -479,13 +479,9 @@ output :>out
 	}
 	
 	// Initializes/destroys status variables.
-	// TODO: Stores status in brick variables, use a nest instead!
 	operation $output_init {
-		success_t ok;
-		
+		success_t ok;		
 		trace ("#lock_mand:>out$output_init (destr==%d, constr==%d) : \"%s\" called\n", @destr, @constr, @param);
-		
-		//if (strcmp(@param,"WA")==0) { @success=TRUE; return; } // FIXME: workaround, init later
 		
 		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
 		@.check (!ok, "##lock_imp:>out$output_init failed!");
@@ -500,12 +496,9 @@ output :>out
 			@=outputcall :<tmp$create (0, STATE_STORAGE_SIZE, TRUE) => (ok);
 			state = PC_GET_DIRTY (tmp_state, 0, STATE_STORAGE_SIZE);
 			@.check (!ok || !state, "Could not get state storage!");
-			trace ("Init free records: ");
 			for (i = 0; i < MAX_LOCK_RECORDS - 1; i++) {
-				printf ("0x%llX,", MAKE_STATE_REF (&state->lock_rec_storage[i + 1]));
 				state->lock_rec_storage[i].next_start = MAKE_STATE_REF (&state->lock_rec_storage[i + 1]);
 			}
-			puts("");
 			state->lock_rec_storage[i].next_start = NULL_REF;
 			state->lock_starting_first = NULL_REF;
 			state->lock_starting_last = NULL_REF;
@@ -614,8 +607,7 @@ output :>out
 			}
 			trace ("mand=%d Optional lock [0x%llX..0x%llX] cut to [0x%llX..0x%llX].\n", (int)@mandate, opt_start, opt_end, get_desc_start (desc), get_desc_end (desc));
 		}
-		
-		
+				
 		// Now the way is free to add the lock. Add new lock records only where there is none
 		// yet owned by this mandate.
 		@try_addr = get_desc_start (desc);
