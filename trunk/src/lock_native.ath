@@ -10,17 +10,16 @@ brick #lock_native
 purpose Encapsulate low-level lock mechanism
 
 desc
-This brick provides simple lock mechanisms for all current runtime environments of Athomux.
-It is just for internal use in lock_mand and lock_mutex. Use those bricks to implement true Athomux-like locks.
-If a new runtime environment is added to Athomux, please add its lock mechanism here, too. You just need to add your own implementation of the macros below.
+This brick encapsulates lock mechanisms for all currently available Athomux runtime environments.
 The interface spec:
-:>out is an array of native locks: each address in the nest is one native lock. Only the address counts, IO makes no sense and is not implemented.
+:>out is an array of native locks: each address in the nest is one native lock.
+Only the address counts, IO operations are not implemented.
 Multiple operation callers can sleep on any such lock.
 The lock at address (addr_t)-1 is a global mutex. It must be locked first, before accessing any of the other locks, and unlocked after having finished the operation.
-All operations on :>out ignore the "log_len" argument and presume it to be 1.
+All operations on :>out work on 1 lock at a time only (log_len presumed 1)
 Use $gadr to allocate an unused lock.
 Use $padr to free it again (all threads sleeping on it are woken up, too).
-Use $lock to wait for this lock. While waiting, the mutex gets released, and later re-obtained immediately before waking up.
+Use $lock to wait for this lock. While waiting, the mutex is released, and is later re-obtained immediately before waking up.
 Use $unlock to release all threads waiting for a certain lock without freeing it.
 enddesc
 
@@ -46,22 +45,45 @@ data {
 	@.if ("PCONF" =~ m/^ulinux/) {
 		pthread_mutex_t mutex_ulinux;
 		pthread_cond_t locks_ulinux[N_NATIVE_LOCKS];
+		// Workaround for a pthread bug: when a lock is broadcasted, no thread should be waiting for it anymore.
+		// So destruction and re-initialization should be possible, but that will cause lock-ups!
+		// Because of that, we must remember locks already initialized.
+		int n_second_hand_locks;
 
-		@.define init_native () { @.check(pthread_mutex_init(&@#.mutex_ulinux, NULL) != 0, "Could not initialize lock_list_access mutex!"); }
-		@.define exit_native () { pthread_mutex_destroy(&@#.mutex_ulinux); }
-		@.define lock_mutex () { pthread_mutex_lock(&@#.mutex_ulinux); }
-		@.define unlock_mutex () { pthread_mutex_unlock(&@#.mutex_ulinux); }
-		@.define init_lock (INDEX) {
-			@.check (pthread_cond_init(&@#.locks_ulinux[INDEX], NULL) != 0, "Could not init POSIX lock!");
+		// init variables.
+		@.define init_native () {
+			@#.n_second_hand_locks = 0;
+			@.check(pthread_mutex_init(&@#.mutex_ulinux, NULL) != 0, "Could not initialize lock_list_access mutex!");
 		}
+		// free all allocated resources
+		@.define exit_native () { pthread_mutex_destroy(&@#.mutex_ulinux); }
+		// enter critical section
+		@.define lock_mutex () { pthread_mutex_lock(&@#.mutex_ulinux); }
+		// leave critical section
+		@.define unlock_mutex () { pthread_mutex_unlock(&@#.mutex_ulinux); }
+		// initialize a lock variable (but do not wait for it)
+		@.define init_lock (INDEX) {
+			if ((int)(INDEX) == @#.n_second_hand_locks) {
+				@#.n_second_hand_locks++;
+				@.check (pthread_cond_init(&@#.locks_ulinux[INDEX], NULL) != 0, "Could not init POSIX lock %d!", (int)(INDEX));
+			}
+			@.if ("PCONF" =~ m/debug$/) {
+			else if ((int)(INDEX) > @#.n_second_hand_locks) {
+				@.err ("BUG: tried to allocate new POSIX lock %d, but locks %d..%d are unused yet!", (int)(INDEX), @#.n_second_hand_locks, N_NATIVE_LOCKS);
+			}
+			}
+		}
+		// wait for a condition to be signaled
 		@.define wait_for_lock (INDEX) {
 			pthread_cond_wait(&@#.locks_ulinux[INDEX], &@#.mutex_ulinux);
 		}
+		// broadcast the condition
 		@.define release_all (INDEX) {
-			@.check (pthread_cond_broadcast(&@#.locks_ulinux[INDEX]) != 0, "Could not release POSIX lock!");
+			@.check (pthread_cond_broadcast(&@#.locks_ulinux[INDEX]) != 0, "Could not release POSIX lock %d!", (int)(INDEX));
 		}
+		// broadcase the condition and free the lock for re-allocation
 		@.define free_lock (INDEX) {
-			@.check (pthread_cond_broadcast(&@#.locks_ulinux[INDEX]) != 0, "Could not release POSIX lock!");
+			@.check (pthread_cond_broadcast(&@#.locks_ulinux[INDEX]) != 0, "Could not release POSIX lock %d!", (int)(INDEX));
 			// Do not use pthread_cond_destroy here! Although after a broadcast
 			// there should no threads be left waiting for the cond, pthread_cond_destroy() 
 			// blocks when there was more than 1 thread waiting for the cond before the broadcast!
@@ -109,6 +131,7 @@ data {
 
 output :>out
 
+	// Initialize/ clean up variables.
 	operation $output_init {
 		if (@destr && !@constr) {
 			exit_native ();
@@ -122,22 +145,27 @@ output :>out
 		}
 		@success = TRUE;
 	}
-	
+
+	// Allocate a lock.	
 	operation $gadr {
 		int word_index;
 		for (word_index = 0; word_index < N_NATIVE_LOCKS / WORD_SIZE; word_index++) {
 			if (@#.free_locks[word_index]) {
 				int bit_index = ffs(@#.free_locks[word_index]) - 1;
 				int index = (addr_t)(word_index * WORD_SIZE + bit_index);
+				@#.free_locks[word_index] &= ~(1 << bit_index);
 				init_lock (index);
 				@log_addr = (addr_t)index;
 				@log_len = 1;
 				@success = TRUE;
-				break;
+				trace ("New free native lock %lld allocated.\n", @log_addr);
+				return;
 			}
 		}
+		@.err ("No more free native locks!");
 	}
-	
+
+	// Free a lock (and release all threads waiting for it).	
 	operation $padr {
 		if (@log_addr < (addr_t)(N_NATIVE_LOCKS)) {
 			int index = (int)@log_addr;
@@ -147,11 +175,19 @@ output :>out
 			if (!(@#.free_locks[word_index] & mask)) {
 				@#.free_locks[word_index] |= mask;
 				free_lock (index);
+				trace ("Native lock %d released and freed.\n", index);
 				@success = TRUE;
 			}
+			else {
+				@.err ("Attempt to free an unallocated lock: %lld!", @log_addr);
+			}
+		}
+		else {
+			@.err ("Native lock index %lld out of bounds!", @log_addr);
 		}
 	}
-	
+
+	// Sleep for a lock.
 	operation $lock {
 		if (@log_addr < (addr_t)(N_NATIVE_LOCKS)) {
 			int index = (int)@log_addr;
@@ -159,17 +195,25 @@ output :>out
 			int bit_index = index % WORD_SIZE;
 			int mask = 1 << bit_index;
 			if (!(@#.free_locks[word_index] & mask)) {
-				@#.free_locks[word_index] |= mask;
+				trace ("(mand=%d) Waiting for lock %d...\n", @mandate, index);
 				wait_for_lock ((int)@log_addr);
+				trace ("(mand=%d) Woken up from lock %d...\n", @mandate, index);
 				@success = TRUE;
+			}
+			else {
+				@.err ("Attempt to sleep on a free lock: %lld", @log_addr);
 			}
 		}
 		else if (@log_addr == (addr_t)-1) {
 			lock_mutex ();
 			@success = TRUE;
 		}
+		else {
+			@.err ("Native lock index %lld out of bounds!", @log_addr);
+		}
 	}
 	
+	// Wake up all threads sleeping on a lock.
 	operation $unlock {
 		if (@log_addr < (addr_t)(N_NATIVE_LOCKS)) {
 			int index = (int)@log_addr;
@@ -177,17 +221,24 @@ output :>out
 			int bit_index = index % WORD_SIZE;
 			int mask = 1 << bit_index;
 			if (!(@#.free_locks[word_index] & mask)) {
-				@#.free_locks[word_index] |= mask;
+				trace ("(mand=%d) Releasing lock %d...\n", @mandate, index);
 				release_all (index);
 				@success = TRUE;
+			}
+			else {
+				@.err ("Attempt to release a free lock: %lld", @log_addr);
 			}
 		}
 		else if (@log_addr == (addr_t)-1) {
 			unlock_mutex ();
 			@success = TRUE;
 		}
+		else {
+			@.err ("Native lock index %lld out of bounds!", @log_addr);
+		}
 	}
 
+	// No other operations implemented.
 	operation $op {
 		@success = FALSE;
 		@.err ("This operation is not supported!");
