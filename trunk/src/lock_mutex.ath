@@ -12,26 +12,29 @@ purpose Mandate-independent locks
 desc
 * Read locks conflict with write locks only.
 * Write locks conflict with any locks.
+* granularity is 1.
 * A lock conflict causes the later requesting operation to either be blocked or to fail, depending on the action parameter.
 * Ignores mandates (conflicting lock calls with the same mandate block!)
 * No accumulating locks (impossible without operator identification), use lock_mand for this.
-* $unlock releases only one of (possible) multiple overlapping locks (always pairwise $lock/ $unlock).
-* Data and address locks are orthogonal and independant.
-* granularity is 1.
-
-* Developers: low-level lock mechanisms are encapsulated in macros and should be easy to adapt to
-              new runtime environments (currently ulinux and klinux environments implemented).
+* Non-conflicting, but overlapping locks stack. The sum of $lock and $unlock must be 0.
+* Data and address locks are independent from each other.
+* Brick is implemented statelessly. Needs an exclusive nest at :<tmp with nest semantics.
+* Brick is system-independent. Uses #lock_native for low-level locks. Adapt that brick for new runtime environments.
+* FIXME: attempts to lock the highest byte (2^64-1) of the nest will fail due to integer overflow!
 
       +--------+
-      |        |
-in ---+        +--- out
+tmp---+        |
+in----+        +---out
       |        |
       +--------+  
 enddesc
 
 static_header {
-	// Abstract reference type to ease later conversion to Pointer Cache.
-	typedef struct lock_mutex_lock_rec *lock_mutex_ref_t;
+	@.define MAX_LOCK_RECORDS (1024)
+	@.define STATE_STORAGE_SIZE (sizeof (struct lock_mutex_state))
+	
+	// Abstract reference type (was necessary to ease conversion from internal vars to state nest).
+	typedef addr_t *lock_mutex_rec_ref_t;
 	// Essential properties of a lock.
 	struct lock_mutex_lock_desc {
 		addr_t start;
@@ -41,35 +44,42 @@ static_header {
 	// Record in a doubly linked list of locks.
 	// Also contains implementation of thread blocking.
 	struct lock_mutex_lock_rec {
-		lock_mutex_ref_t next_start;
-		lock_mutex_ref_t prev_start;
+		lock_mutex_rec_ref_t next_start;
+		lock_mutex_rec_ref_t prev_start;
 		// Signal broadcasted when a locked block is [partially] unlocked.
 		addr_t native_lock;
 		struct lock_mutex_lock_desc desc;
 	};
+	// Structure of :<tmp, from address 0.
+	struct lock_mutex_state {
+		lock_mutex_rec_ref_t lock_starting_first;
+		lock_mutex_rec_ref_t lock_starting_last;
+		lock_mutex_rec_ref_t free_lock_recs;
+		struct lock_mutex_lock_rec lock_rec_storage[MAX_LOCK_RECORDS];
+	};
 	// Filter for locks in the active list.
-	typedef bool (*lock_mutex_lock_test_t) (lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc);
+	typedef bool (*lock_mutex_lock_test_t) (struct lock_mutex_state *state, lock_mutex_rec_ref_t lock, struct lock_mutex_lock_desc *desc);
 }
 
 static_data {
 	// 'Primes' a lock: initialize the native lock mechanism.
 	@.define activate_lock (LOCK) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$gadr (1) => (ok, (LOCK)->native_lock);
+		@=outputcall ##lock_imp:>out$gadr (1) => (ok, MAKE_STATE_PTR (LOCK)->native_lock);
 		@.check (!ok, "Failed to obtain native lock!");
 	}
 	
-	// Releases all threads waiting for this lock, then deactivate the native lock mechanism.
+	// Releases all threads waiting for this lock, then deactivates the native lock mechanism.
 	@.define deactivate_lock (LOCK) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$padr ((LOCK)->native_lock, 1) => (ok);
+		@=outputcall ##lock_imp:>out$padr (MAKE_STATE_PTR (LOCK)->native_lock, 1) => (ok);
 		@.check (!ok, "Failed to drop native lock!");
 	}
 
 	// Makes a thread wait for removal of this lock.
 	@.define wait_for_lock (LOCK) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$lock ((LOCK)->native_lock, 1) => (ok);
+		@=outputcall ##lock_imp:>out$lock (MAKE_STATE_PTR (LOCK)->native_lock, 1) => (ok);
 		@.check (!ok, "Failed to wait on native lock!");
 	}
 	
@@ -87,18 +97,22 @@ static_data {
 		@.check (!ok, "Failed to release native mutex!");
 	}
 
-	@.define LOCK_STORAGE_SIZE (1024)
+	@.define MAX_LOCK_RECORDS (1024)
 
 	// Abstract reference values/querys/operations.
-	@.define NULL_REF ((lock_mutex_ref_t)NULL)
+	@.define NULL_REF ((lock_mutex_rec_ref_t)0)
+	
+	// A valid physical pointer "state" to the brick state must be declared for these macros to work.
+	@.define MAKE_STATE_PTR (REF) ((struct lock_mutex_lock_rec *)((void *)((paddr_t)(state) + (plen_t)(REF))))
+	@.define MAKE_STATE_REF (PTR) ((lock_mutex_rec_ref_t)((char *)(PTR) - (char *)state))
 	
 	// Abstract operations on the lock list.
-	@.define has_next (REF) (REF->next_start != 0)
-	@.define has_prev (REF) (REF->prev_end != 0)
-	@.define next_start_from (REF) (REF->next_start)
-	@.define prev_start_from (REF) (REF->prev_start)
-	@.define next_end_from (REF) (REF->next_end)
-	@.define prev_end_from (REF) (REF->prev_end)
+	@.define has_next_lock (REF) (MAKE_STATE_PTR (REF)->next_start != 0)
+	@.define has_prev_lock (REF) (MAKE_STATE_PTR (REF)->prev_start != 0)
+	@.define get_next_lock (REF) (MAKE_STATE_PTR (REF)->next_start)
+	@.define get_prev_lock (REF) (MAKE_STATE_PTR (REF)->prev_start)
+	@.define set_next_lock (REF, NEXT_REF) (MAKE_STATE_PTR (REF)->next_start = (NEXT_REF))
+	@.define set_prev_lock (REF, PREV_REF) (MAKE_STATE_PTR (REF)->prev_start = (PREV_REF))
 
 	@.define make_lock_type (DATA_LOCK, ADDR_LOCK) (((ADDR_LOCK) << 2) | (DATA_LOCK))
 
@@ -110,16 +124,17 @@ static_data {
 	@.define set_desc_bounds (DESC, START_ADDR, END_ADDR) (set_desc_start (DESC, START_ADDR), set_desc_end (DESC, END_ADDR))
 	@.define set_desc (DESC, ADDR_START, ADDR_END, TYPE) ((DESC).start = ADDR_START, (DESC).end = ADDR_END, (DESC).flags = TYPE)
 	
-	@.define get_lock_start (REF) (get_desc_start ((REF)->desc))
-	@.define get_lock_end (REF) (get_desc_end ((REF)->desc))
-	@.define get_lock_data_type (LOCK) ((LOCK)->desc.flags & 0x0003)
-	@.define get_lock_addr_type (LOCK) (((LOCK)->desc.flags & 0x000C) >> 2)
-	@.define get_lock_type (LOCK) (get_desc_type ((LOCK)->desc))
-	@.define set_lock_start (REF, ADDR) (set_desc_start ((REF)->desc, ADDR))
-	@.define set_lock_end (REF, ADDR) (set_desc_end ((REF)->desc, ADDR))
-	@.define set_lock_bounds (REF, START_ADDR, END_ADDR) (set_desc_bounds ((REF)->desc, START_ADDR, END_ADDR))
-	@.define set_lock_type (LOCK, LOCK_TYPE) ((LOCK)->desc.flags = (((LOCK)->desc.flags & ~0x000F) | (LOCK_TYPE)))	
-	@.define set_lock (LOCK, DESC) ((LOCK)->desc = (DESC))
+	@.define get_lock_start (REF) (get_desc_start (MAKE_STATE_PTR (REF)->desc))
+	@.define get_lock_end (REF) (get_desc_end (MAKE_STATE_PTR (REF)->desc))
+	@.define get_lock_data_type (REF) (MAKE_STATE_PTR (REF)->desc.flags & 0x0003)
+	@.define get_lock_addr_type (REF) ((MAKE_STATE_PTR (REF)->desc.flags & 0x000C) >> 2)
+	@.define get_lock_type (REF) (get_desc_type (MAKE_STATE_PTR (REF)->desc))
+	@.define get_lock_desc (REF) (MAKE_STATE_PTR (REF)->desc)
+	@.define set_lock_start (REF, ADDR) (set_desc_start (MAKE_STATE_PTR (REF)->desc, ADDR))
+	@.define set_lock_end (REF, ADDR) (set_desc_end (MAKE_STATE_PTR (REF)->desc, ADDR))
+	@.define set_lock_bounds (REF, START_ADDR, END_ADDR) (set_desc_bounds (MAKE_STATE_PTR (REF)->desc, START_ADDR, END_ADDR))
+	@.define set_lock_type (REF, LOCK_TYPE) (MAKE_STATE_PTR (REF)->desc.flags = ((MAKE_STATE_PTR (REF)->desc.flags & ~0x000F) | (LOCK_TYPE)))
+	@.define set_lock_desc (REF, DESC) (MAKE_STATE_PTR (REF)->desc = (DESC))
 
 	// lock_type = (addr_lock * 4 + data_lock)
 	// conflict on (lock_conflict_def[lock_type(A)] & (1 << lock_type(B))) != 0
@@ -131,13 +146,13 @@ static_data {
 	
 	// Tests a lock record in a list for conflict with a given lock descriptor.
 	// Assumption is that the two lock records overlap.
-	bool is_conflict(lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc) {
+	bool is_conflict(struct lock_mutex_state *state, lock_mutex_rec_ref_t lock, struct lock_mutex_lock_desc *desc) {
 		return (lock_conflict_def[get_desc_type (*desc)] & (1 << get_lock_type (lock))) != 0;
 	}
 	
 	// Tests a lock record in a list, if it is 'owned' (was set by) the same individual owning desc.
 	// Assumption is that the two lock records overlap.
-	bool is_own (lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc) {
+	bool is_own (struct lock_mutex_state *state, lock_mutex_rec_ref_t lock, struct lock_mutex_lock_desc *desc) {
 		return TRUE;
 	}
 }
@@ -151,77 +166,82 @@ input :<in
 		@=inputcall :>out$retract @args;
 	}
 
+input :<tmp
+
+	use PC tmp_state [4] ;
+
 output :>out
 
-	data {
-		// Storage for doubly linked list of locks. Could (should) later be stored in an input nest nest instead.
-		struct lock_mutex_lock_rec lock_rec_storage[LOCK_STORAGE_SIZE];
-		// Reference to the lock with the lowest address.
-		lock_mutex_ref_t lock_starting_first;
-		lock_mutex_ref_t lock_starting_last;
-		// Reference to the start of the list of unallocated blocks (first element has no 'previous' element).
-		lock_mutex_ref_t free_lock_recs;
-	}
-
 	// Allocates a new lock from the storage.
-	@.define new_lock_rec () => (LOCK) {
+	@.define new_lock_rec (STATE_PTR) => (LOCK) {
+		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d allocate new lock record...\n", (int)@mandate);
-		LOCK = @:>.free_lock_recs;
+		LOCK = (STATE_PTR)->free_lock_recs;
 		@.fatal (!LOCK, "No more free lock records!");
-		@:>.free_lock_recs = LOCK->next_start;
-		#ifdef DEBUG
-		LOCK->next_start = NULL_REF;
-		LOCK->prev_start = NULL_REF;
-		set_lock_bounds(LOCK, 0, 0);
-		#endif
+		(STATE_PTR)->free_lock_recs = get_next_lock (LOCK);
+		@.if ("PCONF" =~ m/debug$/) {
+			set_next_lock (LOCK, NULL_REF);
+			set_prev_lock (LOCK, NULL_REF);
+			set_lock_bounds(LOCK, 0, 0);
+		}
 	}
 	
 	// Returns a lock record to the list of free records.
 	// The record must have been removed from the active list (via remove_lock_rec) before!
-	@.define free_lock_rec (LOCK) {
+	@.define free_lock_rec (STATE_PTR, LOCK) {
+		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d free lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (LOCK), get_lock_end (LOCK));
-		LOCK->next_start = @:>.free_lock_recs;
-		LOCK->prev_start = NULL_REF;
-		@:>.free_lock_recs = LOCK;
+		set_next_lock (LOCK, (STATE_PTR)->free_lock_recs);
+		set_prev_lock (LOCK, NULL_REF);
+		(STATE_PTR)->free_lock_recs = LOCK;
 	}
 
-	// Activates (creates condition) a lock record and adds it to the list.
-	@.func add_lock_rec (lock_mutex_ref_t lock) {
-		lock_mutex_ref_t scan;
+	// Activates a lock record and adds it to the list.
+	@.func add_lock_rec (struct lock_mutex_state *state, lock_mutex_rec_ref_t lock) {
+		lock_mutex_rec_ref_t scan;
+		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d activate lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock));
-		for (scan = @:>.lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = scan->next_start);
+		for (scan = state->lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = get_next_lock (scan));
 		activate_lock (lock);
-		lock->next_start = scan;
-		if (lock->next_start != NULL_REF) {
-			lock->prev_start = lock->next_start->prev_start;
-			lock->next_start->prev_start = lock;
+		set_next_lock (lock, scan);
+		if (get_next_lock (lock) != NULL_REF) {
+			lock_mutex_rec_ref_t next_lock = get_next_lock (lock);
+			lock_mutex_rec_ref_t prev_lock = get_prev_lock (next_lock);
+			set_prev_lock (lock, prev_lock);
+			set_prev_lock (next_lock, lock);
 		}
 		else {
-			lock->prev_start = @:>.lock_starting_last;
-			@:>.lock_starting_last = lock;
+			set_prev_lock (lock, state->lock_starting_last);
+			state->lock_starting_last = lock;
 		}
-		if (lock->prev_start != NULL_REF) {
-			lock->prev_start->next_start = lock;
+		if (get_prev_lock (lock) != NULL_REF) {
+			lock_mutex_rec_ref_t prev_lock = get_prev_lock (lock);
+			set_next_lock (prev_lock, lock);
 		}
 		else {
-			@:>.lock_starting_first = lock;
+			state->lock_starting_first = lock;
 		}		
 	}
 	
 	// Removes a lock record from the list and releases all threads waiting for it.
-	@.func remove_lock_rec (lock_mutex_ref_t lock) {
+	@.func remove_lock_rec (struct lock_mutex_state *state, lock_mutex_rec_ref_t lock) {
+		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d deactivate lock [0x%llX..0x%llX]...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock));
-		if (lock->prev_start != NULL_REF) {
-			lock->prev_start->next_start = lock->next_start;
+		if (get_prev_lock (lock) != NULL_REF) {
+			lock_mutex_rec_ref_t prev_lock = get_prev_lock (lock);
+			lock_mutex_rec_ref_t next_lock = get_next_lock (lock);
+			set_next_lock (prev_lock, next_lock);
 		}
 		else {
-			@:>.lock_starting_first = lock->next_start;
+			state->lock_starting_first = get_next_lock (lock);
 		}
-		if (lock->next_start != NULL_REF) {
-			lock->next_start->prev_start = lock->prev_start;
+		if (get_next_lock (lock) != NULL_REF) {
+			lock_mutex_rec_ref_t next_lock = get_next_lock (lock);
+			lock_mutex_rec_ref_t prev_lock = get_prev_lock (lock);
+			set_prev_lock (next_lock, prev_lock);
 		}
 		else {
-			@:>.lock_starting_last = lock->prev_start;
+			state->lock_starting_last = get_prev_lock (lock);
 		}
 		deactivate_lock (lock);
 	}
@@ -229,27 +249,28 @@ output :>out
 	// Allocates a new lock 'COPY' from the storage and copies
 	// LOCK's essential characteristics to COPY. List and condition variables
 	// are not copied.
-	@.define copy_lock_rec (LOCK) => (COPY) {
-		new_lock_rec () => (COPY);
-		(COPY)->desc = (LOCK)->desc;
+	@.define copy_lock_rec (STATE, LOCK) => (COPY) {
+		new_lock_rec (STATE) => (COPY);
+		@.check ((COPY) == NULL_REF, "Out of lock records!");
+		set_lock_desc (COPY, get_lock_desc (LOCK));
 	}
 	
 	// Returns the first (=lowest start address) lock record in the list that
 	// overlaps the specified descriptor and fulfills the specified requirement.
-	@.define find_first_lock (desc_ptr, requirement) => (result) {
-		find_next_lock_from (@:>.lock_starting_first, desc_ptr, requirement) => (result);
+	@.define find_first_lock (STATE_PTR, DESC_PTR, REQUIREMENT) => (RESULT) {
+		find_next_lock_from (STATE_PTR, (STATE_PTR)->lock_starting_first, DESC_PTR, REQUIREMENT) => (RESULT);
 	}
 	
 	// Returns the next (=next-higher start address from 'lock') lock record in the list that
 	// overlaps the specified descriptor and fulfills the specified requirement.
-	@.func find_next_lock_from (lock_mutex_ref_t lock, struct lock_mutex_lock_desc *desc, lock_mutex_lock_test_t requirement) => (lock_mutex_ref_t result) {
-		for (result = lock; result != NULL_REF; result = next_start_from (result)) {
+	@.func find_next_lock_from (struct lock_mutex_state *state, lock_mutex_rec_ref_t lock, struct lock_mutex_lock_desc *desc, lock_mutex_lock_test_t requirement) => (lock_mutex_rec_ref_t result) {
+		for (result = lock; result != NULL_REF; result = get_next_lock (result)) {
 			if (get_lock_end (result) > get_desc_start (*desc)) {
 				if (get_lock_start (result) >= get_desc_end (*desc)) {
 					result = NULL_REF;
 					break;
 				}
-				if (requirement (result, desc)) {
+				if (requirement (state, result, desc)) {
 					break;
 				}
 			}
@@ -262,55 +283,65 @@ output :>out
 		}
 	}
 	
-	// Prints out the lock list. Debug function.
-	@.func print_lock_list () {
-		char buf[1024];
-		int n;
-		char *buf_end;
-		lock_mutex_ref_t lock, last_lock;
-		lock = @:>.lock_starting_first;
-		last_lock = NULL_REF;
-		trace ("mand=%d lock list:\n", (int)@mandate);
-		memset(buf, 0, sizeof buf);
-		n = sizeof buf - 2;
-		buf_end = buf;
-		while (lock != NULL_REF && n > 0) {
-			int len;
-			snprintf(buf_end, n, "[0x%llX..0x%llX] ", get_lock_start (lock), get_lock_end (lock));
-			len = strlen(buf_end);
-			n -= len;
-			buf_end += len;
-			if (prev_start_from (lock) != last_lock) {
-				trace ("mand=%d %s <-- INCONSISTENCY!!!\n", (int)@mandate, buf);
-				return;
+	@.if ("PCONF" =~ m/debug$/) {
+		// Prints out the lock list.
+		@.func print_lock_list (struct lock_mutex_state *state) {
+			char buf[1024];
+			int n;
+			char *buf_end;
+			lock_mutex_rec_ref_t lock, prev_lock;
+			lock = state->lock_starting_first;
+			prev_lock = NULL_REF;
+			trace ("mand=%d lock list:\n", (int)@mandate);
+			memset(buf, 0, sizeof buf);
+			n = sizeof buf - 2;
+			buf_end = buf;
+			while (lock != NULL_REF && n > 0) {
+				int len;
+				snprintf(buf_end, n, "[0x%llX..0x%llX] ", get_lock_start (lock), get_lock_end (lock));
+				len = strlen(buf_end);
+				n -= len;
+				buf_end += len;
+				if (get_prev_lock (lock) != prev_lock) {
+					trace ("mand=%d %s <-- INCONSISTENCY!!!\n", (int)@mandate, buf);
+					return;
+				}
+				prev_lock = lock;
+				lock = get_next_lock (lock);
 			}
-			last_lock = lock;
-			lock = next_start_from (lock);
+			if (state->lock_starting_last != prev_lock) {
+				trace ("mand=%d %s <-- FINAL INCONSISTENCY!!!\n", (int)@mandate, buf);
+			}
+			trace ("mand=%d %s (ok)\n", (int)@mandate, buf);
 		}
-		if (@:>.lock_starting_last != last_lock) {
-			trace ("mand=%d %s <-- FINAL INCONSISTENCY!!!\n", (int)@mandate, buf);
-		}
-		trace ("mand=%d %s (ok)\n", (int)@mandate, buf);
 	}
 	
 	// Initializes/destroys status variables.
-	// Stores status in brick variables. TODO: use a nest instead!
 	operation $output_init {
 		success_t ok;
+
 		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
 		@.check (!ok, "##lock_imp:>out$output_init failed!");
-		if (@constr) {
-			int i;
-			memset(@:>.lock_rec_storage, 0, sizeof @:>.lock_rec_storage);
-			for (i = 0; i < LOCK_STORAGE_SIZE - 1; i++) {
-				@:>.lock_rec_storage[i].next_start = &@:>.lock_rec_storage[i + 1];
-			}
-			@:>.lock_rec_storage[i].next_start = NULL_REF;
-			@:>.lock_starting_first = NULL_REF;
-			@:>.lock_starting_last = NULL_REF;
-			@:>.free_lock_recs = @:>.lock_rec_storage;
-			@success = TRUE;
+		PC_FLUSH (tmp_state);
+		if (@destr) {
+			@=outputcall :<tmp$delete (0, STATE_STORAGE_SIZE) => (ok);
+			@.check (!ok, "Could not destroy state storage!");
 		}
+		if (@constr) {
+			struct lock_mutex_state *state;
+			int i;
+			@=outputcall :<tmp$create (0, STATE_STORAGE_SIZE, TRUE) => (ok);
+			state = PC_GET_DIRTY (tmp_state, 0, STATE_STORAGE_SIZE);
+			@.check (!ok || !state, "Could not get state storage!");
+			for (i = 0; i < MAX_LOCK_RECORDS - 1; i++) {
+				state->lock_rec_storage[i].next_start = MAKE_STATE_REF (&state->lock_rec_storage[i + 1]);
+			}
+			state->lock_rec_storage[i].next_start = NULL_REF;
+			state->lock_starting_first = NULL_REF;
+			state->lock_starting_last = NULL_REF;
+			state->free_lock_recs = MAKE_STATE_REF (state->lock_rec_storage);
+		}
+		@success = TRUE;
 	}
 
 	// See description in brick header.
@@ -319,11 +350,13 @@ output :>out
 		addr_t obl_end = @log_addr + @log_len;
 		addr_t opt_start = @try_addr;
 		addr_t opt_end = @try_addr + @try_len;
+		struct lock_mutex_state *state;
 		struct lock_mutex_lock_desc desc;
-		lock_mutex_ref_t conflictor;
+		lock_mutex_rec_ref_t conflictor;
+		@.check (opt_end < opt_start || obl_end < obl_start, "Lock  [0x%llX..[0x%llX..0x%llX]..0x%llX] exceeds address space!", opt_start, obl_start, obl_end, opt_end);
 		@.check (opt_start > obl_start || opt_end < obl_end, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", opt_start, opt_end, obl_start, obl_end);
 		
-		if (opt_end - opt_start == 0) {
+		if (opt_end - opt_start == 0 || (@data_lock == lock_none && @addr_lock == lock_none)) {
 			// Nothing to lock, return.
 			trace ("mand=%d Requested lock [?0x%llX..[!0x%llX..0x%llX!]..0x%llX?] has no effect.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end);
 			@success = TRUE;
@@ -334,8 +367,11 @@ output :>out
 
 		lock_mutex ();		
 		
-		// Look for locks overlapping with the obligatory part of our requested lock.
-		find_first_lock (&desc, is_conflict) => (conflictor);
+		state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
+		@.check (!state, "Error getting brick status!");
+		
+		// Look for locks conflicting with the obligatory part of our requested lock.
+		find_first_lock (state, &desc, is_conflict) => (conflictor);
 		if (obl_end - obl_start > 0) {
 			if (conflictor != NULL_REF) {
 				if (@action != action_wait) {
@@ -346,7 +382,7 @@ output :>out
 					// Wait for the lock to be released.
 					wait_for_lock (conflictor);
 					// Start all over again, there could be more locks in the way/ new locks may have appeared.
-					find_first_lock (&desc, is_conflict) => (conflictor);
+					find_first_lock (state, &desc, is_conflict) => (conflictor);
 				} while (conflictor != NULL_REF);
 			}
 		}
@@ -367,7 +403,7 @@ output :>out
 		// Cut the optional parts until nothing conflicts with them anymore.
 		if (opt_start < obl_start || opt_end > obl_end) {
 			set_desc_bounds (desc, opt_start, opt_end);
-			find_first_lock (&desc, is_conflict) => (conflictor);
+			find_first_lock (state, &desc, is_conflict) => (conflictor);
 			while (conflictor != NULL_REF) {
 				if (get_lock_end (conflictor) <= obl_start) {
 					// Conflicting lock is below the obligatory part, cut optional part upwards.
@@ -377,20 +413,20 @@ output :>out
 					// Conflicting is above the obligatory part, cut optional part downwards.
 					set_desc_end (desc, get_lock_start (conflictor));
 				}
-				find_next_lock_from (conflictor, &desc, is_conflict) => (conflictor);
+				find_next_lock_from (state, conflictor, &desc, is_conflict) => (conflictor);
 			}
 		}
 		
 		// Now the way is free: insert a new lock record, if appropriate.
 		if (get_desc_end (desc) > get_desc_start (desc) && @action != action_ask) {
-			lock_mutex_ref_t lock;
-			new_lock_rec () => (lock);
-			set_lock (lock, desc);
-			add_lock_rec (lock);
+			lock_mutex_rec_ref_t lock;
+			new_lock_rec (state) => (lock);
+			set_lock_desc (lock, desc);
+			add_lock_rec (state, lock);
 		}
 
 		trace ("mand=%d Lock [0x%llX..0x%llX] granted.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
-		print_lock_list ();
+		print_lock_list (state);
 		unlock_mutex ();
 		
 		@try_addr = get_desc_start (desc);
@@ -400,8 +436,9 @@ output :>out
 	
 	// See description in brick header.
 	operation $unlock {
-		lock_mutex_ref_t lock;
+		lock_mutex_rec_ref_t lock;
 		struct lock_mutex_lock_desc desc;
+		struct lock_mutex_state *state;
 		// Unlocking will always succeed, so we unlock the whole optional part right away.
 		set_desc (desc, @try_addr, @try_addr + @try_len, make_lock_type (lock_write, lock_write));
 		@.check (get_desc_start (desc) > @log_addr || get_desc_end (desc) < @log_addr + @log_len, "Optional part [0x%llX..0x%llX] does not contain obligatory part [0x%llX..0x%llX]!", get_desc_start (desc), get_desc_end (desc), @log_addr, @log_addr + @log_len);
@@ -409,39 +446,44 @@ output :>out
 		lock_mutex ();
 		trace ("mand=%d Unlock of [0x%llX..0x%llX] requested.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
 		
-		find_first_lock (&desc, is_own) => (lock);
+		state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
+		@.check (!state, "Error getting brick status!");
+		
+		find_first_lock (state, &desc, is_own) => (lock);
 		while (lock != NULL_REF) {
-			lock_mutex_ref_t next_lock = next_start_from (lock);
+			lock_mutex_rec_ref_t next_lock = get_next_lock (lock);
 			// If the block is not completely covered by this $unlock, it must be split.
 			// Create the (potential) lower and the upper leftovers as separate new locks.
 			// Adjust start of 'desc' so that only one lock per address gets removed.
 			if (get_lock_start (lock) < get_desc_start (desc)) {
-				lock_mutex_ref_t lower_part;
-				copy_lock_rec (lock) => (lower_part);
+				lock_mutex_rec_ref_t lower_part;
+				copy_lock_rec (state, lock) => (lower_part);
 				set_lock_end (lower_part, get_desc_start (desc));
-				add_lock_rec (lower_part);
+				add_lock_rec (state, lower_part);
 			}
 			if (get_lock_end (lock) > get_desc_end (desc)) {
-				lock_mutex_ref_t upper_part;
-				copy_lock_rec (lock) => (upper_part);
+				lock_mutex_rec_ref_t upper_part;
+				copy_lock_rec (state, lock) => (upper_part);
 				set_lock_start (upper_part, get_desc_end (desc));
-				add_lock_rec (upper_part);
+				add_lock_rec (state, upper_part);
 				set_desc_start (desc, get_desc_end (desc));
 			}
 			else {
 				set_desc_start (desc, get_lock_end (lock));
 			}
 			// Now remove the original lock. 
-			remove_lock_rec (lock);
-			free_lock_rec (lock);
+			remove_lock_rec (state, lock);
+			free_lock_rec (state, lock);
 			if (get_desc_start (desc) == get_desc_end (desc)) {
 				// Any more overlapping locks don't need to be touched.
 				break;
 			}
-			find_next_lock_from (next_lock, &desc, is_own) => (lock);
+			find_next_lock_from (state, next_lock, &desc, is_own) => (lock);
 		}
-		trace ("mand=%d Lock [0x%llX..0x%llX] released.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
-		print_lock_list ();
+		trace ("mand=%d Lock [0x%llX..0x%llX] released.\n", (int)@mandate, @try_addr, @try_addr + @try_len);
+		@.if ("PCONF" =~ m/debug$/) {
+			print_lock_list (state);
+		}
 		unlock_mutex ();
 		@success = TRUE;
 	}
