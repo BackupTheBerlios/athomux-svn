@@ -11,47 +11,48 @@ brick #adapt_multi
 purpose Allows multiple users on a single-user nest
 
 desc
-	Outputs not capable of handling multiple simultaneous operation calls can use this adapter to gain this capability.
+	Outputs not capable of handling multiple simultaneous operation calls can use this adapter to make it a monitor.
 	Input and output calls are locked separately, so at most one input and one output call can pass this brick at the same time.
 	Modification by nieserd Dez 2005:
 	Brick used #lock_ulinux to implement mutual exclusion, what failed when two incoming
-	simulteneous operation calls used the same mandate (#lock_ulinux is mandate-oriented).
+	simultaneous operation calls used the same mandate (#lock_ulinux is mandate-oriented).
 	#lock_mutex_ulinux ignores mandates, so this won't happen anymore.
+	Internally uses a #tmp_dummy_ulinux brick for lock_mutex' state. For compatibility with
+	programs using the brick, no additional input is added.
 	
 	Note:
-		Bricks should try to implement concurrency safety in a more distributed way, e.g.
+		Bricks should try to implement concurrency safety in a more flexible way, e.g.
 		called operations could lock only the ranges of the status nest they actually access.
-
-	     +-------------------------+
-	     |                         |
-	in --+--                     --+-- out
-	     |                         |
-	     |   +-------------+       |  
-	     |   | #lock_mutex +--     |  
-	     |   +-------------+       |
-	     |                         |
-	     +-------------------------+
 enddesc
 
-
+instance #tmp_dummy_ulinux as tmp;
+wire :>out as ##lock:<tmp;
 instance #lock_mutex as lock;
 
 
 operation $brick_init {
-	INIT_ALL_INPUTS ();
-	INIT_ALL_INSTANCES ();
-	INIT_ALL_OUTPUTS();
-	@=call ##lock:>out$output_init (@destr, @constr) => (@success);
+	if (@destr) {
+		INIT_ALL_OUTPUTS ();
+		//INIT_ALL_INSTANCES ();
+		INIT_ONE_INSTANCE (lock, "");
+		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ALL_INPUTS ();
+	}
+	if (@constr) {
+		INIT_ALL_INPUTS ();
+		//INIT_ALL_INSTANCES ();
+		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ONE_INSTANCE (lock, "");
+		INIT_ALL_OUTPUTS ();
+	}
 }
 
 
 input :<in
 
-
 operation $op
 {
   success_t succ;
-
   // get lock
   @=call ##lock:>out$lock (1, 1, lock_write, lock_write) => (succ);
   @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
@@ -65,7 +66,6 @@ operation $op
 
 
 output :>out
-
 
 operation $op
 {
