@@ -1,0 +1,66 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #lock_manager
+
+purpose Fits a nest with locking
+
+desc
+	Original lock resource provider: Retrofits locking to the nest at :<in.
+	Does not emit $lock or $unlock calls from :<in.
+	Rejects $retract calls at :<in.
+	All other operations are forwarded between :<in and :>out.
+	
+	Uses a lock_cache together with an unlimited pool of lock resources as implementation.
+enddesc
+
+instance #lock_dummy as pool;
+instance #lock_cache as impl;
+wire :<in as ##pool:>out;
+wire :<tmp as :>wkarnd;
+
+operation $brick_init {
+	INIT_ALL_INPUTS ();
+	@=outputcall :>wkarnd$output_init (FALSE, TRUE) => (@success);
+	INIT_ONE_INSTANCE (pool, "");
+	INIT_ONE_INSTANCE (impl, "");
+	INIT_ALL_OUTPUTS ();
+}
+
+input :<tmp
+
+// Workaround for not-working  'alias ##impl:<tmp as :<tmp'
+local output :>wkarnd
+
+	operation $op {
+		trace ("#lock_manager:>wkaround$%s %d called\n", @name, @op_code);
+		@=outputcall :<tmp$op @args;
+	}
+
+input :<in
+
+	operation $retract {
+		@success = FALSE;
+	}
+	
+	operation $op {
+		@=inputcall :>out$op @args;
+	}
+
+output :>out
+
+	operation $lock {
+		@=outputcall ##impl:>out$lock @args;
+	}
+	
+	operation $unlock {
+		@=outputcall ##impl:>out$unlock @args;
+	}
+
+	operation $op {
+		@=outputcall :<in$op @args;
+	}
