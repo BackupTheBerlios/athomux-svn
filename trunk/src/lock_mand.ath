@@ -19,8 +19,9 @@ desc
 * Forwards all operations except $lock and $unlock to the 'protected' resource in :<in.
 * Does not generate own $lock or $unlock calls.
 * Generates $retract operations on optional locks to attempt conflict solvation.
-* Brick is implemented statelessly. Needs an exclusive nest at :<tmp with nest semantics.
-* Brick is system-independent. Uses #lock_native for low-level locks. Adapt that brick for new runtime environments.
+* Ignores $retract operations on all inputs (analogous to not emitting $lock and $unlock).
+* Brick is implemented statelessly. Needs an exclusive nest at :<tmp supporting $create, $delete, $get and $put.
+* Brick is system-independent. Uses #lock_native for low-level locks. Adapt _that_ brick to new runtime environments.
 * FIXME: attempts to lock the highest byte (2^64-1) of the nest will fail due to integer overflow!
 
       +--------+
@@ -246,20 +247,16 @@ output :>out
 		activate_lock (lock);
 		set_next_lock (lock, scan);
 		if (get_next_lock (lock) != NULL_REF) {
-			//DELETEME: lock->prev_start = lock->next_start->prev_start;
 			lock_mand_rec_ref_t next_lock = get_next_lock (lock);
 			lock_mand_rec_ref_t prev_lock = get_prev_lock (next_lock);
 			set_prev_lock (lock, prev_lock);
-			//DELETEME: lock->next_start->prev_start = lock;
 			set_prev_lock (next_lock, lock);
 		}
 		else {
-			//DELETEME: lock->prev_start = state->lock_starting_last;
 			set_prev_lock (lock, state->lock_starting_last);
 			state->lock_starting_last = lock;
 		}
 		if (get_prev_lock (lock) != NULL_REF) {
-			//DELETEME: lock->prev_start->next_start = lock;
 			lock_mand_rec_ref_t prev_lock = get_prev_lock (lock);
 			set_next_lock (prev_lock, lock);
 		}
@@ -273,7 +270,6 @@ output :>out
 		PC_DIRTY (tmp_state, 0);
 		trace ("mand=%d deactivate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		if (get_prev_lock (lock) != NULL_REF) {
-			//DELETEME: lock->prev_start->next_start = lock->next_start;
 			lock_mand_rec_ref_t prev_lock = get_prev_lock (lock);
 			lock_mand_rec_ref_t next_lock = get_next_lock (lock);
 			set_next_lock (prev_lock, next_lock);
@@ -282,7 +278,6 @@ output :>out
 			state->lock_starting_first = get_next_lock (lock);
 		}
 		if (get_next_lock (lock) != NULL_REF) {
-			//DELETME: lock->next_start->prev_start = lock->prev_start;
 			lock_mand_rec_ref_t next_lock = get_next_lock (lock);
 			lock_mand_rec_ref_t prev_lock = get_prev_lock (lock);
 			set_prev_lock (next_lock, prev_lock);
