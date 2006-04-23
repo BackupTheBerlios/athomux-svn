@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
 	g_signal_connect(G_OBJECT(main_win), "destroy", G_CALLBACK(destroy_main_win), NULL);		
 	gtk_container_set_border_width(GTK_CONTAINER(main_win), 8);
 	gtk_window_set_title(GTK_WINDOW(main_win), title_str);
+	gtk_window_set_default_size(GTK_WINDOW(main_win), 512, 256);
 	gtk_container_add(GTK_CONTAINER(main_win), vbox);
 	gtk_widget_show(main_win);
 
@@ -92,7 +93,7 @@ void input_available(gpointer data, gint src, GdkInputCondition cond) {
 		return;
 	}
 	input_buf[buf_size] = '\0';
-	/* Avoid utf-8 trouble. */
+	/* Avoid any trouble with encodings. */
 	guchar *c;
 	for (c = input_buf; *c != '\0'; c++) {
 		if (*c >= 128) {
