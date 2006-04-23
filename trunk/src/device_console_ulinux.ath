@@ -28,7 +28,14 @@ desc
 	is necessary there.
 enddesc
 
-static_header {
+// Indices into file descriptor arrays holding the pipes to the child prog.
+@.define READ (0)
+@.define WRITE (1)
+// Currently, the position and size of the read buffer in :<buf are fixed.
+@.define READ_BUF_ADDR (0)
+@.define READ_BUF_SIZE (DEFAULT_TRANSFER)
+
+static_data {
 	#include <sys/types.h>
 	#include <sys/stat.h>
 	#include <unistd.h>
@@ -39,60 +46,57 @@ static_header {
 	#define MAKE_STRING(VAR) #VAR
 	#define MAKE_EXPANDED_STRING(VAR) MAKE_STRING(VAR)
 	#define DEFAULT_CHILD_PROGRAM "PCONF/" MAKE_EXPANDED_STRING(CCONF) "/graph_console"
-	// Indices into file descriptor arrays holding the pipes to the child prog.
-	#define READ 0
-	#define WRITE 1
-	#define READ_BUF_SIZE 1024
 }
 
 data {
-	// Necessary until there is a memory device with free access to any logical
-	// address.
+	// These variables constitute instance attributes, no 'brick state',
+	// as they are never modified after brick initialization and can safely
+	// be dumped on brick deinitialization (they don't need to be saved for
+	// proper reinitialization).
 	pid_t child_pid;
 	int to_child[2], from_child[2];
 }
 
-/* Brick instantiation. */
-init {
-	@#.child_pid = -1;
-	if (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0) {
-		fputs("Error creating pipes for connection to child program!\n", stderr);
-		exit(1);
+operation $brick_init {
+	if (@destr) {
+		INIT_ALL_OUTPUTS ();
+		if (@#.child_pid > 0) {
+			kill(@#.child_pid, SIGTERM);
+		}
+		close(@#.to_child[READ]);
+		close(@#.from_child[WRITE]);
+		INIT_ALL_INPUTS ();
 	}
-	int pid = fork();
-	if (pid < 0) {
-		 fputs("Error creating child process!\n", stdout);
-		 exit(1);
-	}
-	else if (pid == 0) {
-		// Child process:
-		// Link the pipes to stdin/stdout, close the pipes' other ends.
-		close(@#.to_child[WRITE]);
-		close(@#.from_child[READ]);
-		if (dup2(@#.to_child[READ], STDIN_FILENO) < 0 || dup2(@#.from_child[WRITE], STDOUT_FILENO) < 0) {
-			fputs("Error linking the pipes to child process!\n", stderr);
+	if (@constr) {
+		INIT_ALL_INPUTS ();
+		@#.child_pid = -1;
+		@.fatal (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0, "Error creating pipes for connection to child program!\n");
+		int pid = fork();
+		@.fatal (pid < 0, "Error creating child process!\n");
+		if (pid == 0) {
+			// Child process:
+			// Link the pipes to stdin/stdout, close the pipes' other ends.
+			close(@#.to_child[WRITE]);
+			close(@#.from_child[READ]);
+			if (dup2(@#.to_child[READ], STDIN_FILENO) < 0 || dup2(@#.from_child[WRITE], STDOUT_FILENO) < 0) {
+				fputs("Error linking the pipes to child process!\n", stderr);
+				exit(1);
+			}
+			// ...and start the specified child terminal program.
+			execl(DEFAULT_CHILD_PROGRAM, DEFAULT_CHILD_PROGRAM, @param, NULL);
+			fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!\n", stderr);
 			exit(1);
 		}
-		// ...and start the specified child terminal program.
-		execl(DEFAULT_CHILD_PROGRAM, DEFAULT_CHILD_PROGRAM, NULL);
-		fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!\n", stderr);
-		exit(1);
-	}
-	else {
-		// Parent process:
-		// Close the pipes' ends that belong to the child.
-		@#.child_pid = pid;
-		close(@#.to_child[READ]);
-		@#.to_child[READ] = -1;
-		close(@#.from_child[WRITE]);
-		@#.from_child[WRITE] = -1;
-	}
-}
-
-/* Brick deinstantiation. */
-exit {
-	if (@#.child_pid > 0) {
-		kill(@#.child_pid, SIGTERM);
+		else {
+			// Parent process:
+			// Close the pipes' ends that belong to the child.
+			@#.child_pid = pid;
+			close(@#.to_child[READ]);
+			@#.to_child[READ] = -1;
+			close(@#.from_child[WRITE]);
+			@#.from_child[WRITE] = -1;
+		}
+		INIT_ALL_OUTPUTS ();
 	}
 }
 
@@ -104,46 +108,50 @@ input:<buf
 output:>read
 
 	data {
+		// Output state.
+		// TODO: store this in :<buf
 		addr_t read_buf_addr;
 		len_t read_buf_pos;
-		len_t read_buf_len;
+		len_t read_buf_size;
 	}
 
 	operation $output_init {
-		if (@constr == TRUE && @destr == FALSE) {
+		if (@constr == FALSE && @destr == TRUE) {
 			success_t ok;
-			@=outputcall :<buf$gadr (READ_BUF_SIZE) => (ok, @:>.read_buf_addr, @:>.read_buf_len);
-			@.check (!ok || @:>.read_buf_len < READ_BUF_SIZE, "Error allocating read buffer!");
-			@=outputcall :<buf$create (@:>.read_buf_addr, @:>.read_buf_len) => (ok);
-			@.check (!ok, "Error creating read buffer!");
-			@:>.read_buf_pos = @:>.read_buf_len;
+			@=outputcall :<buf$delete (@:>.read_buf_addr, @:>.read_buf_size) => (ok);
 		}
-		else if (@constr == FALSE && @destr == TRUE) {
+		else if (@constr == TRUE && @destr == FALSE) {
 			success_t ok;
-			@=outputcall :<buf$delete (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
-			@=outputcall :<buf$padr (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
+			// read_buf_addr and read_buf_size are constant for now. They may be
+			// determined dynamically in the future (e.g., via $brick_init paramstring).
+			@:>.read_buf_addr = READ_BUF_ADDR;
+			@:>.read_buf_size = READ_BUF_SIZE;
+			@=outputcall :<buf$create (@:>.read_buf_addr, @:>.read_buf_size) => (ok);
+			@.check (!ok, "Error creating read buffer!");
+			@:>.read_buf_pos = @:>.read_buf_size;
 		}
 	}
 
 	/* Preparation for any kind of input from this pipe. */
 	operation $gadr {
-		@.err ("$gadr not implemented!");
+		@.err ("$gadr not implemented yet! Use $gadrtranswaitdeletepadr");
 	}
 
 	/* Physical pipe input. */
 	operation $gadrtranswaitdeletepadr {
-		@.check (@phys_len <= 0, "Negative phys_len!");
+		@.check (@phys_len <= 0, "phys_len <=0!");
 		success_t ok;
 		paddr_t read_buf_paddr;
 		plen_t read_buf_plen;
 		version_t read_buf_version;
 		// Get pointer to read buffer.
-		@=outputcall :<buf$get (@:>.read_buf_addr, READ_BUF_SIZE) => (ok, read_buf_paddr, read_buf_plen, read_buf_version);
-		@.check (!ok || read_buf_plen < READ_BUF_SIZE, "Error getting read buffer!");
+		@.msg ("INFO: ", "read_buf_addr == 0x%llX, read_buf_size == 0x%llX", @:>.read_buf_addr, @:>.read_buf_size);
+		@=outputcall :<buf$get (@:>.read_buf_addr, @:>.read_buf_size) => (ok, read_buf_paddr, read_buf_plen, read_buf_version);
+		@.check (!ok || read_buf_plen < (plen_t)@:>.read_buf_size, "Error getting read buffer!");
 		// Update read buffer if necessary.
 		if (read_buf_version != vers_newest) {
-			@=outputcall :<buf$transwait (@:>.read_buf_addr, READ_BUF_SIZE, read_buf_paddr, direct_read) => (ok, read_buf_plen);
-			@.check (!ok || read_buf_plen < READ_BUF_SIZE, "Error updating read buffer!");
+			@=outputcall :<buf$transwait (@:>.read_buf_addr, @:>.read_buf_size, read_buf_paddr, direct_read) => (ok, read_buf_plen);
+			@.check (!ok || read_buf_plen < @:>.read_buf_size, "Error updating read buffer!");
 		}
 		// Copy from read buffer to destination address until LF found or destination full.
 		char *const read_buf = MAKE_PTR (read_buf_paddr);
@@ -154,13 +162,13 @@ output:>read
 		while (!hit_lf && dest_write < dest_end) {
 			fflush(stdout);
 			// Refill read buffer if empty.
-			if (@:>.read_buf_pos == @:>.read_buf_len) {
-				@:>.read_buf_len = (len_t)read(@#.from_child[READ], read_buf, READ_BUF_SIZE);
-				@.check (@:>.read_buf_len <= 0, "Error reading from user!");
+			if (@:>.read_buf_pos == @:>.read_buf_size) {
+				@:>.read_buf_size = (len_t)read(@#.from_child[READ], read_buf, @:>.read_buf_size);
+				@.check (@:>.read_buf_size <= 0, "Error reading from user!");
 				@:>.read_buf_pos = 0;
 			}
 			char *buf_read = (char *)MAKE_PTR (read_buf_paddr + (plen_t)@:>.read_buf_pos);
-			char *const read_buf_end = MAKE_PTR (read_buf_paddr + (plen_t)@:>.read_buf_len);
+			char *const read_buf_end = MAKE_PTR (read_buf_paddr + (plen_t)@:>.read_buf_size);
 			while (buf_read < read_buf_end && dest_write < dest_end) {
 				*dest_write++ = *buf_read;
 				if (*buf_read++ == '\n') {
@@ -171,7 +179,7 @@ output:>read
 			@:>.read_buf_pos = (len_t)(buf_read - read_buf);
 		}
 		// Release buffer and set return values.
-		@=outputcall :<buf$put (@:>.read_buf_addr, READ_BUF_SIZE) => (ok);
+		@=outputcall :<buf$put (@:>.read_buf_addr, @:>.read_buf_size) => (ok);
 		@phys_len = (plen_t)(dest_write - dest_buf);
 		@success = TRUE;
 	}
@@ -188,7 +196,7 @@ output:>write
 
 	/* Finalization of any kind of output to this pipe. */
 	operation $padr {
-		@.err ("$padr not implemented!");
+		@.err ("$padr not implemented yet! Use $gadrcreatetranswaitpadr");
 	}
 
 	/* Physical pipe output. */
