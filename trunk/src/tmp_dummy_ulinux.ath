@@ -5,15 +5,18 @@ License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 context: pconf *
 context: cconf *
 
-brick #tmp_dummy_ulinux
+brick #device_mem_nest_ulinux
 
-purpose Provide a status nest
+purpose Simple memory provider
 
 desc
-	Provides a simple output nest.
-	Memory can be created and deleted at arbitrary addresses, but not moved.
+	Provides limited memory management at the output.
+	Memory can be $create'd and $delete'd at arbitrary addresses, but not moved.
+	Operations $get, $put, $trans, $wait can be performed on $create'd address ranges.
 	No overlapping creates allowed.
-	Creates and deletes must occur pairwise.
+	$create and $delete must be used pairwise.
+	No $gadr or $padr supported.
+	THIS BRICK IS NOT THREAD-SAFE!
 enddesc
 
 
@@ -108,7 +111,7 @@ output :>out
 			}
 		}
 		// deleting a hole has no effect, but is ok.
-		@.msg ("WARNING", "Deleting a hole at [0x%llX..0x%llX] (ok)", @log_addr, @log_addr + @log_len);
+		@.msg ("WARNING", "Deleting a hole at [0x%llX..0x%llX] (ok, but probably an error)", @log_addr, @log_addr + @log_len);
 		@success = TRUE;
 	}
 	
@@ -127,7 +130,7 @@ output :>out
 				return;
 			}
 		}
-		@.err ("Could not get memory out of a hole!");
+		@.err ("Could not get memory at [0x%llX..0x%llX], there\'s a hole!", @log_addr, @log_len);
 	}
 	
 	operation $trans,$transwait {
