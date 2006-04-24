@@ -67,35 +67,35 @@ static_data {
 	// 'Primes' a lock: initialize the native lock mechanism.
 	@.define activate_lock (REF) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$gadr (1) => (ok, MAKE_STATE_PTR (REF)->native_lock);
+		@=outputcall ##lock_imp:>out(:0:)$gadr (1) => (ok, MAKE_STATE_PTR (REF)->native_lock);
 		@.check (!ok, "Failed to obtain native lock!");
 	}
 	
 	// Releases all threads waiting for this lock, then deactivate the native lock mechanism.
 	@.define deactivate_lock (REF) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$padr (MAKE_STATE_PTR (REF)->native_lock, 1) => (ok);
+		@=outputcall ##lock_imp:>out(:0:)$padr (MAKE_STATE_PTR (REF)->native_lock, 1) => (ok);
 		@.check (!ok, "Failed to drop native lock!");
 	}
 
 	// Makes a thread wait for removal of this lock.
 	@.define wait_for_lock (REF) {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$lock (MAKE_STATE_PTR (REF)->native_lock, 1) => (ok);
+		@=outputcall ##lock_imp:>out(:0:)$lock (MAKE_STATE_PTR (REF)->native_lock, 1) => (ok);
 		@.check (!ok, "Failed to wait on native lock!");
 	}
 	
 	// Reserve exclusive access to the lock list.
 	@.define lock_mutex () {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$lock ((addr_t)-1, 1) => (ok);
+		@=outputcall ##lock_imp:>out(:0:)$lock ((addr_t)-1, 1) => (ok);
 		@.check (!ok, "Failed to reserve native mutex!");
 	}
 	
 	// Release exclusive access to the lock list.
 	@.define unlock_mutex () {
 		success_t ok;
-		@=outputcall ##lock_imp:>out$unlock ((addr_t)-1, 1) => (ok);
+		@=outputcall ##lock_imp:>out(:0:)$unlock ((addr_t)-1, 1) => (ok);
 		@.check (!ok, "Failed to release native mutex!");
 	}
 
@@ -479,11 +479,20 @@ wire :>cpu as #:<lpasync;
 	}
 	
 operation $brick_init {
-	INIT_ALL_OUTPUTS ();
-	INIT_ONE_INSTANCE (lock_imp, "");
-	INIT_ONE_INSTANCE (fork_a, "");
-	INIT_ONE_INSTANCE (fork_b, "");
-	INIT_ALL_INPUTS ();
+	if (@destr && !@constr) {
+		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (lock_imp, "");
+		INIT_ONE_INSTANCE (fork_b, "");
+		INIT_ONE_INSTANCE (fork_a, "");
+		INIT_ALL_INPUTS ();
+	}
+	else {
+		INIT_ALL_INPUTS ();
+		INIT_ONE_INSTANCE (fork_a, "");
+		INIT_ONE_INSTANCE (fork_b, "");
+		INIT_ONE_INSTANCE (lock_imp, "");
+		INIT_ALL_OUTPUTS ();
+	}
 }
 
 local input :<clients
@@ -507,7 +516,7 @@ local output :>loop
 input :<in
 	
 	operation $retract {
-		@=outputcall lpasync:>$lock @args;
+		@=outputcall :<lpasync$lock @args;
 		@success = TRUE;
 	}
 
@@ -522,10 +531,9 @@ input :<tmp
 
 output :>out
 
-	data {
-		// A native lock 
-		addr_t state_change;
-	}
+	// Record type of the meta nest, describes one lock entry.
+	// Field "flags": bits 0..1=data lock type, 2..3=address lock type
+	define export TYPE lock_descriptor "addr_t addr, len_t len, mand_t mandate, int4 flags";
 
 // section 0: main nest - lock management
 // section 1: meta nest - surveillance
@@ -534,7 +542,7 @@ section (:0:)
 	// Initializes/destroys status variables.
 	operation $output_init {
 		success_t ok;		
-		trace ("#lock_mand:>out$output_init (destr==%d, constr==%d) : \"%s\" called\n", @destr, @constr, @param);
+		trace ("#lock_cache:>out$output_init (destr==%d, constr==%d) : \"%s\" called\n", @destr, @constr, @param);
 		
 		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
 		@.check (!ok, "##lock_imp:>out$output_init failed!");
@@ -547,8 +555,6 @@ section (:0:)
 			struct brick_state *state;
 			int i;
 			lock_ref_t lock;
-			@=outputcall ##lock_imp:>out$gadr (1) => (lock);
-			@#.state_change = lock;
 			@=outputcall :<tmp$create (0, STATE_STORAGE_SIZE, TRUE) => (ok);
 			state = PC_GET_DIRTY (tmp_state, 0, STATE_STORAGE_SIZE);
 			@.check (!ok || !state, "Could not get state storage!");
@@ -561,6 +567,7 @@ section (:0:)
 			state->free_lock_recs = MAKE_STATE_REF (state->lock_rec_storage);
 			new_lock_rec (state) => (lock);
 			@.fatal (lock == NULL_REF, "Could not even allocate one lock record!");
+			set_desc (get_lock_desc (lock), (addr_t)0, (addr_t)0xFFFFFFFFFFFFFFFF, @#._mand, make_lock_type (lock_write, lock_write, FALSE));
 			add_lock_rec (state, lock);
 		}
 		@success = TRUE;
@@ -731,16 +738,34 @@ section (:0:)
 		@=outputcall :<in$op @args;
 	}
 
-// section 1: meta nest - surveillance
-// * use $get and $put only
-// * $get takes the nest range of interest
-// * $put ignores arguments except mandate; must be called pairwise to $get
-// * $get freezes the brick until $put
+// section 1: meta nest
+// for external surveillance
+// read from address 0 via $transwait, buffer gets filled with an array of "lock_descriptor" records (exported type)
 section (:1:)
 
-	operation $get {
+	operation $trans,$transwait {
+		struct brick_state *state;
+		lock_ref_t lock_ref;
+		void *buf_writeptr;
+		plen_t buf_available = (plen_t)@log_len;
+
+		@.check (@direction == direct_write || @log_addr == 0, "Only reading transfers from meta nest starting at 0 supported!");
+		state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
+		@.check (!state, "Error getting brick status!");
+		lock_mutex ();
 		
-	}
-	
-	operation $put {
+		lock_ref = state->lock_starting_first;
+		buf_writeptr = MAKE_PTR (@phys_addr);
+		while (lock_ref != NULL_REF && buf_available >= @.sizeof (lock_descriptor)) {
+			struct lock_desc *lock_desc = &get_lock_desc (lock_ref);
+			buf_writeptr@*lock_descriptor->addr = get_desc_start (*lock_desc);
+			buf_writeptr@*lock_descriptor->len = get_desc_end (*lock_desc) - get_desc_start (*lock_desc);
+			buf_writeptr@*lock_descriptor->mandate = get_desc_mand (*lock_desc);
+			buf_writeptr@*lock_descriptor->flags = ((get_desc_addr_type (*lock_desc) << 2) | (get_desc_data_type (*lock_desc)));
+			buf_writeptr = &buf_writeptr@*lock_descriptor->LASTFIELD;
+			lock_ref = get_next_lock (lock_ref);
+		}
+		@phys_len = (plen_t)@log_len - buf_available;
+		@success = TRUE;
+		unlock_mutex ();
 	}

@@ -1,0 +1,86 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux*
+context: cconf ulinux*
+
+brick #test_lock_manager
+
+purpose Verify lock_manager brick
+
+desc
+enddesc
+
+instance #device_mem_nest_ulinux as tmp;
+instance #device_mem_nest_ulinux as tmp2;
+instance #device_console_ulinux as console;
+wire :<buf as ##tmp2:>out;
+instance #lock_mand as lock;
+wire :<tmp as ##tmp:>out;
+wire :<in as #:>resrc;
+instance #thread_ulinux as thread;
+wire :<exec as #:>oper;
+wire :>cpu as #:<async;
+
+operation $brick_init {
+	if (@destr) {
+		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (thread, "");
+		INIT_ONE_INSTANCE (lock, "");
+		INIT_ONE_INSTANCE (console, "");
+		INIT_ONE_INSTANCE (tmp2, "");
+		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ALL_INPUTS ();
+	}
+	if (@constr) {
+		INIT_ALL_INPUTS ();
+		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ONE_INSTANCE (tmp2, "");
+		INIT_ONE_INSTANCE (console, "Debug-Fenster");
+		INIT_ONE_INSTANCE (lock, "");
+		INIT_ONE_INSTANCE (thread, "");
+		INIT_ALL_OUTPUTS ();
+	}
+}
+
+local input :<async
+
+local output :>resrc
+
+local output :>oper
+
+	// async ops here
+
+input :<strat
+
+output :>program
+
+	@.define lock_and_test (MAND, START, END, TRY_START, TRY_END, DATA_TYPE, ADDR_TYPE, ACTION, EXP_START, EXP_END) {
+		success_t ok;
+		addr_t addr;
+		len_t len;
+		@=outputcall ##lock:>out$lock [MAND] (START, (END) - (START), DATA_TYPE, ADDR_TYPE, TRY_START, (TRY_END) - (TRY_START), ACTION) => (ok, addr, len);
+		@.check (!ok, "Lock of [0x%llX..0x%llX] failed!", (addr_t)TRY_START, (addr_t)TRY_END);
+		@.check (addr != (EXP_START) || len != ((EXP_END) - (EXP_START)), "Lock [0x%llX..[0x%llX..0x%llX]..0x%llX] resulted in [0x%llX..0x%llX], expected [0x%llX..0x%llX]!", (addr_t)TRY_START, (addr_t)START, (addr_t)END, (addr_t)TRY_END, addr, addr + len, (addr_t)EXP_START, (addr_t)EXP_END);
+	}
+
+	operation $output_init {
+		char linebuf[0x200];
+		const char *test_msg = "This is a new style of music!\n";
+		success_t ok;
+		len_t length;
+		
+		@=outputcall ##console:>write$gadrcreatetranswaitpadr (MAKE_PADDR (test_msg), (plen_t)strlen(test_msg)) => (ok, length);
+		//@=outputcall ##console:>read$gadrtranswaitdeletepadr (MAKE_PADDR (linebuf), (plen_t)sizeof linebuf) => (ok, length);
+		//@=outputcall ##lock:>out$output_init (@destr, @constr) => (@success);
+		//@.check (!@success, "Lock init/exit failed!");
+		
+		/*lock_and_test (1234, 0x110, 0x120, 0x100, 0x130, lock_read, lock_none, action_wait, 0x100, 0x130);
+		lock_and_test (1234, 0x080, 0x100, 0x080, 0x128, lock_write, lock_read, action_wait, 0x080, 0x128);
+		lock_and_test (2345, 0x140, 0x150, 0x000, 0x160, lock_read, lock_read, action_try, 0x128, 0x160);
+		lock_and_test (2345, 0x168, 0x178, 0x168, 0x178, lock_write, lock_read, action_try, 0x168, 0x178);
+		lock_and_test (2345, 0x130, 0x150, 0x080, 0x180, lock_read, lock_write, action_try, 0x128, 0x180);*/
+		@.msg ("INFO: ", "All tests passed.");
+		@success = TRUE;
+	}
