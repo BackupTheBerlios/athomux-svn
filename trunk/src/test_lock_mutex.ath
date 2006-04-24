@@ -32,13 +32,13 @@ operation $brick_init {
 		INIT_ONE_INSTANCE (fork2, "");
 		INIT_ONE_INSTANCE (fork1, "");
 		INIT_ONE_INSTANCE (mutex, "");
-		INIT_ONE_INSTANCE (tmp0, "");
+		INIT_ONE_INSTANCE (tmp, "");
 		INIT_ALL_INPUTS ();
 	}
 	if (@constr && !@destr) {
 		INIT_ALL_INPUTS ();		
 //		INIT_ALL_INSTANCES ();
-		INIT_ONE_INSTANCE (tmp0, "");
+		INIT_ONE_INSTANCE (tmp, "");
 		INIT_ONE_INSTANCE (mutex, "");
 		INIT_ONE_INSTANCE (fork1, "");
 		INIT_ONE_INSTANCE (fork2, "");
