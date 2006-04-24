@@ -25,7 +25,7 @@ desc
 		called operations could lock only the ranges of the status nest they actually access.
 enddesc
 
-instance #tmp_dummy_ulinux as tmp;
+instance #device_mem_nest_ulinux as tmp;
 wire :>out as ##lock:<tmp;
 instance #lock_mutex as lock;
 
