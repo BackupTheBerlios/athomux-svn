@@ -1,0 +1,90 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #map_split_static
+
+purpose Split the input into two output nests
+
+desc
+	Maps its outputs into separate, consecutive areas of equal size at the input,
+	the first starting at address 0. Default size of these areas is 1 MB (0x10000) but 
+	can be overridden at instantiation (a hexadecimal number as the only argument to
+	$brick_init, without "0x" prefix).
+	All operations except $gadr and $padr are mapped to the input.
+	Note: $gadr and $padr are not supported, because $gadr cannot be mapped this way.
+	If you need e.g. heap or pipe semantics, connect a corresponding adapter brick to
+	the output.
+	
+	Note: a "map_split_dynamic" would be nice that splits the nests dynamically and
+	unequally.
+	
+	This brick is totally stateless, it does not save any status anywhere.
+	Though, it has instance attributes: the size of the address windows in :<in
+	This brick is capable of concurrent multiuser access.
+	
+	Illustration of the in/outputs:
+	
+	       +---------+        
+	       |         +--- out0
+	in ----+         |
+	       |         +--- out1
+	       +---------+        
+enddesc
+
+@.include "param_scanner.inc"
+
+static_data {
+	@.define DEFAULT_WIN_SIZE (0x00100000)
+}
+
+data {
+	// These variables constitute instance attributes, rather than brick state.
+	// They are never modified after brick initialization.
+	addr_t nest_base[2];
+	len_t nest_size[2];
+}
+
+operation $brick_init {
+	rawtrace ("Initializing brick map_split_static\n");
+	INIT_ALL_CONNS ();
+	@#.nest_base[0] = 0;
+	@#.nest_size[0] = 0x100000; // 1 MB
+	@#.nest_base[1] = @#.nest_base[0] + @#.nest_size[0];
+	@#.nest_size[1] = @#.nest_size[0];
+	rawtrace ("Brick map_split_static initialized\n");
+}
+
+@.macro MAPPED_OPS (BASE, SIZE) {
+	/* $gadr cannot be supported, as it cannot be mapped. */
+	operation $gadr {
+		@.err ("$gadr not supported!");
+	}
+	
+	/* $padr could be mapped, but is senseless, since $gadr cannot be mapped. */
+	operation $padr {	
+		@.err ("$padr not supported!");
+	}
+	
+	/* Do not allow operations outside the reduced address space. */
+	operation $op {
+		addr_t log_end = @log_addr + @log_len;
+		@.check (@log_addr >= SIZE || log_end >= SIZE || log_end < @log_addr, "Operation off the nest (addr==0x%llX, len==0x%llX, nest_size==0x%llX)!", @log_addr, @log_len, (len_t)SIZE);
+		@log_addr += BASE;
+		@=outputcall #:<in$op @args;
+		@log_addr -= BASE;
+	}
+}
+
+input:<in
+
+output:>out0
+
+	MAPPED_OPS (@#.nest_base[0], @#.nest_size[0])
+
+output:>out1
+
+	MAPPED_OPS (@#.nest_base[1], @#.nest_size[1])
