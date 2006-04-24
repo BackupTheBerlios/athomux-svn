@@ -13,7 +13,7 @@ desc
 Some test procedures to verify the brick #lock_mutex.
 enddesc
 
-instance #tmp_dummy_ulinux as tmp0;
+instance #device_mem_nest_ulinux as tmp;
 wire :>out as ##mutex:<tmp;
 instance #lock_mutex as mutex;
 wire :<in as #:>dummy;
