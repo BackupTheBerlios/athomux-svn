@@ -129,17 +129,16 @@ int next_opt(const char * const start, const char ** name, int * name_len, const
 
 
 
-// search in 'param' for option 'name'.
-// if this option is found 'found' is set to TRUE, otherwise it is set to FALSE.
-// if this option is found and has a value 'val' and 'val_len' are set accordingly, otherwise they are set to NULL and 0.
-// finds the first match in 'param'.
+// Searches 'param' for option 'name'.
+// If this option is found, 'found' is set to TRUE, otherwise it is set to FALSE.
+// If given 'val' or 'val_len' is NULL, any option value is ignored.
+// If the option has a value, it is returned in 'val', its length in 'val_len', otherwise NULL/0 is returned.
 void param_getopt(const char * const param, const char * const name, bool * found, const char ** val, int * val_len) {
-  *val = NULL;
-  *val_len = 0;
+  if (val) *val = NULL;
+  if (val_len) *val_len = 0;
   *found = FALSE;
 
-  if (param==NULL) return;
-  if (name==NULL) return;
+  if (param == NULL || name == NULL) return;
 
   const char *p = param;
   int len;
@@ -155,7 +154,7 @@ void param_getopt(const char * const param, const char * const name, bool * foun
 
     if ((cur_name_len>0) && (strncmp(cur_name, name, cur_name_len)==0)) {
       *found = TRUE;
-      if (cur_val_len>0) {
+      if (cur_val_len>0 && val && val_len) {
         *val = cur_val;
         *val_len = cur_val_len;
       }
