@@ -2508,9 +2508,6 @@ sub gen_initexit {
     print OUT "void exit_$brick (void * _ini_, const char * _param)\n{\n";
   }
   print OUT "struct brick_$brick * _brick = _ini_; (void)_brick; int _i_; (void)_i_;\n";
-  if($optype eq "init") {
-    print OUT "_brick->_mand = _mand;\n  _brick->ops = ops_${brick}_BRICK;\n";
-  }
   print OUT "  // $optype connectors\n";
   while(my ($spec, $tuple) = each %::conn_spec) {
     next if $spec =~ m/\[\]/; # skip dynamic arrays
@@ -2549,6 +2546,9 @@ sub gen_initexit {
     } else {
       print OUT "  exit_$br (&_brick->_sub_$name, _param);\n";
     }
+  }
+  if($optype eq "init") {
+    print OUT "_brick->_mand = _mand;\n  _brick->ops = ops_${brick}_BRICK;\n";
   }
   print OUT "\n";
 }
