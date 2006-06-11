@@ -424,7 +424,9 @@ output :>out
 		}
 
 		trace ("mand=%d Lock [0x%llX..0x%llX] granted.\n", (int)@mandate, get_desc_start (desc), get_desc_end (desc));
-		print_lock_list (state);
+		@.if ("PCONF" =~ m/debug$/) {
+			print_lock_list (state);
+		}
 		unlock_mutex ();
 		
 		@try_addr = get_desc_start (desc);

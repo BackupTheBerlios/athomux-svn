@@ -13,8 +13,10 @@ desc
 	This brick can be used to protect operations from each other:
 	Io operations are protected by this brick from concurrent address or data modifications.
 	An address blocks gets protected between $get and $put. Concurrent $get ops with @forwrite==FALSE are allowed.
+	$trans and $put are synchronized (become $transwait and $putwait) because there is no requirement to call $wait after those operations.
 	Note: locks are maintained only locally, they don't get forwarded to the 'protected' nest.
-	WARNING: This brick cannot give a singleuser nest multiuser capability! Use adapt_multi for that.
+	WARNING: This brick cannot give a singleuser output multiuser capability! Use adapt_multi for that.
+	         It is rather a protection for singleuser inputs (users not aware of concurrent users).
 enddesc
 
 instance #lock_mutex as mutex;

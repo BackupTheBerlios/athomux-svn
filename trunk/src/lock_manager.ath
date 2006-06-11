@@ -14,53 +14,95 @@ desc
 	Does not emit $lock or $unlock calls from :<in.
 	Rejects $retract calls at :<in.
 	All other operations are forwarded between :<in and :>out.
-	
-	Uses a lock_cache together with an unlimited pool of lock resources as implementation.
 enddesc
 
-instance #lock_dummy as pool;
+// Implemented via an internal #lock_cache with a dummy lock manager granting anything to it.
 instance #lock_cache as impl;
-wire :<in as ##pool:>out;
-wire :<tmp as :>wkarnd;
+wire :<in as #:>dummylm;
+wire :<tmp as #:>wa_tmp;
+wire :>out as #:<wa_out;
 
 operation $brick_init {
-	INIT_ALL_INPUTS ();
-	@=outputcall :>wkarnd$output_init (FALSE, TRUE) => (@success);
-	INIT_ONE_INSTANCE (pool, "");
-	INIT_ONE_INSTANCE (impl, "");
-	INIT_ALL_OUTPUTS ();
+	if (@destr) {
+		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (impl, "");
+		INIT_ALL_INPUTS ();		
+	}
+	if (@constr) {
+		success_t ok;
+		INIT_ALL_INPUTS ();
+		// Bad: it should be possible to init local outputs seperately from external ones.
+		// Good order would be:
+		// external inputs, internal outputs, local instances, internal inputs, external outputs
+		//@=inputcall :<wa_out$input_init (@destr, @constr) => (ok);
+		@=outputcall :>wa_tmp$output_init (@destr, @constr) => (ok);
+		@=outputcall :>dummylm$output_init (@destr, @constr) => (ok);
+		INIT_ONE_INSTANCE (impl, "lock_all_on_init");
+		INIT_ALL_OUTPUTS ();
+	}
 }
 
 input :<tmp
 
-// Workaround for not-working  'alias ##impl:<tmp as :<tmp'
-local output :>wkarnd
+// Workaround for non-functional 'alias ##impl:<tmp as :<tmp'
+local output :>wa_tmp
 
 	operation $op {
-		trace ("#lock_manager:>wkaround$%s %d called\n", @name, @op_code);
-		@=outputcall :<tmp$op @args;
+		@=outputcall :<tmp$op [@mandate] @args;
+	}
+	
+local output :>dummylm
+
+	operation $lock,$unlock {
+		@success = TRUE;
+	}
+	
+// Workaround for non-functional 'alias ##impl:>out as #:>out
+local input :<wa_out
+
+	operation $retract {
+		//trace ("#lock_manager:<wa_out$retract [0x%llX..0x%llX] called!\n", @try_addr, @try_addr + @try_len);
+		@=inputcall :>out$retract [@mandate] @args;
 	}
 
 input :<in
 
 	operation $retract {
-		@success = FALSE;
+		// since we never acquired any locks via this input, retraction always succeeds.
+		@success = TRUE;
 	}
 	
 	operation $op {
-		@=inputcall :>out$op @args;
+		@=inputcall :>out$op [@mandate] @args;
 	}
 
-output :>out
+output :>out(:2:)
+
+	// Forward of lock_cache.lockrec_t for lock_cache meta nest (section 1).
+	// No "forward export" function available, so we need to do it this way.
+	define export TYPE lockrec_t "addr_t addr, len_t len, mand_t mand, int4 flags";
+
+section (:0:)
 
 	operation $lock {
-		@=outputcall ##impl:>out$lock @args;
+		@=outputcall ##impl:>out$lock [@mandate] @args;
 	}
 	
 	operation $unlock {
-		@=outputcall ##impl:>out$unlock @args;
+		@=outputcall ##impl:>out$unlock [@mandate] @args;
 	}
 
 	operation $op {
-		@=outputcall :<in$op @args;
+		@=outputcall :<in$op [@mandate] @args;
+	}
+
+section (:1:)
+
+	operation $gadrtranswaitdeletepadr {
+		//trace ("#lock_manager:>out(:1:)$gadrtranswaitdeletepadr called\n");
+		@=outputcall ##impl:>out(:1:)$gadrtranswaitdeletepadr [@mandate] @args;
+	}
+	
+	operation $op {
+		@=outputcall ##impl:>out$op [@mandate] @args;
 	}
