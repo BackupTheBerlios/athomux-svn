@@ -7,7 +7,7 @@ LIB_FUSE = `if ( test -f /usr/local/lib/libfuse.a ); then echo /usr/local/lib/li
 
 GCC_LIB = `gcc -print-libgcc-file-name`
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o $(pconf)/$(cconf)/param_scanner.o $(LIB_FUSE)
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o $(pconf)/$(cconf)/param_scanner.o $(pconf)/$(cconf)/graph_console $(pconf)/$(cconf)/snformath.o $(LIB_FUSE)
 
 $(pconf)/$(cconf)/athomux-ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) $(pconf)/$(cconf)/loader_exec $(pconf)/$(cconf)/loader_fork
 	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<

@@ -3,7 +3,7 @@
 
 include target-include.ulinux
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/param_scanner.o
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/param_scanner.o  $(pconf)/$(cconf)/ath_stdio.o
 
 $(pconf)/$(target).c : $(target).athl common.ath pre.pl Makefile
 	./pre.pl $< $@
