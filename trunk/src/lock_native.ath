@@ -10,7 +10,20 @@ brick #lock_native
 purpose Encapsulate low-level lock mechanism
 
 desc
++---------------+
+|               |
+| #lock_native  :>out---
+|               |
++---------------+
+
 This brick encapsulates lock mechanisms for all currently available Athomux runtime environments.
+It implements a pthreads-like lock mechanism: a 'surrounding' mutex and a dynamic set of 'condition' variables.
+Can be easily used to implement a monitor of 'Mesa'-type (the op signalling a condition continues, ops just 'wakened' must wait for the signaller to release the mutex).
+Provides an internal generic interface that allows the runtime-conext-specific implementation of locking.
+Implemented contexts right now:
+	* linux userspace (any config)
+	* linux kernelspace (any config)
+
 The interface spec:
 :>out is an array of native locks: each address in the nest is one native lock.
 Only the address counts, IO operations are not implemented.
@@ -20,7 +33,7 @@ All operations on :>out work on 1 lock at a time only (log_len presumed 1)
 Use $gadr to allocate an unused lock.
 Use $padr to free it again (all threads sleeping on it are woken up, too).
 Use $lock to wait for this lock. While waiting, the mutex is released, and is later re-obtained immediately before waking up.
-Use $unlock to release all threads waiting for a certain lock without freeing it.
+Use $unlock to release all threads waiting for a certain lock without freeing it. They will compete for the global mutex lock.
 enddesc
 
 static_header {
@@ -114,7 +127,7 @@ data {
 		}
 	}
 	
-	// --- YOUR IMPLEMENTATION HERE ---
+	// --- --- YOUR IMPLEMENTATION HERE --- ---
 	
 	// --- dummy implementation
 	@.else {
@@ -129,10 +142,15 @@ data {
 	}
 }
 
+operation $brick_init {
+	INIT_ALL_OUTPUTS ();
+}
+
 output :>out
 
 	// Initialize/ clean up variables.
 	operation $output_init {
+		trace ("#lock_native:>out$output_init (constr=%i, destr=%i) : \"%s\" called\n", @constr, @destr, @param);
 		if (@destr && !@constr) {
 			exit_native ();
 		}
@@ -158,7 +176,7 @@ output :>out
 				@log_addr = (addr_t)index;
 				@log_len = 1;
 				@success = TRUE;
-				trace ("New free native lock %lld allocated.\n", @log_addr);
+				//trace ("New free native lock %lld allocated.\n", @log_addr);
 				return;
 			}
 		}
@@ -175,7 +193,7 @@ output :>out
 			if (!(@#.free_locks[word_index] & mask)) {
 				@#.free_locks[word_index] |= mask;
 				free_lock (index);
-				trace ("Native lock %d released and freed.\n", index);
+				//trace ("Native lock %d released and freed.\n", index);
 				@success = TRUE;
 			}
 			else {
@@ -187,7 +205,7 @@ output :>out
 		}
 	}
 
-	// Sleep for a lock.
+	// Sleep on a lock.
 	operation $lock {
 		if (@log_addr < (addr_t)(N_NATIVE_LOCKS)) {
 			int index = (int)@log_addr;
@@ -195,9 +213,9 @@ output :>out
 			int bit_index = index % WORD_SIZE;
 			int mask = 1 << bit_index;
 			if (!(@#.free_locks[word_index] & mask)) {
-				trace ("(mand=%d) Waiting for lock %d...\n", @mandate, index);
+				//trace ("(mand=%d) Waiting for lock %d...\n", @mandate, index);
 				wait_for_lock ((int)@log_addr);
-				trace ("(mand=%d) Woken up from lock %d...\n", @mandate, index);
+				//trace ("(mand=%d) Woken up from lock %d...\n", @mandate, index);
 				@success = TRUE;
 			}
 			else {
@@ -221,7 +239,7 @@ output :>out
 			int bit_index = index % WORD_SIZE;
 			int mask = 1 << bit_index;
 			if (!(@#.free_locks[word_index] & mask)) {
-				trace ("(mand=%d) Releasing lock %d...\n", @mandate, index);
+				//trace ("(mand=%d) Releasing lock %d...\n", @mandate, index);
 				release_all (index);
 				@success = TRUE;
 			}
