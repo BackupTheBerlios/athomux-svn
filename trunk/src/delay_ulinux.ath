@@ -1,0 +1,62 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux*
+context: cconf ulinux*
+
+brick #delay_ulinux
+
+purpose Abstract bottleneck for performance tests
+
+desc
+      +---------------+
+      |               |
+---in<: #delay_ulinux :>out---
+      |               |
+      +---------------+
+
+Specify a time in ms at initialization. example: "delay_ms=200".
+All incoming ops will be blocked for the duration specified until forwarded to the opposite connector.
+enddesc
+
+static_data {
+	#include <time.h>
+	#include "param_scanner.h"
+}
+
+data {
+	struct timespec delay;
+}
+
+operation $brick_init {
+	const char *value;
+	int value_len;
+	long delay;
+	@success = FALSE;
+	@=inputcall :<in$input_init (@destr, @constr) => (@success);
+	@.check (!@success, "Could not init :<in!");
+	@success = FALSE;
+	@=outputcall :>out$output_init (@destr, @constr) => (@success);
+	@.check (!@success, "Could not init :>out");
+	@.check (!param_check (@param, "delay_ms", &value, &value_len), "No delay given!");
+	@.check (sscanf(value, "%li", &delay) != 1, "Invalid delay!");
+	@#.delay.tv_sec = 0;
+	@#.delay.tv_nsec = delay * 1000L;
+}
+
+input :<in
+
+	operation $op {
+		struct timespec remainder;
+		nanosleep(&@#.delay, &remainder);
+		@=inputcall :>out$op @args;
+	}
+
+output :>out
+
+	operation $op {
+		struct timespec remainder;
+		nanosleep(&@#.delay, &remainder);
+		@=outputcall :<in$op @args;
+	}

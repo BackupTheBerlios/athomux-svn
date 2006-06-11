@@ -1,0 +1,119 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #format_metanest
+
+purpose Reads out a metanest and prints contents human-readable
+
+static_data {
+	#include "param_scanner.h"
+	#include "ath_stdio.h"	
+	
+	//WORKAROUND some bug in generics that causes crashes.
+	struct lock_rec_t {
+		addr_t addr;
+		len_t len;
+		mand_t mand;
+		int4 flags;
+	};
+}
+
+data {
+	char name[32];
+}
+
+operation $brick_init {
+	if (!@constr && @destr) {
+		INIT_ALL_INSTANCES ();
+		INIT_ALL_OUTPUTS ();
+		INIT_ALL_INPUTS ();
+	}
+	if (@constr && !@destr) {
+		success_t ok;
+		const char *param_name;
+		int param_name_len;
+		if (param_check (@param, "name", &param_name, &param_name_len)) {
+			if (param_name_len > sizeof @#.name - 1) {
+				param_name_len = sizeof @#.name - 1;
+			}
+			memcpy(@#.name, param_name, param_name_len);
+			@#.name[param_name_len] = '\0';
+		}
+		else {
+			athsnprintf(@#.name, sizeof @#.name, "formatter(mandate=%m)", @#._mand);
+		}
+		INIT_ALL_INPUTS ();
+		@=inputcall :<meta$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not init :<meta!");
+		INIT_ALL_INSTANCES ();
+		INIT_ALL_OUTPUTS ();
+	}
+	@success = TRUE;
+}
+
+input :<meta
+	use TYPE lockrec_t "addr_t addr, len_t len, mand_t mand, int4 flags";
+
+input :<text
+
+output :>trigger
+
+	@.define log (FMT, ...) (athprintf(&@:<text, FALSE, 0, TRUE, "[[%s]] " FMT, @#.name ...))
+
+	// generic trigger operation, ignores arguments
+	operation $op {
+		char metabuf[0x200];
+		plen_t metabuflen;
+		char *metabufpos;
+		char textbuf[0x400];
+		plen_t textbuflen;
+		char *textbufpos;
+		success_t ok;
+		
+		@=outputcall :<meta(:1:)$gadrtranswaitdeletepadr (MAKE_PADDR (metabuf), (plen_t)sizeof metabuf) => (ok, metabuflen);
+		if (!ok) {
+			log (" failed!\n");
+			return;
+		}
+//WORKAROUND buggy generics: pointer to generic types is NULL here, causes a memory error
+//		const plen_t rec_size = (plen_t)(@.sizeof (lockrec_t));
+		
+		const plen_t rec_size = sizeof (struct lock_rec_t);
+		if (metabuflen < rec_size) {
+			athsnprintf(textbuf, sizeof textbuf, "[[%s]] (no locks)\n", @#.name);
+			textbuflen = strlen(textbuf);
+			textbuf[sizeof textbuf - 1] = '\0';
+			textbufpos = textbuf + textbuflen;
+		}
+		else {
+			const char *const textbufend = textbuf + sizeof textbuf;
+			textbufpos = athsnprintf(textbuf, sizeof textbuf, "[[%s]] ", @#.name);
+			metabufpos = metabuf;
+			while (metabuflen >= rec_size && textbufpos < textbufend) {
+//WORKAROUND buggy generics
+				addr_t addr = ((struct lock_rec_t *)metabufpos)->addr;
+				len_t len = ((struct lock_rec_t *)metabufpos)->len;
+				mand_t mand = ((struct lock_rec_t *)metabufpos)->mand;
+				int4 flags = ((struct lock_rec_t *)metabufpos)->flags;
+//				addr_t addr = metabufpos@*lockrec_t->addr;
+//				len_t len = metabufpos@*lockrec_t->len;
+//				mand_t mand = metabufpos@*lockrec_t->mand;
+//				int4 flags = metabufpos@*lockrec_t->flags;
+				textbufpos = athsnprintf(textbufpos, textbufend - textbufpos, "(0x%L..0x%L %k%k %m) ", addr, addr + len, flags & 0x03, (flags >> 2) & 0x03, mand);
+//WORKAROUND buggy generics
+				metabufpos += sizeof (struct lock_rec_t);					
+//				metabufpos = (char *)&metabufpos@*lockrec_t->LASTFIELD;
+				metabuflen -= rec_size;
+			}
+			*textbufpos++ = '\n';
+			*textbufpos = '\0';
+			textbuflen = (textbufpos - textbuf);
+		}
+		@=outputcall :<text(:0:)$gadrcreatetranswaitpadr (MAKE_PADDR (textbuf), textbuflen) => (ok);
+		@.check (!ok, "Could not print textual meta data!");
+		@success = TRUE;
+	}

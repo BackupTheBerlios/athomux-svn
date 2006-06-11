@@ -1,0 +1,383 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux*
+context: cconf ulinux*
+
+brick #block_ops
+
+purpose Catch incoming ops and let the user decide about their forthcoming.
+
+desc
+Both input and output operations get caught (blocked) by this brick.
+The user is shown a list of sticking operations. She can enter a command to free specific ones.
+A handy tool when testing bricks in multiuser environments: with this brick put in front of a connector, the order concurrent operations come in can be defined, and the behaviour of the connector tested.
+enddesc
+
+// root record of doubly linked list of blocked ops. Additional space is for a short description string.
+@.define ROOT_REC_SIZE (sizeof (struct rec) + 8)
+
+static_data {
+	#include "stdio.h"
+	#include "ath_stdio.h"
+	
+	struct op_desc {
+		op_t op;
+		char *(*op_args_to_string)(char *buf, int bufsize, struct args *args);
+		char *(*op_result_to_string)(char *buf, int bufsize, struct args *args);
+	};
+	
+	struct rec {
+		addr_t next_addr;
+		len_t next_len;
+		addr_t prev_addr;
+		len_t prev_len;
+		addr_t id;
+		char description[0];
+	};
+	
+	char *default_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(@args)");
+	}
+	
+	char *default_result_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, " => (%o)");
+	}
+
+	char *lock_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L.. 0x%L..0x%L ..0x%L, data=%k, addr=%k, action=%a)", args->try_addr, args->log_addr, args->log_addr + args->log_len, args->try_addr + args->try_len, args->data_lock, args->addr_lock, args->action);		
+	}
+	
+	char *lock_result_to_string(char *buf, int bufsize, struct args *args) {
+		if (args->success) {
+			return athsnprintf(buf, bufsize, " => (%o, 0x%L..0x%L)", args->success, args->try_addr, args->try_addr + args->try_len);
+		}
+		else {
+			return default_result_to_string(buf, bufsize, args);
+		}
+	}
+	
+	char *unlock_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L)", args->try_addr, args->try_addr + args->try_len);
+	}
+	
+	char *retract_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, %r)", args->try_addr, args->try_addr + args->try_len, args->prio);
+	}
+	
+	struct op_desc op_descs[] = {
+		{ opcode_lock, lock_args_to_string, lock_result_to_string },
+		{ opcode_unlock, unlock_args_to_string, default_result_to_string },
+		{ opcode_retract, retract_args_to_string, default_result_to_string },
+		{ opcode_brick_max, default_args_to_string, default_result_to_string }
+	};
+}
+
+instance #lock_native as locks;
+instance #map_split_static as split;
+wire :<in as :>wa_tmp;
+wire :>out0 as ##console:<buf;
+wire :>out1 as :<state;
+instance #device_console_ulinux as console;
+instance #thread_ulinux as async;
+wire :<exec as :>usrinp;
+
+// Gets a list record with specified address and length from the :<state nest
+// Returns a pointer to it (NULL on failure)
+@.func get_rec (addr_t rec_addr, len_t rec_len) => (struct rec *rec) {
+	success_t ok;
+	paddr_t paddr;
+	plen_t plen;
+	//trace (":<state$get [0x%llX..0x%llX]\n", rec_addr, rec_addr + rec_len);
+	@=outputcall :<state$get (rec_addr, rec_len) => (ok, paddr, plen);
+	if (ok && plen == (plen_t)rec_len) {
+		rec = MAKE_PTR (paddr);
+	}
+	else {
+		rec = NULL;
+		@.err ("Could not get op record!");
+	}
+}
+
+// Releases the specified current record into the nest (via $put).
+// Returns logical address and length as well as a pointer to the next list record.
+// If there is no next record then next_rec_addr==0 and next_rec==NULL
+@.func seek_next_rec_from (const addr_t rec_addr, const len_t rec_len, const struct rec *const rec) => (addr_t next_rec_addr, len_t next_rec_len, struct rec *next_rec) {
+	success_t ok;
+	next_rec_addr = rec->next_addr;
+	next_rec_len = rec->next_len;
+	@=outputcall :<state$put (rec_addr, rec_len) => (ok);
+	@.check (!ok, "Could not put record [0x%llX..0x%llX]!", rec_addr, rec_addr + rec_len);
+	if (next_rec_addr) {
+		get_rec (next_rec_addr, next_rec_len) => (next_rec);
+	}
+	else {
+		next_rec = NULL;
+	}
+}
+
+// Returns the first list record (or addr==0/rec==NULL on empty list)
+@.func seek_first_rec () => (addr_t first_rec_addr, len_t first_rec_len, struct rec *first_rec) {
+	struct rec *root_rec;
+	first_rec_addr = 0;
+	first_rec_len = 0;
+	first_rec = NULL;
+	get_rec (0, ROOT_REC_SIZE) => (root_rec);
+	seek_next_rec_from (0, ROOT_REC_SIZE, root_rec) => (first_rec_addr, first_rec_len, first_rec);
+}
+
+@.func print_ops () {
+	addr_t rec_addr;
+	len_t rec_len;
+	struct rec *rec;
+	athprintf (&@##console:>write, TRUE, 0, TRUE, "--- operations currently stuck in this brick:\n");
+	seek_first_rec () => (rec_addr, rec_len, rec);
+	while (rec) {
+		athprintf (&@##console:>write, TRUE, 0, TRUE, "id=%L op=%s\n", rec->id, rec->description);
+		seek_next_rec_from (rec_addr, rec_len, rec) => (rec_addr, rec_len, rec);
+	}
+}
+
+@.func add_rec (addr_t id, const char *description) => (addr_t result_rec_addr, len_t result_rec_len, struct rec *result_rec) {
+	addr_t last_rec_addr, new_rec_addr;
+	len_t last_rec_len, new_rec_len;
+	struct rec *root_rec, *last_rec, *new_rec;
+	success_t ok;
+	paddr_t paddr;
+	plen_t plen;
+	
+	result_rec_addr = 0;
+	result_rec_len = 0;
+	result_rec = NULL;
+	// find last record in list
+	get_rec (0, ROOT_REC_SIZE) => (root_rec);
+	@.check (!root_rec, "Could not get op list root rec!");
+	if (root_rec->prev_addr) {
+		// there is a last record
+		last_rec_addr = root_rec->prev_addr;
+		last_rec_len = root_rec->prev_len;
+		get_rec (last_rec_addr, last_rec_len) => (last_rec);
+	}
+	else {
+		// root record is the last one --> list is empty
+		last_rec_addr = 0;
+		last_rec_len = ROOT_REC_SIZE;
+		last_rec = root_rec;
+	}
+	// create and initialize a new list record (space behind the last record in the list is free)
+	new_rec_addr = last_rec_addr + last_rec_len;
+	new_rec_len = sizeof (struct rec) + strlen(description) + 1;
+	@=outputcall :<state$createget (new_rec_addr, new_rec_len) => (ok, paddr, plen);
+	@.check (!ok || plen < (plen_t)new_rec_len, "Could not create space for new record!");
+	new_rec = MAKE_PTR (paddr);
+	new_rec->prev_addr = last_rec_addr;
+	new_rec->prev_len = last_rec_len;
+	new_rec->next_addr = 0;
+	new_rec->next_len = ROOT_REC_SIZE;
+	new_rec->id = id;
+	strcpy(new_rec->description, description);
+	// append the record to the end of the list
+	last_rec->next_addr = root_rec->prev_addr = new_rec_addr;
+	last_rec->next_len = root_rec->prev_len = new_rec_len;
+	// return temporarily acquired resources
+	if (last_rec_addr) {
+		@=outputcall :<state$put (last_rec_addr, last_rec_len) => ();
+	}
+	@=outputcall :<state$put (0, ROOT_REC_SIZE) => ();
+	// finish, signalling success
+	result_rec_addr = new_rec_addr;
+	result_rec_len = new_rec_len;
+	result_rec = new_rec;
+}
+
+@.func remove_rec (addr_t rec_addr, len_t rec_len, struct rec *this_rec) => (success_t ok) {
+	struct rec *prev_rec, *next_rec;
+	ok = FALSE;
+	@.check (!rec_addr, "Tried to remove the root record from the list!");
+	get_rec (this_rec->prev_addr, this_rec->prev_len) => (prev_rec);
+	@.check (!prev_rec, "Could not get previous record");
+	prev_rec->next_addr = this_rec->next_addr;
+	prev_rec->next_len = this_rec->next_len;
+	@=outputcall :<state$put (this_rec->prev_addr, this_rec->prev_len) => (ok);
+	
+	get_rec (this_rec->next_addr, this_rec->next_len) => (next_rec);
+	@.check (!next_rec, "Could not get next record");
+	next_rec->prev_addr = this_rec->prev_addr;
+	next_rec->prev_len = this_rec->prev_len;
+	@=outputcall :<state$put (this_rec->next_addr, this_rec->next_len) => (ok);
+	
+	@=outputcall :<state$putdelete (rec_addr, rec_len) => (ok);
+}
+
+@.func block_op (bool returning) {
+	char buf[512];
+	char *const bufend = buf + sizeof buf;
+	struct op_desc *op_desc;
+	char *bufpos;
+	success_t ok;
+	addr_t lock_id;
+	addr_t rec_addr;
+	len_t rec_len;
+	struct rec *rec;
+	
+	@success = FALSE;
+	for (op_desc = op_descs; op_desc->op != @op_code && op_desc->op < opcode_brick_max; op_desc++);
+	bufpos  = athsnprintf(buf, sizeof buf, "$%s [%m] ", op_names[@op_code], @mandate);
+	bufpos = op_desc->op_args_to_string(bufpos, bufend - bufpos, @args);
+	if (returning) {
+		bufpos = op_desc->op_result_to_string(bufpos, bufend - bufpos, @args);
+	}
+	trace ("Blocking incoming operation %s\n", buf);
+	@=outputcall ##locks:>out$lock ((addr_t)-1, 1) => (ok);
+	@.check (!ok, "Could not grab mutex!");
+	@=outputcall ##locks:>out$gadr (1) => (ok, lock_id);
+	@.check (!ok, "Could not allocate lock!");
+	add_rec (lock_id, buf) => (rec_addr, rec_len, rec);
+	@.check (!rec_addr, "Could not add op %s to the list", buf);
+	print_ops ();
+	@=outputcall ##locks:>out$lock (lock_id, 1) => (ok);
+	@.check (!ok, "Could not sleep on the lock!");
+	trace ("Operation %s released\n", buf);
+	remove_rec (rec_addr, rec_len, rec) => (ok);
+	@.check (!ok, "Could not remove op record from the list!");
+	print_ops ();
+	@=outputcall ##locks:>out$padr (lock_id, 1) => (ok);
+	@.check (!ok, "Could not release lock!");
+	@=outputcall ##locks:>out$unlock ((addr_t)-1, 1) => (ok);
+	@.check (!ok, "Could not release mutex!");
+	@success = TRUE;
+}
+
+operation $brick_init {
+	if (!@constr && @destr) {
+		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (locks, "");
+		INIT_ONE_INSTANCE (console, "");
+		INIT_ONE_INSTANCE (async, "");
+		INIT_ONE_INSTANCE (split, "");
+		INIT_ALL_INPUTS ();
+	}
+	if (@constr && !@destr) {
+		success_t ok;
+		paddr_t paddr;
+		plen_t plen;
+		struct rec *root_rec;
+		// manually initialize local inputs and outputs
+		INIT_ALL_INPUTS ();
+		@=outputcall :>wa_tmp$output_init (@destr, @constr) => (ok);
+		@.check (!ok, "#:>wa_tmp$output_init failed!");
+		@=outputcall :>usrinp$output_init (@destr, @constr) => (ok);
+		@.check (!ok, "#:>ursinp$output_init failed!");
+		@=inputcall :<state$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "#:<state$input:init failed!");
+		INIT_ONE_INSTANCE (split, "");
+		INIT_ONE_INSTANCE (async, "keep_mandates");
+		INIT_ONE_INSTANCE (console, @param);
+		INIT_ONE_INSTANCE (locks, "");
+		INIT_ALL_OUTPUTS ();
+		// initialize state structure
+		@=outputcall :<state$createget (0, ROOT_REC_SIZE) => (ok, paddr, plen);
+		@.check (!ok || plen < ROOT_REC_SIZE, "Could not create root record of list of blocked ops!");
+		root_rec = MAKE_PTR (paddr);
+		root_rec->next_addr = 0;
+		root_rec->next_len = ROOT_REC_SIZE;
+		root_rec->prev_addr = 0;
+		root_rec->prev_len = ROOT_REC_SIZE;
+		root_rec->id = (addr_t)-2;
+		sprintf(root_rec->description, "ROOT");
+		@=outputcall :<state$put (0, ROOT_REC_SIZE) => (ok);
+		@.check (!ok, "Could not put root record!"); // (not expected to happen, but who knows...)
+		// start the internal thread reading user input (and releasing blocked ops)
+		@=outputcall ##async:>cpu$wait (0, 0) => (ok);
+		@.check (!ok, "Could not start reader thread!");
+		athprintf(&@##console:>write, TRUE, 0, TRUE, "Enter the id to release a blocked operation\n");
+	}
+	@success = TRUE;
+}
+
+local input :<state
+
+	// structure of 'state' buffer:
+	// * at address 0: log_addr+log_len of the first list record, log_addr of the free space behind the list
+	// * every record: log_addr + log_len of the next block, index_t: the lock id, followed by x bytes string data
+
+local output :>wa_tmp
+
+	operation $op {
+		@=outputcall :<tmp$op @args;
+	}
+
+input :<tmp
+
+local output :>usrinp
+
+	// asynchronous, ever-lasting op reading user commands to release blocked operations
+	operation $op {
+		success_t ok;
+		char readbuf[32];
+		plen_t readbuf_len;
+		int id;
+		while (TRUE) {
+			@=outputcall ##console:>read$gadrtranswaitdeletepadr (MAKE_PADDR (readbuf), (plen_t)sizeof readbuf) => (ok, readbuf_len);
+			@.check (!ok, "Could not read from console!");
+			readbuf[readbuf_len] = '\0';
+			if (sscanf(readbuf, "%i", &id) == 1) {
+				addr_t rec_addr;
+				len_t rec_len;
+				struct rec *rec;
+				seek_first_rec () => (rec_addr, rec_len, rec);
+				while (rec && rec->id != id) {
+					seek_next_rec_from (rec_addr, rec_len, rec) => (rec_addr, rec_len, rec);
+				}
+				if (rec) {
+					// release the blocked op
+					//trace ("User releases operation %s\n", rec->description);
+					@=outputcall ##locks:>out$unlock (rec->id, 1) => (ok);
+					@.check (!ok, "Could not free lock holding op!");
+				}
+			}
+			else {
+				trace ("Invalid input \"%s\"\n", readbuf);
+			}
+			// wait for next user input
+		}
+	}
+
+input :<in
+
+	operation $input_init {
+		@success = TRUE;
+	}
+
+	operation $op {
+		success_t ok = @success;
+		@success = FALSE;
+		block_op (FALSE);
+		@.check (!@success, "Operation blocking failed!");
+		@success = ok;
+		@=inputcall :>out$op @args;
+		ok = @success;
+		block_op (TRUE);
+		@.check (!@success, "Operation blocking failed!");
+		@success = ok;
+	}
+
+output :>out
+
+	operation $output_init {
+		@success = TRUE;
+	}
+
+	operation $op {
+		success_t ok = @success;
+		@success = FALSE;
+		block_op (FALSE);
+		@.check (!@success, "Operation blocking failed!");
+		@success = ok;
+		@=outputcall :<in$op @args;
+		ok = @success;
+		block_op (TRUE);
+		@.check (!@success, "Operation blocking failed!");
+		@success = ok;
+	}
