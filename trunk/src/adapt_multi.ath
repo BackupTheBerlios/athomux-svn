@@ -25,24 +25,20 @@ desc
 		called operations could lock only the ranges of the status nest they actually access.
 enddesc
 
-instance #device_mem_nest_ulinux as tmp;
-wire :>out as ##lock:<tmp;
-instance #lock_mutex as lock;
-
+instance #lock_native as out_lock;
+instance #lock_native as in_lock;
 
 operation $brick_init {
 	if (@destr) {
 		INIT_ALL_OUTPUTS ();
-		//INIT_ALL_INSTANCES ();
-		INIT_ONE_INSTANCE (lock, "");
-		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ONE_INSTANCE (out_lock, "");
+		INIT_ONE_INSTANCE (in_lock, "");
 		INIT_ALL_INPUTS ();
 	}
 	if (@constr) {
 		INIT_ALL_INPUTS ();
-		//INIT_ALL_INSTANCES ();
-		INIT_ONE_INSTANCE (tmp, "");
-		INIT_ONE_INSTANCE (lock, "");
+		INIT_ONE_INSTANCE (in_lock, "");
+		INIT_ONE_INSTANCE (out_lock, "");
 		INIT_ALL_OUTPUTS ();
 	}
 }
@@ -54,13 +50,13 @@ operation $op
 {
   success_t succ;
   // get lock
-  @=call ##lock:>out$lock (1, 1, lock_write, lock_write) => (succ);
+  @=call ##out_lock:>out$lock ((addr_t)-1, 1) => (succ);
   @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
   @=inputcall :>out$op [@mandate] (@args);
 
   // release lock
-  @=call ##lock:>out$unlock (1, 1) => (succ);
+  @=call ##out_lock:>out$unlock ((addr_t)-1, 1) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
 
@@ -72,12 +68,12 @@ operation $op
   success_t succ;
 
   // get lock
-  @=call ##lock:>out$lock (0, 1, lock_write, lock_write) => (succ);
+  @=call ##in_lock:>out$lock ((addr_t)-1, 1) => (succ);
   @.check (!succ, "FIXME: Could not grab lock, switch to error state!");
 
   @=outputcall :<in$op (@args);
   
   // release lock
-  @=call ##lock:>out$unlock [@mandate] (0, 1) => (succ);
+  @=call ##in_lock:>out$unlock [@mandate] ((addr_t)-1, 1) => (succ);
   @.check (!succ, "FIXME: Could not release lock, switch to error state!");
 }
