@@ -49,13 +49,23 @@ data {
 }
 
 operation $brick_init {
-	rawtrace ("Initializing brick map_split_static\n");
 	INIT_ALL_CONNS ();
-	@#.nest_base[0] = 0;
-	@#.nest_size[0] = 0x100000; // 1 MB
-	@#.nest_base[1] = @#.nest_base[0] + @#.nest_size[0];
-	@#.nest_size[1] = @#.nest_size[0];
-	rawtrace ("Brick map_split_static initialized\n");
+	if (@constr && !@destr) {
+		addr_t split_addr;
+		int n = 0;
+		if (@param) {
+			n = sscanf(@param, "%lli", &split_addr);
+		}
+		if (n < 1) {
+			split_addr = 0x100000; // Split point defaults to 1 MB
+		}
+		rawtrace ("Initializing brick map_split_static to 0..0x%llX..2^64\n", split_addr);
+		@#.nest_base[0] = 0;
+		@#.nest_size[0] = split_addr;
+		@#.nest_base[1] = split_addr;
+		@#.nest_size[1] = -split_addr;
+		rawtrace ("Brick map_split_static initialized\n");
+	}
 }
 
 @.macro MAPPED_OPS (BASE, SIZE) {
@@ -65,7 +75,7 @@ operation $brick_init {
 	}
 	
 	/* $padr could be mapped, but is senseless, since $gadr cannot be mapped. */
-	operation $padr {	
+	operation $padr {
 		@.err ("$padr not supported!");
 	}
 	

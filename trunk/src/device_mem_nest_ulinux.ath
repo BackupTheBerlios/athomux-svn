@@ -16,7 +16,7 @@ desc
 	No overlapping creates allowed.
 	$create and $delete must be used pairwise.
 	No $gadr or $padr supported.
-	THIS BRICK IS NOT THREAD-SAFE!
+	THIS BRICK IS NOT MULTIUSER-SAFE, USE #adapt_multi ON CONCURRENT USE!
 enddesc
 
 
@@ -44,8 +44,30 @@ operation $brick_init {
 
 output :>out
 
+	@.if ("PCONF" =~ m/debug/) {
+		@.func print_block_list () {
+			trace ("memory blocks: ");
+			struct mem_block *iter = @#.block_list;
+			if (iter) {
+				printf ("[0x%llX..0x%llX]", iter->log_addr, iter->log_addr + iter->log_len);
+				iter = iter->next;
+				while (iter) {
+					printf (",[0x%llX..0x%llX]", iter->log_addr, iter->log_addr + iter->log_len);
+					iter = iter->next;
+				}
+				printf ("\n");
+			}
+			else {	
+				printf ("(empty)\n");
+			}
+		}
+	}
+	@.else {
+		@.macro print_block_list () {}
+	}
+
 	operation $output_init {
-		trace ("#tmp_dummy:>out$output_init (destr=%d, constr=%d) called\n", @destr, @constr);
+		//trace ("#device_mem_nest_ulinux:>out$output_init (destr=%d, constr=%d) called\n", @destr, @constr);
 		if (@destr) {
 			struct mem_block *iter = @#.block_list;
 			while (iter) {
@@ -64,7 +86,7 @@ output :>out
 	operation $create {
 		struct mem_block *iter, *prev;
 		for (prev = NULL, iter = @#.block_list; iter && iter->log_addr < @log_addr + @log_len; prev = iter, iter = iter->next) {
-			@.check (iter->log_addr + iter->log_len > @log_addr, "Tried to $create [%llX..%llX], but [%llX..%llX] already existed!", @log_addr, @log_addr + @log_len, iter->log_addr, iter->log_addr + iter->log_len);
+			@.check (iter->log_addr + iter->log_len > @log_addr, "Tried to $create [%llX..%llX], but [%llX..%llX] already existed (and overlapped)!", @log_addr, @log_addr + @log_len, iter->log_addr, iter->log_addr + iter->log_len);
 		}
 		struct mem_block *new_block = malloc(sizeof *new_block + (size_t)@log_len);
 		@.check (!new_block, "Out of memory!");
@@ -85,13 +107,14 @@ output :>out
 			@#.block_list = new_block;
 		}
 		trace ("Created a new block of memory at [0x%llX..0x%llX]\n", @log_addr, @log_addr + @log_len);
+		//print_block_list ();
 		@success = TRUE;
 	}
 	
 	operation $delete {
 		struct mem_block *iter, *prev;
 		for (prev = NULL, iter = @#.block_list; iter && iter->log_addr < @log_addr + @log_len; prev = iter, iter = iter->next) {
-			if (iter->log_addr + iter->log_len >= @log_addr) {
+			if (iter->log_addr + iter->log_len > @log_addr) {
 				if (iter->log_addr == @log_addr && iter->log_len == @log_len) {
 					if (iter->last) {
 						iter->last->next = iter->next;
@@ -105,6 +128,7 @@ output :>out
 					free(iter);
 					@success = TRUE;
 					trace ("Deleted a block of memory at [0x%llX..0x%llX]\n", @log_addr, @log_addr + @log_len);
+					//print_block_list ();
 					return;
 				}
 				@.err ("Could not delete [0x%llX..0x%llX] because it did not match with found block [0x%llX..0x%llX]!", @log_addr, @log_addr + @log_len, iter->log_addr, iter->log_addr + iter->log_len);
@@ -116,21 +140,23 @@ output :>out
 	}
 	
 	operation $get,$gettranswait {
+		//trace ("#device_mem_nest_ulinux:>$gettranswait [0x%llX..0x%llX] (0x%llX bytes) called\n", @log_addr, @log_addr + @log_len, @log_len);
 		struct mem_block *iter;
-		for (iter = @#.block_list; iter && iter->log_addr < @log_addr + @log_len; iter = iter->next) {
-			if (@log_addr >= iter->log_addr) {
-				len_t cut_len = @log_len;
-				if (@log_addr + @log_len > iter->log_addr + iter->log_len) {
-					cut_len = iter->log_addr + iter->log_len - @log_addr;
-					@.msg ("WARNING", "Could not get all memory (0x%llX bytes) at 0x%llX, cut to 0x%llX bytes!", @log_len, @log_addr, cut_len);
-				}
-				@phys_addr = MAKE_PADDR (iter->data) + (plen_t)(@log_addr - iter->log_addr);
-				@phys_len = (plen_t)cut_len;
-				@success = TRUE;
-				return;
+		for (iter = @#.block_list; iter && iter->log_addr + iter->log_len <= @log_addr; iter = iter->next);
+		if (iter && iter->log_addr <= @log_addr) {
+			// Found a block containing the start address requested.
+			len_t cut_len = @log_len;
+			if (@log_addr + @log_len > iter->log_addr + iter->log_len) {
+				cut_len = iter->log_addr + iter->log_len - @log_addr;
+				@.msg ("WARNING", "Could not get all memory (0x%llX bytes) at 0x%llX, cut to 0x%llX bytes!", @log_len, @log_addr, cut_len);
 			}
+			@phys_addr = MAKE_PADDR (iter->data) + (plen_t)(@log_addr - iter->log_addr);
+			@phys_len = (plen_t)cut_len;
+			@success = TRUE;
 		}
-		@.err ("Could not get memory at [0x%llX..0x%llX], there\'s a hole!", @log_addr, @log_len);
+		else {
+			@.err ("Could not get memory at [0x%llX..0x%llX], there\'s a hole!", @log_addr, @log_len);			
+		}
 	}
 	
 	operation $trans,$transwait {
