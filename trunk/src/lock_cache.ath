@@ -10,20 +10,23 @@ brick #lock_cache
 purpose outpost of #lock_mand
 
 desc
-#lock_cache:>out behaves in the same manner as #lock_mand:>out.
-Unlike #lock_mand, this brick does not create new resource locks, but takes them from :<in.
-So this brick also acts as a lock generator via :<in. All $lock and $unlock ops emitted there carry the mandate of this brick.
-Analogously, this brick accepts $retract ops on :<in.
-:<tmp must be exclusive and must support $create, $delete, $get and $put, no other ops.
-
        +-------------+
 tmp---<:             |
-in----<:             :>---out
-       |             |
+       |             :>---out
+in----<:             |
        +-------------+
+
+A cache for lock resources to improve performance on long and/or slow paths between a lock manager and lock users.
+The 'main' path where all operations except $lock, $unlock and $retract are simply forwarded on, is from :<in to :>out.
+:<tmp is used to store information about the lock resources currently being held by this cache. Must support non-overlapping $create and $delete, as well as $get, $put, $trans and $wait.
+Requests for locks ($lock) not held by the cache get forwarded to the 'superordinate' lock manager somewhere behind :<in.
+Requests for locks ($lock) held by the cache are immediately server from the cache's pool, without (possibly costly) lock requests to the lock manager.
+Releases of locks ($unlock) only return locks to this cache's lock pool. It never returns resources to the lock manager behind :<in without request.
 enddesc
 
 static_data {
+	#include "param_scanner.h"
+
 	@.define MAX_LOCK_RECORDS (1024)
 	@.define STATE_STORAGE_SIZE (sizeof (struct brick_state))
 
@@ -62,6 +65,7 @@ static_data {
 		0x770, 0x774, 0x776
 	};
 	
+	// lock types as characters, for logging (0=none, 1=read, 2=write)
 	static const char ch_lock_types[] = { '-', 'r', 'w' };
 
 	// 'Primes' a lock: initialize the native lock mechanism.
@@ -124,6 +128,7 @@ static_data {
 	@.define is_desc_obligatory (DESC) (((DESC).flags & 0x0010) >> 4)
 	@.define set_desc_start (DESC, ADDR) ((DESC).start = (ADDR))
 	@.define set_desc_end (DESC, ADDR) ((DESC).end = (ADDR))
+	@.define set_desc_mand (DESC, MAND) ((DESC).mandate = (MAND))
 	@.define set_desc_obligatory (DESC, IS_OBLIG) ((DESC).flags = (((DESC).flags & ~0x0010) | (IS_OBLIG << 4)))
 	@.define set_desc_bounds (DESC, START_ADDR, END_ADDR) (set_desc_start (DESC, START_ADDR), set_desc_end (DESC, END_ADDR))
 	@.define set_desc (DESC, ADDR_START, ADDR_END, MAND, TYPE) ((DESC).start = ADDR_START, (DESC).end = ADDR_END, (DESC).mandate = MAND, (DESC).flags = TYPE)
@@ -174,6 +179,8 @@ static_data {
 		instance #thread_klinux as NAME
 	}
 }
+
+// native implementation of locks
 instance #lock_native as lock_imp;
 
 // For asynchronous retracts. $lock calls to this brick will cause an asynchronous $retract
@@ -183,6 +190,8 @@ DECLARE_THREAD_BRICK (fork_a);
 wire :<exec as #:>bounce;
 wire :>cpu as #:<clients;
 
+// For asynchronous requests of lock resources from the lock manager.
+// Must be asynchronous to lessen the danger of deadlocks
 DECLARE_THREAD_BRICK (fork_b);
 wire :<exec as #:>loop;
 wire :>cpu as #:<lpasync;
@@ -190,12 +199,12 @@ wire :>cpu as #:<lpasync;
 	// Allocates a new lock from the storage.
 	@.define new_lock_rec (STATE_PTR) => (LOCK) {
 		PC_DIRTY (tmp_state, 0);
-		trace ("mand=%d allocate new lock record...\n", (int)@mandate);
+		//trace ("mand=%d allocate new lock record...\n", (int)@mandate);
 		LOCK = (STATE_PTR)->free_lock_recs;
 		@.fatal (!LOCK, "No more free lock records!");
-		trace ("found free record.\n");
+		//trace ("found free record.\n");
 		(STATE_PTR)->free_lock_recs = get_next_lock (LOCK);
-		trace ("allocated free record.\n");
+		//trace ("allocated free record.\n");
 		@.if ("PCONF" =~ m/debug$/) {
 			set_next_lock (LOCK, NULL_REF);
 			set_prev_lock (LOCK, NULL_REF);
@@ -207,7 +216,7 @@ wire :>cpu as #:<lpasync;
 	// The record must have been removed from the active list (via remove_lock_rec) before!
 	@.define free_lock_rec (STATE_PTR, LOCK) {
 		PC_DIRTY (tmp_state, 0);
-		trace ("mand=%d free lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (LOCK), get_lock_end (LOCK), ch_lock_types[get_lock_data_type (LOCK)], ch_lock_types[get_lock_addr_type (LOCK)]);
+		//trace ("mand=%d lock record freed [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (LOCK), get_lock_end (LOCK), ch_lock_types[get_lock_data_type (LOCK)], ch_lock_types[get_lock_addr_type (LOCK)]);
 		set_next_lock (LOCK, (STATE_PTR)->free_lock_recs);
 		set_prev_lock (LOCK, NULL_REF);
 		(STATE_PTR)->free_lock_recs = (LOCK);
@@ -217,7 +226,7 @@ wire :>cpu as #:<lpasync;
 	@.func add_lock_rec (struct brick_state *state, lock_ref_t lock) {
 		lock_ref_t scan;
 		PC_DIRTY (tmp_state, 0);
-		trace ("mand=%d activate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
+		trace ("mand=%d added new lock record [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		for (scan = state->lock_starting_first; scan != NULL_REF && get_lock_start (scan) < get_lock_start (lock); scan = get_next_lock (scan));
 		activate_lock (lock);
 		set_next_lock (lock, scan);
@@ -237,13 +246,13 @@ wire :>cpu as #:<lpasync;
 		}
 		else {
 			state->lock_starting_first = lock;
-		}		
+		}
 	}
 	
 	// Deactivates (signals and destroys condition) and removes a lock record from the list.
 	@.func remove_lock_rec (struct brick_state *state, lock_ref_t lock) {
 		PC_DIRTY (tmp_state, 0);
-		trace ("mand=%d deactivate lock [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
+		trace ("mand=%d removed lock record [0x%llX..0x%llX]D%cA%c...\n", (int)@mandate, get_lock_start (lock), get_lock_end (lock), ch_lock_types[get_lock_data_type (lock)], ch_lock_types[get_lock_addr_type (lock)]);
 		if (get_prev_lock (lock) != NULL_REF) {
 			lock_ref_t prev_lock = get_prev_lock (lock);
 			lock_ref_t next_lock = get_next_lock (lock);
@@ -303,13 +312,13 @@ wire :>cpu as #:<lpasync;
 	// Melts the lock described into the existing lock list.
 	// This function ignores conflicting locks. The lock gets molten with existing own locks.
 	// Write locks override read locks.
-	// Obligatory locks override optional locks.
 	// Existing locks are kept where possible, simply 'upgrading' them, to avoid unnecessary wake-ups.
 	// At desc's borders however, existing locks possibly have to be split (replaced by two locks of different grade).
 	// Gaps are filled with new lock records with desc's grade.
 	@.func melt_lock_into_list (struct brick_state *state, struct lock_desc desc) => (success_t ok) {
 		lock_ref_t lock;
 		ok = FALSE;
+		trace ("Melting lock (%d)[0x%llX..0x%llX]D%cA%c into lock list\n", get_desc_mand (desc), get_desc_start (desc), get_desc_end (desc), ch_lock_types[get_desc_data_type (desc)], ch_lock_types[get_desc_addr_type (desc)]);
 		find_first_lock (state, &desc, is_own) => (lock);
 		if (lock != NULL_REF) {
 			// There is at least one block with the same mandate overlapping the new lock.
@@ -327,19 +336,19 @@ wire :>cpu as #:<lpasync;
 					set_lock_desc (new_lock, get_lock_desc (lock));
 					set_lock_end (new_lock, get_desc_start (desc));
 					set_lock_start (lock, get_desc_start (desc));
-					set_strongest_lock_type (lock, desc);
+					// Do not enstrengthen the lock yet, it could be necessary to split it further. Let the loop do that
 					add_lock_rec (state, lock);
 					add_lock_rec (state, new_lock);
 				}
-				set_desc_start (desc, get_lock_end (lock));
-				find_next_lock_from (state, lock, &desc, is_own) => (lock);
+				// 'lock' needs to be investigated further
 			}
 			while (lock != NULL_REF) {
 				// Loop invariant: there is no own lock between start of 'desc' and start of 'lock'.
 				if (get_lock_start (lock) > get_desc_start (desc)) {
+					trace ("mand=%d there is a gap to fill from 0x%llX to 0x%llX\n", get_desc_mand (desc), get_desc_start (desc), get_lock_start (lock));
 					// There is a gap to fill to the next existing lock.
 					if (is_weaker_or_equal (lock, desc)) {
-						trace ("mand=%d filling gap by stretching that lock.\n", (int)@mandate);
+						trace ("mand=%d filling gap by stretching next lock.\n", (int)@mandate);
 						set_lock_start (lock, get_desc_start (desc));
 					}
 					else if (prev_lock != NULL_REF && is_equally_strong (prev_lock, desc)) {
@@ -363,6 +372,7 @@ wire :>cpu as #:<lpasync;
 						// It is (partly) weaker, and the overlapping part needs
 						// enstrengthment, so split it.
 						lock_ref_t new_lock;
+						trace ("mand=%d splitting the lock\n", @mandate);
 						new_lock_rec (state) => (new_lock);
 						@.check (new_lock == NULL_REF, "Out of lock records!");
 						remove_lock_rec (state, lock);
@@ -384,7 +394,7 @@ wire :>cpu as #:<lpasync;
 			}
 		}
 		if (get_desc_start (desc) < get_desc_end (desc)) {
-			// Behind the last existing lock there is still some space left to lock.
+			// Behind the last existing lock there is still some empty space left to lock.
 			lock_ref_t lock;
 			new_lock_rec (state) => (lock);
 			@.check (lock == NULL_REF, "Out of lock records!");
@@ -453,6 +463,7 @@ wire :>cpu as #:<lpasync;
 	// Splits existing locks where necessary.
 	@.func remove_own_locks (struct brick_state *state, struct lock_desc *desc) => (success_t ok) {
 		lock_ref_t lock;
+		trace ("mand=%d removing all own locks in [0x%llX..0x%llX]\n", get_desc_mand (*desc), get_desc_start (*desc), get_desc_end (*desc));
 		find_first_lock (state, desc, is_own) => (lock);
 		while (lock != NULL_REF) {
 			lock_ref_t next_lock = get_next_lock (lock);
@@ -460,11 +471,13 @@ wire :>cpu as #:<lpasync;
 			// Create the (potential) lower and the upper leftovers as separate new locks.
 			if (get_lock_start (lock) < get_desc_start (*desc)) {
 				lock_ref_t lower_part;
+				trace ("mand=%d must split the lock at 0x%llX\n", get_desc_mand (*desc), get_desc_start (*desc));
 				copy_lock_rec (state, lock) => (lower_part);
 				set_lock_end (lower_part, get_desc_start (*desc));
 				add_lock_rec (state, lower_part);
 			}
 			if (get_lock_end (lock) > get_desc_end (*desc)) {
+				trace ("mand=%d must split the lock at 0x%llX\n", get_desc_mand (*desc), get_desc_start (*desc));
 				lock_ref_t upper_part;
 				copy_lock_rec (state, lock) => (upper_part);
 				set_lock_start (upper_part, get_desc_end (*desc));
@@ -477,50 +490,79 @@ wire :>cpu as #:<lpasync;
 		}
 		ok = TRUE;
 	}
-	
+
 operation $brick_init {
-	if (@destr && !@constr) {
+	if (@destr) {
 		INIT_ALL_OUTPUTS ();
 		INIT_ONE_INSTANCE (lock_imp, "");
 		INIT_ONE_INSTANCE (fork_b, "");
 		INIT_ONE_INSTANCE (fork_a, "");
 		INIT_ALL_INPUTS ();
 	}
-	else {
+	if (@constr) {
 		INIT_ALL_INPUTS ();
-		INIT_ONE_INSTANCE (fork_a, "");
-		INIT_ONE_INSTANCE (fork_b, "");
+		INIT_ONE_INSTANCE (fork_a, "keep_mandates");
+		INIT_ONE_INSTANCE (fork_b, "keep_mandates");
 		INIT_ONE_INSTANCE (lock_imp, "");
 		INIT_ALL_OUTPUTS ();
 	}
+	//XXX: nasty but necessary, since INIT_ALL_OUTPUTS does not init internal outputs
+	@=outputcall :>bounce$output_init (@destr, @constr) => ();
+	@=outputcall :>loop$output_init (@destr, @constr) => ();
 }
 
 local input :<clients
-
+// these two are connected via a #thread brick
 local output :>bounce
 
+	// Fetch the requested lock from the clients (Send them a $retract and wait for them to return the lock).
 	operation $lock {
-		@=inputcall :>out$retract @args;
+		struct input *inp;
+		trace ("asynchronous $retract (%d)[0x%llX..0x%llX]\n", @mandate, @try_addr, @try_addr + @try_len);
+		@=inputcall :>out$retract [@mandate] @args;
 	}
 
 local input :<lpasync
-
+// these two are connected via a #thread brick
 local output :>loop
 
+	// A $retract from the superordinate has been transformed into a $lock with this brick's mandate.
+	// When this operation has succeeded, the lock held by this cache must of course be returned to the superordinate.
 	operation $lock {
-		success_t dummy;
-		@=outputcall :>out$lock [@#._mand] (@log_addr, @log_len, lock_write, lock_write, @log_addr, @log_len, action_wait) => (dummy);
+		success_t ok;
+		@=outputcall :>out$lock [@#._mand] (@log_addr, @log_len, lock_write, lock_write, @log_addr, @log_len, action_wait) => (ok, @try_addr, @try_len);
+		if (!ok) {
+			// Danger of a deadlock. 
+			// TODO: instead of aborting, we should wait for a change in the area tried to be retracted and then try again.
+			// TODO: remember, we signaled "OK" to the $retract op.
+			return;
+		}
+		else {
+			// DISCUSS: We are in an inconsistent state now! This brick has now marked the lock as released, but has not returned it yet!
+			// What happens on concurrent $lock ops in this area in the meantime? Should it be protected until successfully returned?
+			@=outputcall :<in$unlock [@#._mand] (@try_addr, @try_len) => (ok);
+			// $unlock is always expected to succeed.
+			@.fatal (!ok, ":<in$unlock (%d)[0x%llX..0x%llX] failed! Serious error!", @#._mand, @try_addr, @try_addr + @try_len);
+		}
+		// result is meaningless anyway, since this call was an asynchronous one.
 		@success = TRUE;
 	}
 
 input :<in
 	
+	// retract from superordinate lock manager is like an asynchronous $lock op "from the left".
 	operation $retract {
-		@=outputcall :<lpasync$lock @args;
+		trace ("retraction (%d)[0x%llX..0x%llX] received from superordinate lock manager\n", @mandate, @try_addr, @try_addr + @try_len);
+		if (@mandate != @#._mand) {
+			@=outputcall :<lpasync$lock @args;
+		}
+		else {
+			trace ("The retraction is in my name! But I cannot conflict for resources with myself! This must result from a lock acquisition by me, ignore...\n");
+		}
 		@success = TRUE;
 	}
 
-	// Future unknown ops are redirected to :>out, since this brick does not handle them. 
+	// Future, yet unknown, ops are redirected to :>out, since this brick does not handle them. 
 	operation $op {
 		@=inputcall :>out$op @args;
 	}
@@ -529,11 +571,11 @@ input :<tmp
 
 	use PC tmp_state [4] ;
 
-output :>out
+output :>out(:2:)
 
 	// Record type of the meta nest, describes one lock entry.
 	// Field "flags": bits 0..1=data lock type, 2..3=address lock type
-	define export TYPE lock_descriptor "addr_t addr, len_t len, mand_t mandate, int4 flags";
+	define export TYPE lockrec_t "addr_t addr, len_t len, mand_t mand, int4 flags";
 
 // section 0: main nest - lock management
 // section 1: meta nest - surveillance
@@ -541,21 +583,20 @@ section (:0:)
 	
 	// Initializes/destroys status variables.
 	operation $output_init {
-		success_t ok;		
-		trace ("#lock_cache:>out$output_init (destr==%d, constr==%d) : \"%s\" called\n", @destr, @constr, @param);
-		
-		@=outputcall ##lock_imp:>out$output_init (@destr, @constr) => (ok);
-		@.check (!ok, "##lock_imp:>out$output_init failed!");
-		PC_FLUSH (tmp_state);
+		success_t ok;
+		trace ("#lock_cache:>out$output_init (constr==%d, desctr==%d) : \"%s\" called\n", @constr, @destr, @param);
 		if (@destr) {
+			PC_FLUSH (tmp_state);
 			@=outputcall :<tmp$delete (0, STATE_STORAGE_SIZE) => (ok);
 			@.check (!ok, "Could not destroy state storage!");
 		}
 		if (@constr) {
 			struct brick_state *state;
 			int i;
+			bool found;
+			
 			lock_ref_t lock;
-			@=outputcall :<tmp$create (0, STATE_STORAGE_SIZE, TRUE) => (ok);
+			@=outputcall :<tmp$create (0, STATE_STORAGE_SIZE, TRUE, FALSE) => (ok);
 			state = PC_GET_DIRTY (tmp_state, 0, STATE_STORAGE_SIZE);
 			@.check (!ok || !state, "Could not get state storage!");
 			for (i = 0; i < MAX_LOCK_RECORDS - 1; i++) {
@@ -567,8 +608,25 @@ section (:0:)
 			state->free_lock_recs = MAKE_STATE_REF (state->lock_rec_storage);
 			new_lock_rec (state) => (lock);
 			@.fatal (lock == NULL_REF, "Could not even allocate one lock record!");
-			set_desc (get_lock_desc (lock), (addr_t)0, (addr_t)0xFFFFFFFFFFFFFFFF, @#._mand, make_lock_type (lock_write, lock_write, FALSE));
+			set_desc (get_lock_desc (lock), (addr_t)0, (addr_t)0xFFFFFFFFFFFFFFFFLL, @#._mand, make_lock_type (lock_write, lock_write, FALSE));
 			add_lock_rec (state, lock);
+			
+			param_getopt(@param, "lock_all_on_init", &found, NULL, NULL);
+			if (found) {
+				struct lock_desc desc;
+				trace ("allocating all locks from the superordinate lock manager.\n");
+				// Special init parameter to lock whole :>in initially.
+				// Handy for performance improvement, if this lock cache is the only client anyway.
+				@=outputcall :<in$lock (0, 0xFFFFFFFFFFFFFFFFLL, @#._mand, make_lock_type (lock_write, lock_write, FALSE)) => (ok);
+				@.check (!ok, "Could not grab all locks initially!");
+				lock_mutex ();
+				state = PC_GET_DIRTY (tmp_state, 0, STATE_STORAGE_SIZE);
+				@.check (!state, "Could not get state storage!");
+				set_desc (desc, 0, 0xFFFFFFFFFFFFFFFFLL, @#._mand, make_lock_type (lock_write, lock_write, FALSE));
+				remove_own_locks (state, &desc) => (ok);
+				@.check (!ok, "BUG! Could not release all locks!");
+				unlock_mutex ();
+			}
 		}
 		@success = TRUE;
 	}
@@ -594,12 +652,13 @@ section (:0:)
 		
 		set_desc (desc, obl_start, obl_end, @mandate, make_lock_type (@data_lock, @addr_lock, TRUE));
 
-		lock_mutex ();		
-		trace ("mand=%d Lock [?0x%llX..[!0x%llX..0x%llX!]..0x%llX?]D%cA%c requested.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
+		lock_mutex ();
+		trace ("Lock (%d)[?0x%llX..[!0x%llX..0x%llX!]..0x%llX?]D%cA%c requested.\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
 		
 		state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
 		@.check (!state, "Error getting brick status!");
 		
+		trace ("Looking for conflicts\n");
 		// Look for locks conflicting with the obligatory part of our requested lock.
 		find_first_lock (state, &desc, is_conflict) => (conflictor);
 		if (obl_end - obl_start > 0) {
@@ -607,6 +666,7 @@ section (:0:)
 				if (@action != action_wait) {
 					// There is a conflict and we are not supposed to wait for it, so break.
 					unlock_mutex ();
+					// No metanest notification on failed operations.
 					return;
 				}
 				do {
@@ -615,36 +675,52 @@ section (:0:)
 					len_t length;
 					start = get_lock_start (conflictor);
 					length = get_lock_end (conflictor) - start;
+					if (start < get_desc_start (desc)) {
+						// conflictor overlaps only partially (at beginning), we don't need to request all of it
+						len_t diff = get_desc_start (desc) - start;
+						start += diff;
+						length -= diff;
+					}
+					if (start + length > get_desc_end (desc)) {
+						// conflictor overlaps only partially (at end), we don't need to request all of it
+						length -= (start + length) - get_desc_end (desc);
+					}
 					if (get_lock_mand (conflictor) != @#._mand) {
+						//trace ("about to send out an asynchronous $retract [0x%llX..0x%llX]\n", start, start + length);
 						// A $lock call through ##clntasync becomes an asynchronous inputcall :>out$retract
-						@=outputcall :<clients$lock [get_lock_mand (conflictor)] (start, length) => (ok);
+						@=outputcall :<clients$lock [@mandate] (start, length) => (ok);
+						//trace ("sent out an asynchronous $retract [0x%llX..0x%llX]\n", start, start + length);
 						// Wait for the lock to be released.
 						wait_for_lock (conflictor);
-						trace ("mand=%d got condition signal!\n", (int)@mandate);
+						trace ("back to lock request (%d)[?0x%llX..[!0x%llX..0x%llX!]..0x%llX?]D%cA%c...\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
+						// In case the state pointer has been removed from the cache in the meantime.
+						state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
 					}
 					else {
 						// The conflictor is owned by the lock manager (at :<in).
-						// This kind of "retraction" means locking.
+						// Instead of retraction, we must request the lock via a $lock op
+						// Release the mutex while we are "out" to avoid deadlocks.
 						unlock_mutex ();
 						@=outputcall :<in$lock [@#._mand] (start, length, lock_write, lock_write, start, length, action_wait) => (ok);
-						lock_mutex ();
 						if (!ok) {
 							// The $lock op failed. This could mean a potential deadlock. Abort.
-							return;
+							@.err("Lock [0x%llX..0x%llX] could not be acquired from superordinate lock manager!", get_desc_start (desc), get_desc_end (desc));
 						}
-						else {
-							lock_ref_t lock;
-							// The lock list could have changed in the meantime.
-							// Old references have thus become invalid.
-							find_first_lock (state, &desc, is_own) => (lock);
-							remove_lock_rec (state, lock);
-							free_lock_rec (state, lock);
-						}
+						lock_mutex ();
+						// (remember that the lock list could have changed completely in the meantime)
+						trace ("back to lock request (%d)[?0x%llX..[!0x%llX..0x%llX!]..0x%llX?]D%cA%c...\n", (int)@mandate, opt_start, obl_start, obl_end, opt_end, ch_lock_types[@data_lock], ch_lock_types[@addr_lock]);
+						// In case the state pointer has been removed from the cache in the meantime.
+						state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
+						// The $lock has been granted (= has been successfully 'retracted' from the superordinate lock manager).
+						// Remove the record from the list.
+						mand_t client_mand = get_desc_mand (desc);
+						set_desc_mand (desc, @#._mand);
+						remove_own_locks (state, &desc) => (ok);
+						set_desc_mand (desc, client_mand);
+						@.check (!ok, "Internal lock record release failed!"); // (should never happen)
 					}
-					// In case the state pointer has been removed from the cache in the meantime.
-					state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
-					// Start all over again, the list has changed in the meantime
-					// and 'conflictor' has become invalid.
+					// Start all over again, because the locks have changed in the meantime
+					// and the reference 'conflictor' could have become invalid.
 					find_first_lock (state, &desc, is_conflict) => (conflictor);
 				} while (conflictor != NULL_REF);
 			}
@@ -690,6 +766,7 @@ section (:0:)
 			set_desc_obligatory (desc, TRUE);
 			melt_lock_into_list (state, desc) => (ok);
 			if (!ok) {
+				// Do not notify the metanest on failure.
 				return;
 			}
 		}
@@ -740,32 +817,41 @@ section (:0:)
 
 // section 1: meta nest
 // for external surveillance
-// read from address 0 via $transwait, buffer gets filled with an array of "lock_descriptor" records (exported type)
+// read from address 0 via $transwait, buffer gets filled with an array of "lockrec_t" records (exported type)
 section (:1:)
 
-	operation $trans,$transwait {
+	// Writes the current main nest structure to the meta nest buffer
+	// The main nest mutex must be owned by whoever this function gets called by
+	@.func write_metainfo (void *buf, plen_t buf_size) => (success_t ok, plen_t buf_len) {
 		struct brick_state *state;
 		lock_ref_t lock_ref;
 		void *buf_writeptr;
-		plen_t buf_available = (plen_t)@log_len;
-
-		@.check (@direction == direct_write || @log_addr == 0, "Only reading transfers from meta nest starting at 0 supported!");
+		plen_t buf_available = buf_size;
+		
 		state = PC_GET (tmp_state, 0, STATE_STORAGE_SIZE);
+		ok = FALSE;
 		@.check (!state, "Error getting brick status!");
-		lock_mutex ();
 		
 		lock_ref = state->lock_starting_first;
-		buf_writeptr = MAKE_PTR (@phys_addr);
-		while (lock_ref != NULL_REF && buf_available >= @.sizeof (lock_descriptor)) {
-			struct lock_desc *lock_desc = &get_lock_desc (lock_ref);
-			buf_writeptr@*lock_descriptor->addr = get_desc_start (*lock_desc);
-			buf_writeptr@*lock_descriptor->len = get_desc_end (*lock_desc) - get_desc_start (*lock_desc);
-			buf_writeptr@*lock_descriptor->mandate = get_desc_mand (*lock_desc);
-			buf_writeptr@*lock_descriptor->flags = ((get_desc_addr_type (*lock_desc) << 2) | (get_desc_data_type (*lock_desc)));
-			buf_writeptr = &buf_writeptr@*lock_descriptor->LASTFIELD;
+		buf_writeptr = buf;
+		while (lock_ref != NULL_REF && buf_available >= @.sizeof (lockrec_t)) {
+			struct lock_desc *desc = &get_lock_desc (lock_ref);
+			buf_writeptr@*lockrec_t->addr = get_desc_start (*desc);
+			buf_writeptr@*lockrec_t->len = get_desc_end (*desc) - get_desc_start (*desc);
+			buf_writeptr@*lockrec_t->mand = get_desc_mand (*desc);
+			buf_writeptr@*lockrec_t->flags = get_desc_type (*desc);
+			buf_writeptr = &(buf_writeptr@*lockrec_t->LASTFIELD);
+			buf_available -= @.sizeof (lockrec_t);
 			lock_ref = get_next_lock (lock_ref);
 		}
-		@phys_len = (plen_t)@log_len - buf_available;
-		@success = TRUE;
+		ok = TRUE;
+		buf_len = buf_size - buf_available;
+	}
+
+	operation $gadrtranswaitdeletepadr {
+		success_t ok;
+		lock_mutex ();
+		write_metainfo (MAKE_PTR (@phys_addr), @phys_len) => (@success, @phys_len);
 		unlock_mutex ();
+		@success = TRUE;
 	}
