@@ -1,0 +1,104 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf *
+context: cconf *
+
+brick #map_select
+
+purpose Verify lock_manager brick
+
+desc
+	Maps the address range [0..n-1] at :>out to a fixed address range [x..x+n-1] at :>in.
+	This address range is provided at initialization as instance attributes, currently as parameters "address=<hex-num>" and "length=<hex-num>".
+	Note the notation of the hexadecimal address and length without the prefix "0x"
+	This brick is completely stateless and multiuser-safe.
+enddesc
+
+example
+	brick #some_brick
+	...
+	instance #map_select as selector;
+	wire :>in as #something:>out
+	wire :>out as #whatever:<tmp;
+	...
+	operation $brick_init {
+		...
+		if (@constr && !@destr) {
+			INIT_ONE_INSTANCE (selector, "address=F0000 length=1A00");
+		}
+		...
+	}
+endexample
+
+static_data {
+	#include "param_scanner.h"
+}
+
+data {
+	// instance attributes, not modified during the lifetime of the brick
+	addr_t addr;
+	len_t len;
+}
+
+operation $brick_init {
+	INIT_ALL_CONNS ();
+	if (@constr && !@destr) {
+		const char *param_address;
+		int param_address_len;
+		const char *param_length;
+		int param_length_len;
+		bool found;
+		param_getopt(@param, "address", &found, &param_address, &param_address_len);
+		@.check (!found || sscanf(param_address, "%llX", &@#.addr) < 1, "Parameter \"address=<hex-addr>\" not found or wrong format!");
+		param_getopt(@param, "length", &found, &param_length, &param_length_len);
+		@.check (!found || sscanf(param_length, "%llX", &@#.len) < 1, "Parameter \"length\" not found or wrong format!");
+		trace ("Initialized #map_select to address range 0x%llX..0x%llX\n", @#.addr, @#.addr + @#.len);
+	}
+	@success = TRUE;
+}
+
+input :<in
+
+output :>out
+
+	// Operations have been broken up into 4 groups, differing in the parameters that specify the logical address range they act upon.
+	// Future combined operations will (hopefully) be broken up into their elementary ops by default, so no change in semantics will occur.
+
+	// all operations involving address operations
+	operation $gadr,$padr,$gadrcreate,$deletepadr,$gadrcreatetranswaitpadr,$gadrtranswaitdeletepadr,$gadrgettranswait,$putdeletepadr,$gadrcreateget,$putpadr {
+		@.err ("$gadr and $padr cannot be implemented on a selector!");
+	}
+
+	// all operations on range [MIN(log_addr, log_addr+offset)..MAX(log_addr+log_len, log_addr+log_len+offset)]
+	operation $move {
+		addr_t log_end = @log_addr + @log_len;
+		addr_t dest_addr = @log_addr + @offset;
+		addr_t dest_end = dest_addr + @log_len;
+		@.check (log_end > @#.len || log_end < @log_addr, "move source 0x%llX..0x%llX out of range!", @log_addr, log_end);
+		@.check (dest_end > @#.len || dest_end < dest_addr, "move destination 0x%llX..0x%llX out of range!", dest_addr, dest_end);
+		@log_addr += @#.addr;
+		@=outputcall :<in$move @args;
+		@log_addr -= @#.addr;
+	}
+	
+	// all operations on range [try_addr.. [log_addr..log_addr+log_len] ..try_addr+try_len]
+	operation $lock,$unlock {
+		addr_t try_end = @try_addr + @try_len;
+		@.check (try_end > @#.len || try_end < @try_addr, "x%llX..0x%llX out of range!", @try_addr, try_end);
+		@try_addr += @#.addr;
+		@log_addr += @#.addr;
+		@=outputcall :<in$op @args;
+		@try_addr -= @#.addr;
+		@log_addr -= @#.addr;
+	}
+
+	// all operations on range [log_addr..log_addr+log_len]
+	operation $trans,$wait,$get,$put,$create,$delete,$transwait,$gettranswait,$transwaitput,$putwait,$createget,$putdelete {
+		addr_t log_end = @log_addr + @log_len;
+		@.check (log_end > @#.len || log_end < @log_addr, "0x%llX..0x%llX out of range [0x0..0x%llX]!", @log_addr, log_end, @#.len);
+		@log_addr += @#.addr;
+		@=outputcall :<in$op @args;
+		@log_addr -= @#.addr;
+	}
