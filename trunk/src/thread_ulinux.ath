@@ -11,10 +11,18 @@ desc
   the caller.
   If you want to wait on termination of the thread, use an
   explicit synchronization mechanism for that.
+  
+  By default, operations leaving the brick at :<exec carry a unique
+  mandate different from that of the op incoming at :>cpu.
+  The existence of a mandate-ignoring lock brick has made this behavior
+  obsolete.
+  To make the cloned operation keep the original mandate, provide a
+  valueless parameter "keep_mandates" at brick initialiazation (op $brick_init).
 enddesc
 
 static_data {
 #include "control_simple.h"
+#include "param_scanner.h"
 #include <pthread.h>
 
 /* The pthread library will allocate the stack for the new thread
@@ -102,21 +110,25 @@ int main(void)
 struct thread_info {
   pthread_cond_t sync;
   pthread_mutex_t mutex;
-  const struct output * on;
-  struct args * myargs;
-  const char * myparam;
+  const struct output *on;
+  struct args *myargs;
+  const char *myparam;
 };
 
 void * thread_handler(void * _info)
 {
   // copy all vital data to the local stack
-  struct thread_info * info = _info;
-  const struct output * on = info->on;
+  struct thread_info *info = _info;
+  const struct output *on = info->on;
   struct args myargs;
-  memcpy(&myargs, info->myargs, sizeof(struct args));
-  // HACK (not correct)
-  // TODO: use atomic increment opcode instead
-  myargs.mandate = base_mand++;
+  struct brick_thread_ulinux *const _brick = BASE(on, struct brick_thread_ulinux, _conn_cpu);
+  memcpy(&myargs, info->myargs, sizeof myargs);
+  if (!_brick->keep_mandates) {
+    // Old behavior: give the asynchronous op a new mandate, necessary for good ol' lock_ulinux
+    // HACK (not correct)
+    // TODO: use atomic increment opcode instead
+    myargs.mandate = base_mand++;
+  }
   int len = strlen(info->myparam);
   char myparam[len+1];
   strcpy(myparam, info->myparam);
@@ -128,6 +140,17 @@ void * thread_handler(void * _info)
   return NULL;
 }
 
+}
+
+data {
+  bool keep_mandates;
+}
+
+operation $brick_init {
+  INIT_ALL_INPUTS ();
+  INIT_ALL_INSTANCES ();
+  INIT_ALL_OUTPUTS ();
+  @#.keep_mandates = param_check(@param, "keep_mandates", NULL, NULL);
 }
 
 input :<exec
