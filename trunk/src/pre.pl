@@ -2478,6 +2478,7 @@ sub gen_conn_init {
   #my $name = sp_name($spec, 2);
   #$res .= "  _on->_${type}_.ops = ops_$name;\n" unless $exit_mode;
   $res .= "  _on->_${type}_.ops = uninitialized_$type;\n" unless $exit_mode;
+  $res .= "  _on->_output_.rev_chain = NULL;\n" if $type eq "output";
   $res .= "  _on->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
   $code =~ s/\@param/_param/mg;
   eval_vars(\$code, $spec);
@@ -2548,7 +2549,7 @@ sub gen_initexit {
     }
   }
   if($optype eq "init") {
-    print OUT "_brick->_mand = _mand;\n  _brick->ops = ops_${brick}_BRICK;\n";
+    print OUT "\n  // init brick mandate and brick operations\n  _brick->_mand = _mand;\n  _brick->ops = ops_${brick}_BRICK;\n";
   }
   print OUT "\n";
 }

@@ -197,9 +197,11 @@ MISSING(create)
 MISSING(delete)
 MISSING(move)
 
+// input ops
 UNUSED(input_init)
 OPTIONAL(retract)
 
+// brick ops
 UNUSED(brick_init)
 
 /* These are the default implementations for combined elementary
