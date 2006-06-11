@@ -12,75 +12,373 @@ purpose Verify lock_manager brick
 desc
 enddesc
 
-instance #device_mem_nest_ulinux as tmp;
-instance #device_mem_nest_ulinux as tmp2;
+static_data {
+	// sprintf for athomux data types
+	#include "ath_stdio.h"
+	
+	// Unfortunately, this is necessary, since generic types cannot be used in functions
+	struct lmgr_meta {
+		addr_t addr;
+		len_t len;
+		mand_t mand;
+		int4 flags;
+	};
+	struct test_suite {
+		mand_t m;            // mandate the tested operation is performed under
+		addr_t s, e, ts, te; // lock oundaries: start, end, try_start, try_end
+		lock_t dl, al;       // lock types: data lock and address lock
+		action_t a;          // operation mode: ask, try or wait 
+		success_t x;         // expected success
+		addr_t xs, xe;       // expected success limits: start, end
+	};
+}
+
+instance #device_mem_nest_ulinux as mem;
+instance #adapt_multi as monitor;
+wire :<in as ##mem:>out;
+instance #map_select as select_a;
+wire :<in as ##monitor:>out;
+instance #map_select as select_b;
+wire :<in as ##monitor:>out;
+instance #map_select as select_c;
+wire :<in as ##monitor:>out;
 instance #device_console_ulinux as console;
-wire :<buf as ##tmp2:>out;
-instance #lock_mand as lock;
-wire :<tmp as ##tmp:>out;
-wire :<in as #:>resrc;
+wire :<buf as ##select_a:>out;
+wire :>write as #:<log;
+instance #lock_manager as main_lock;
+wire :<tmp as ##select_b:>out;
+wire :<in as ##select_c:>out;
+wire :>out as #:<manager;
 instance #thread_ulinux as thread;
 wire :<exec as #:>oper;
 wire :>cpu as #:<async;
 
 operation $brick_init {
+	@success = FALSE;
 	if (@destr) {
 		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (main_lock, "");
 		INIT_ONE_INSTANCE (thread, "");
-		INIT_ONE_INSTANCE (lock, "");
 		INIT_ONE_INSTANCE (console, "");
-		INIT_ONE_INSTANCE (tmp2, "");
-		INIT_ONE_INSTANCE (tmp, "");
+		INIT_ONE_INSTANCE (select_c, "");
+		INIT_ONE_INSTANCE (select_b, "");
+		INIT_ONE_INSTANCE (select_a, "");
+		INIT_ONE_INSTANCE (monitor, "");
+		INIT_ONE_INSTANCE (mem, "");
+		@=outputcall :>oper$output_init (@destr, @constr) => ();
 		INIT_ALL_INPUTS ();
+		@success = TRUE;
 	}
 	if (@constr) {
 		INIT_ALL_INPUTS ();
-		INIT_ONE_INSTANCE (tmp, "");
-		INIT_ONE_INSTANCE (tmp2, "");
-		INIT_ONE_INSTANCE (console, "Debug-Fenster");
-		INIT_ONE_INSTANCE (lock, "");
+		@=outputcall :>oper$output_init (@destr, @constr) => ();
+		INIT_ONE_INSTANCE (mem, "");
+		INIT_ONE_INSTANCE (monitor, "");
+		INIT_ONE_INSTANCE (select_a, "address=0 length=100000");
+		INIT_ONE_INSTANCE (select_b, "address=100000 length=100000");
+		INIT_ONE_INSTANCE (select_c, "address=200000 length=100000");
+		INIT_ONE_INSTANCE (console, "Lock manager");
+		@.fatal (!@success, "Failed to init console!");
 		INIT_ONE_INSTANCE (thread, "");
+		INIT_ONE_INSTANCE (main_lock, "");
 		INIT_ALL_OUTPUTS ();
+		@success = TRUE;
 	}
 }
 
-local input :<async
+@.define log (FMT_STR, ...) {
+	athprintf(&@##console:>write, TRUE, 0, TRUE, FMT_STR ...);
+}
 
-local output :>resrc
+// Reads out the meta nest (:1:) at CONNECTOR (e.g., "#some_brick:>out" or ":<that") into *METABUF_PTR (maximum size METABUF_SIZE) and returns the number of bytes read in METABUF_SIZE
+@.define read_metanest (CONNECTOR, METABUF_PTR, METABUF_SIZE, METABUF_PLEN) {
+	success_t ok;
+	@=outputcall CONNECTOR(:1:)$gadrtranswaitdeletepadr (MAKE_PADDR (METABUF_PTR), (METABUF_SIZE)) => (ok, (METABUF_PLEN));
+	@.check (!ok, "Could not read meta nest!");
+}
+
+@.func print_metainfo (const char *metabuf, plen_t metabuflen) {
+	// Bad but necessary, since lock_t is not processed in funcs :(
+	const struct lmgr_meta *metabufpos = (void *)metabuf;
+	char textbuf[0x2000];
+	char *textbufpos = textbuf;
+	char *const textbufend = textbuf + sizeof textbuf;
+	success_t ok;
+	if (metabuflen < sizeof *metabufpos) {
+		strcpy(textbuf, "(no locks)\n");
+		textbufpos = textbuf + strlen(textbuf);
+	}
+	else {
+		while (metabuflen >= sizeof *metabufpos && textbufpos < textbufend) {
+			index_t flags = metabufpos->flags;
+			textbufpos = athsnprintf(textbufpos, textbufend - textbufpos, "(0x%L..0x%L %k%k %m) ", metabufpos->addr, metabufpos->addr + metabufpos->len, (lock_t)(flags & 0x03), (lock_t)((flags >> 2) & 0x03), metabufpos->mand);
+			metabufpos++;
+			metabuflen -= sizeof *metabufpos;
+		}
+		*textbufpos++ = '\n';
+		*textbufpos = '\0';
+	}
+	@=outputcall :<log$gadrcreatetranswaitpadr (MAKE_PADDR (textbuf), (plen_t)(textbufpos - textbuf)) => (ok);
+}
+
+local input :<manager
+	use TYPE lockrec_t "addr_t addr, len_t len, mand_t mand, int4 flags";
+
+local input :<log
+
+local input :<async
 
 local output :>oper
 
-	// async ops here
+	// Operation performing a calculation at :<manager: (int4)[@log_addr] = (int4)[@log_addr + @log_len - 8] OP (int)[@log_addr + @log_len - 4]
+	// Parameters are read-locked before being read, to ensure correct order of operations.
+	operation $wait {
+		success_t ok;
+		const addr_t params_addr = @log_addr + @log_len - 8;
+		const len_t params_len = 8;
+		paddr_t params_paddr;
+		plen_t params_plen;
+		const addr_t result_addr = @log_addr;
+		const len_t result_len = 4;
+		paddr_t result_paddr;
+		plen_t result_plen;
+		int4 *params;
+		int4 *result;
+		char metabuf[0x200];
+		plen_t metabuf_len;
+		
+		log ("(mand=%m) Operation [0x%L] = [0x%L] %c [0x%L] requested.\n", @mandate, result_addr, params_addr, @param[0], params_addr + 4);
+		@=outputcall :<manager(:0:)$lock [@mandate] (params_addr, params_len, lock_read, lock_none) => (ok);
+		@.check (!ok, "Could not readlock the parameters for math op \"%c\"!", @param[0]);
+		log ("Operation [0x%L] = [0x%L] %c [0x%L] now running.\n", result_addr, params_addr, @param[0], params_addr + 4);
+		@=outputcall :<manager(:0:)$gettranswait [@mandate] (params_addr, params_len) => (ok, params_paddr, params_plen);
+		@.check (!ok || (len_t)params_plen < params_len, "Could not $get parameters for math op \"%c\"!", @param[0]);
+		params = MAKE_PTR (params_paddr);
+		// result field is already write locked.
+		@=outputcall :<manager(:0:)$get [@mandate] (result_addr, result_len) => (ok, result_paddr, result_plen);
+		@.check (!ok || (len_t)result_plen < result_len, "Could not $get space for result of math op \"%c\"!", @param[0]);
+		result = MAKE_PTR (result_paddr);
+		switch (@param[0]) {
+		case '+':
+			*result = params[0] + params[1];
+			break;
+		case '-':
+			*result = params[0] - params[1];
+			break;
+		case '*':
+			*result = params[0] * params[1];
+			break;
+		case '/':
+			*result = params[0] / params[1];
+			break;
+		default:
+			*result = -100;
+			break;
+		}
+		@=outputcall :<manager(:0:)$put [@mandate] (params_addr, params_len) => (ok);
+		@.check (!ok, "Could not $put params of math operation \"%c\"!", @param[0]);
+		@=outputcall :<manager(:0:)$put [@mandate] (result_addr, result_len) => (ok);
+		@.check (!ok, "Could not $put result of math operation \"%c\"!", @param[0]);
+		@=outputcall :<manager(:0:)$unlock [101] (result_addr, result_len) => (ok);
+		@.check (!ok, "Could not $unlock result of math operation \"%c\"!", @param[0]);
+		read_metanest (:<manager, metabuf, sizeof metabuf, metabuf_len);
+		print_metainfo (metabuf, metabuf_len);
+	}
 
 input :<strat
 
 output :>program
 
-	@.define lock_and_test (MAND, START, END, TRY_START, TRY_END, DATA_TYPE, ADDR_TYPE, ACTION, EXP_START, EXP_END) {
+	@.define lock (MAND, START, END, TRY_START, TRY_END, DATA, ADDR, ACTION) {
 		success_t ok;
-		addr_t addr;
-		len_t len;
-		@=outputcall ##lock:>out$lock [MAND] (START, (END) - (START), DATA_TYPE, ADDR_TYPE, TRY_START, (TRY_END) - (TRY_START), ACTION) => (ok, addr, len);
-		@.check (!ok, "Lock of [0x%llX..0x%llX] failed!", (addr_t)TRY_START, (addr_t)TRY_END);
-		@.check (addr != (EXP_START) || len != ((EXP_END) - (EXP_START)), "Lock [0x%llX..[0x%llX..0x%llX]..0x%llX] resulted in [0x%llX..0x%llX], expected [0x%llX..0x%llX]!", (addr_t)TRY_START, (addr_t)START, (addr_t)END, (addr_t)TRY_END, addr, addr + len, (addr_t)EXP_START, (addr_t)EXP_END);
+		log ("$lock [%m] ?0x%L..!0x%L..0x%L!..0x%L %k%k\n", (mand_t)MAND, (addr_t)TRY_START, (addr_t)START, (addr_t)END, (addr_t)TRY_END, (addr_t)DATA, ADDR);
+		@=outputcall :<manager(:0:)$lock [MAND] ((START), (END) - (START), (DATA), (ADDR), (TRY_START), (TRY_END), (ACTION)) => (ok);
+		if (!ok) {
+			log ("locking of [0x%L..[0x%L..0x%L]..0x%L] failed!", (addr_t)TRY_START, (addr_t)START, (addr_t)END, (addr_t)TRY_END);
+			return;
+		}
 	}
 
+	// Issue a lock operation with the given parameters and check the op result as well as the lock state afterwards
+	@.func lock_and_test (mand_t mand, addr_t start, addr_t end, addr_t try_start, addr_t try_end, lock_t data_type, lock_t addr_type, action_t action, success_t exp_succ, addr_t exp_start, addr_t exp_end) => (success_t ok) {
+		success_t succ;
+		addr_t addr;
+		len_t len;
+		char metabuf[0x1000];
+		plen_t metabuf_len;
+		const struct lmgr_meta *iter;
+		
+		succ = FALSE;
+		log ("$lock [%m] ?0x%L..!0x%L..0x%L!..0x%L? %k%k ", mand, try_start, start, end, try_end, data_type, addr_type);
+		@=outputcall :<manager(:0:)$lock [mand] (start, end - start, data_type, addr_type, try_start, try_end - try_start, action) => (succ, addr, len);
+		if (succ != exp_succ) {
+			log ("Lock of [0x%L..0x%L] failed!\n", try_start, try_end);
+			return;
+		}
+		log ("---> ");
+		if (exp_succ) {
+			read_metanest (:<manager, metabuf, sizeof metabuf, metabuf_len);
+			print_metainfo (metabuf, metabuf_len);
+			if (action != action_ask && (data_type != lock_none || addr_type != lock_none)) {
+				if (addr != exp_start || len != (exp_end - exp_start)) {
+					log ("resulted in [0x%L..0x%L], expected [0x%llX..0x%llX]!\n", addr, addr + len, exp_start, exp_end);
+					return;
+				}
+				iter = (struct lmgr_meta *)metabuf;
+				while ((char *)iter < metabuf + metabuf_len && iter->addr + iter->len <= addr) {
+					iter++;
+				}
+				while ((char *)iter < metabuf + metabuf_len && addr < exp_end) {
+					addr_t lock_addr = iter->addr;
+					len_t lock_len = iter->len;
+					mand_t lock_mand = iter->mand;
+					lock_t lock_type_data = (iter->flags) & 0x03;
+					lock_t lock_type_addr = ((iter->flags) >> 2) & 0x03;
+					if (lock_mand == mand) {
+						if (lock_addr > addr) {
+							log ("ERROR: area [0x%L..0x%L] not locked by %m, as expected!\n", exp_start, exp_end, lock_mand);
+							return;
+						}
+						if ((int)lock_type_data < (int)data_type || (int)lock_type_addr < (int)(addr_type)) {
+							log ("ERROR: area [0x%L..0x%L] has insufficient lock level: %k%k, expected %k%k!\n", lock_addr, lock_addr + lock_len, lock_type_data, lock_type_addr, data_type, addr_type);
+							return;
+						}
+						addr += lock_len;
+					}
+					iter++;
+				}
+				if (addr < exp_end) {
+					log ("ERROR: area [0x%L..0x%L] not locked by %m, as expected!\n", addr, exp_end, mand);
+					return;
+				}
+			}
+		}
+		else {
+			log (" failed as expected\n");
+		}
+		ok = TRUE;
+	}
+
+	@.func unlock_and_test (mand_t mand, addr_t start, addr_t end) => (success_t ok) {
+		char metabuf[0x1000];
+		plen_t metabuf_len;
+		log ("$unlock [%m] (0x%L..0x%L) --> ", mand, start, end);
+		@=outputcall :<manager(:0:)$unlock [mand] (start, (end) - (start)) => (ok);
+		if (!ok) {
+			log ("Could not unlock [0x%L..0x%L]!\n", start, end);
+			return;
+		}
+		read_metanest(:<manager, metabuf, sizeof metabuf, metabuf_len);
+		print_metainfo (metabuf, metabuf_len);
+	}
+
+	@.func run_test_suite (const char *title, const struct test_suite *const suite) => (success_t ok) {
+		const struct test_suite *test;
+		log ("-------- %s --------\n", title);
+		for (test = suite; test->s <= test->e; test++) {
+			lock_and_test (test->m, test->s, test->e, test->ts, test->te, test->dl, test->al, test->a, test->x, test->xs, test->xe) => (ok);
+			if (!ok) {
+				return;
+			}
+		}
+		for (test = suite; test->s <= test->e; test++) {
+			if (test->x) {
+				unlock_and_test (test->m, test->xs, test->xe) => (ok);
+				if (!ok) {
+					return;
+				}
+			}
+		}
+	}
+
+	@.macro calc (X, OP_STR) { @=outputcall :<async$wait [(X) + 102] ((X) * 4 + 0x50, ((X) + 3) * 4) : OP_STR => (); }
+
 	operation $output_init {
-		char linebuf[0x200];
-		const char *test_msg = "This is a new style of music!\n";
-		success_t ok;
-		len_t length;
-		
-		@=outputcall ##console:>write$gadrcreatetranswaitpadr (MAKE_PADDR (test_msg), (plen_t)strlen(test_msg)) => (ok, length);
-		//@=outputcall ##console:>read$gadrtranswaitdeletepadr (MAKE_PADDR (linebuf), (plen_t)sizeof linebuf) => (ok, length);
-		//@=outputcall ##lock:>out$output_init (@destr, @constr) => (@success);
-		//@.check (!@success, "Lock init/exit failed!");
-		
-		/*lock_and_test (1234, 0x110, 0x120, 0x100, 0x130, lock_read, lock_none, action_wait, 0x100, 0x130);
-		lock_and_test (1234, 0x080, 0x100, 0x080, 0x128, lock_write, lock_read, action_wait, 0x080, 0x128);
-		lock_and_test (2345, 0x140, 0x150, 0x000, 0x160, lock_read, lock_read, action_try, 0x128, 0x160);
-		lock_and_test (2345, 0x168, 0x178, 0x168, 0x178, lock_write, lock_read, action_try, 0x168, 0x178);
-		lock_and_test (2345, 0x130, 0x150, 0x080, 0x180, lock_read, lock_write, action_try, 0x128, 0x180);*/
-		@.msg ("INFO: ", "All tests passed.");
+		// test 1: melting of lock requests with the same mandate
+		static const struct test_suite test1[] = {
+			// add base lock
+			{ m:101, s:0x0010, e:0x0100, ts:0x0010, te:0x0100, dl:lock_read,  al:lock_read,  a:action_wait, x:TRUE, xs:0x0010, xe:0x0100 },
+			// try ineffective locks (should not change anything)
+			{ m:101, s:0x0001, e:0x1000, ts:0x0000, te:0x2000, dl:lock_none,  al:lock_none,  a:action_wait, x:TRUE, xs:0x0000, xe:0x2000 },
+			{ m:101, s:0x0040, e:0x0060, ts:0x0030, te:0x00F8, dl:lock_read,  al:lock_read,  a:action_wait, x:TRUE, xs:0x0030, xe:0x00F8 },
+			// try weaker locks at beginning, inmidst, and at the end of the base lock.
+			{ m:101, s:0x0011, e:0x0018, ts:0x0005, te:0x001E, dl:lock_read,  al:lock_none,  a:action_wait, x:TRUE, xs:0x0005, xe:0x001E },
+			{ m:101, s:0x0040, e:0x0060, ts:0x0040, te:0x0060, dl:lock_read,  al:lock_none,  a:action_wait, x:TRUE, xs:0x0040, xe:0x0060 },
+			{ m:101, s:0x00F0, e:0x0110, ts:0x00E0, te:0x0110, dl:lock_none,  al:lock_read,  a:action_wait, x:TRUE, xs:0x00E0, xe:0x0110 },
+			// try stronger locks at beginning, inmidst, and at the end of the base lock.
+			{ m:101, s:0x0010, e:0x0020, ts:0x0000, te:0x002F, dl:lock_read,  al:lock_write, a:action_wait, x:TRUE, xs:0x0000, xe:0x002F },
+			{ m:101, s:0x0040, e:0x0060, ts:0x0038, te:0x0068, dl:lock_write, al:lock_none,  a:action_wait, x:TRUE, xs:0x0038, xe:0x0068 },
+			{ m:101, s:0x00F0, e:0x0100, ts:0x00E0, te:0x0120, dl:lock_write, al:lock_write, a:action_wait, x:TRUE, xs:0x00E0, xe:0x0120 },
+			{ m:101, s:0x0010, e:0x0050, ts:0x0010, te:0x0050, dl:lock_read,  al:lock_write, a:action_wait, x:TRUE, xs:0x0010, xe:0x0050 },
+			{ s:1, e:0 }
+		};
+		// test 2: conflicting lock requests
+		static const struct test_suite test2[] = {
+			{ m:101, s:0x0040, e:0x0060, ts:0x0030, te:0x0070, dl:lock_read,  al:lock_read,  a:action_wait, x:TRUE, xs:0x0030, xe:0x0070 },
+			{ m:101, s:0x0048, e:0x0058, ts:0x0040, te:0x0060, dl:lock_write, al:lock_read,  a:action_wait, x:TRUE, xs:0x0040, xe:0x0060 },
+			{ m:202, s:0x0020, e:0x0038, ts:0x0010, te:0x003F, dl:lock_read,  al:lock_read,  a:action_wait, x:FALSE },
+			{ m:202, s:0x0020, e:0x0038, ts:0x0010, te:0x003F, dl:lock_read,  al:lock_read,  a:action_wait, x:TRUE, xs:0x0010, te:0x003F },
+			{ m:202, s:0x0020, e:0x0038, ts:0x0010, te:0x004F, dl:lock_read,  al:lock_read,  a:action_wait, x:TRUE, xs:0x0010, xe:0x0040 },
+			{ s:1, e:0 }
+		};
+		// Only execute on initialization
+		if (@constr && !@destr) {
+			success_t ok;
+			const addr_t values_addr = 0x50;
+			const addr_t values_len = 0x3C;
+			paddr_t values_paddr;
+			plen_t values_plen;
+			int4 *values;
+			run_test_suite ("Test 1: melting of locks of same mandate", test1) => (ok);
+			if (!ok) return;
+			run_test_suite ("Test 2: conflicting locks", test2) => (ok);
+			if (!ok) return;
+			
+			log ("--- Test 3: thread synchronization ---\n");
+			// Perform a simple calculation in multiple threads with dependencies between sub-calculations, synchronized by locks.
+			//   ((3*5)*(12+8))/((3*9)-(34/2))
+			// = (15*20)/(27-17)
+			// = 300/10
+			// = 30
+			@=outputcall :<manager(:0:)$lock [101] (values_addr, values_len, lock_write, lock_none) => (ok);
+			@.check (!ok, "Could not lock space for parameters for calculation!");
+			@=outputcall :<manager(:0:)$createget (values_addr, values_len) => (ok, values_paddr, values_plen);
+			@.check (!ok || (len_t)values_plen < values_len, "Could not get space for parameters for calculation!");
+			values = MAKE_PTR (values_paddr);
+			values[7] = 3;
+			values[8] = 5;
+			values[9] = 12;
+			values[10] = 8;
+			values[11] = 3;
+			values[12] = 9;
+			values[13] = 34;
+			values[14] = 2;
+			calc (0, "/");
+			calc (1, "*");
+			calc (2, "-");
+			calc (3, "*");
+			calc (4, "+");
+			calc (5, "*");
+			calc (6, "/");
+			@=outputcall :<manager$putwait (values_addr, values_len) => (ok);
+			// unlock the range with valid contents: the parameters
+			@=outputcall :<manager$unlock [101] (0x6C, 0x20) => (ok);
+			@.check (!ok, "Could not release the operations!");
+			// wait for the final result to receive valid contents
+			@=outputcall :<manager$lock [102] (values_addr, 4, lock_read, lock_none) => (ok);
+			@.check (!ok, "Could not lock the calculation result for reading!");
+			@=outputcall :<manager$gettranswait (values_addr, 4) => (ok, values_paddr, values_plen);
+			@.check (!ok || (len_t)values_plen < 4, "Could not read the result of the calculation!");
+			values = MAKE_PTR (values_paddr);
+			if (values[0] == 30) {
+				log ("The result is %i, as expected\n", values[0]);
+			}
+			else {
+				log ("Result (%i) not as expected (30)!\n", values[0]);
+				return;
+			}
+			log ("All tests passed.\n");
+		}
 		@success = TRUE;
 	}
+
