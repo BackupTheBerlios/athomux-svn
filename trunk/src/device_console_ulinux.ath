@@ -57,18 +57,24 @@ data {
 	int to_child[2], from_child[2];
 }
 
+instance #lock_native as readlock;
+
 operation $brick_init {
+	@success = FALSE;
 	if (@destr) {
 		INIT_ALL_OUTPUTS ();
+		INIT_ONE_INSTANCE (readlock, "");
 		if (@#.child_pid > 0) {
 			kill(@#.child_pid, SIGTERM);
 		}
 		close(@#.to_child[READ]);
 		close(@#.from_child[WRITE]);
 		INIT_ALL_INPUTS ();
+		@success = TRUE;
 	}
 	if (@constr) {
 		INIT_ALL_INPUTS ();
+		INIT_ONE_INSTANCE (readlock, "");
 		@#.child_pid = -1;
 		@.fatal (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0, "Error creating pipes for connection to child program!\n");
 		int pid = fork();
@@ -84,10 +90,13 @@ operation $brick_init {
 			}
 			// ...and start the specified child terminal program.
 			execl(DEFAULT_CHILD_PROGRAM, DEFAULT_CHILD_PROGRAM, @param, NULL);
-			fputs("Execution of the child \"" DEFAULT_CHILD_PROGRAM "\" failed!\n", stderr);
-			exit(1);
+			// Signal the parent an error via closure of the connection.
+			close(@#.to_child[READ]);
+			close(@#.from_child[WRITE]);
 		}
 		else {
+			char buf[256];
+			int buf_len;
 			// Parent process:
 			// Close the pipes' ends that belong to the child.
 			@#.child_pid = pid;
@@ -95,8 +104,9 @@ operation $brick_init {
 			@#.to_child[READ] = -1;
 			close(@#.from_child[WRITE]);
 			@#.from_child[WRITE] = -1;
+			INIT_ALL_OUTPUTS ();
+			@success = TRUE;
 		}
-		INIT_ALL_OUTPUTS ();
 	}
 }
 
@@ -105,7 +115,7 @@ input:<buf
 
 /* Input pipe, from where user input can be read. 
  * Right now, only physical input via $gadrtranswaitdeletepadr is implemented, due to the lack of a fully functional memory device brick that could be used as buffer. */
-output:>read
+output :>read
 
 	data {
 		// Output state.
@@ -130,13 +140,14 @@ output:>read
 			@.check (!ok, "Error creating read buffer!");
 			@:>.read_buf_pos = @:>.read_buf_size;
 		}
+		@success = TRUE;
 	}
 
 	/* Preparation for any kind of input from this pipe. */
 	operation $gadr {
 		@.err ("$gadr not implemented yet! Use $gadrtranswaitdeletepadr");
 	}
-
+	
 	/* Physical pipe input. */
 	operation $gadrtranswaitdeletepadr {
 		@.check (@phys_len <= 0, "phys_len <=0!");
@@ -144,8 +155,11 @@ output:>read
 		paddr_t read_buf_paddr;
 		plen_t read_buf_plen;
 		version_t read_buf_version;
+		
+		@=outputcall ##readlock:>out$lock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Could not obtain read lock!");
 		// Get pointer to read buffer.
-		@.msg ("INFO: ", "read_buf_addr == 0x%llX, read_buf_size == 0x%llX", @:>.read_buf_addr, @:>.read_buf_size);
+		//@.msg ("INFO: ", "read_buf_addr == 0x%llX, read_buf_size == 0x%llX", @:>.read_buf_addr, @:>.read_buf_size);
 		@=outputcall :<buf$get (@:>.read_buf_addr, @:>.read_buf_size) => (ok, read_buf_paddr, read_buf_plen, read_buf_version);
 		@.check (!ok || read_buf_plen < (plen_t)@:>.read_buf_size, "Error getting read buffer!");
 		// Update read buffer if necessary.
@@ -181,6 +195,8 @@ output:>read
 		// Release buffer and set return values.
 		@=outputcall :<buf$put (@:>.read_buf_addr, @:>.read_buf_size) => (ok);
 		@phys_len = (plen_t)(dest_write - dest_buf);
+		@=outputcall ##readlock:>out$unlock ((addr_t)-1, 1) => (ok);
+		@.check (!ok, "Could not release read lock!");
 		@success = TRUE;
 	}
 	
@@ -193,6 +209,10 @@ output:>read
 /* Output pipe. Strings written to it will be displayed to the user.
  * Right now only physical output via $gadrcreatetranswaitpadr is implemented, due to the lack of a fully functional memory device brick that could be used as buffer. */
 output:>write
+
+	operation $output_init {
+		@success = TRUE;
+	}
 
 	/* Finalization of any kind of output to this pipe. */
 	operation $padr {

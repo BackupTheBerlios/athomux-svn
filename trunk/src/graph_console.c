@@ -36,7 +36,7 @@ static gboolean close_enabled;
 
 /* Main function, builds and runs the main window. */
 int main(int argc, char *argv[]) {	
-	const char *title_str = "Console";
+	static const char *title_str = "Console";
 	
 	if (argc > 1) {
 		title_str = argv[1];
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 
 	/* Nifty: install input surveillance (no extra thread necessary). */
 	input_handle = gdk_input_add(STDIN_FILENO, GDK_INPUT_READ, input_available, NULL);
-		
+	
 	gtk_main();
 	return 0;
 }
