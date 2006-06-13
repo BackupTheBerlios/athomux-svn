@@ -1,0 +1,211 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context: pconf ulinux*
+context: cconf ulinux*
+
+brick #test_lock_cache
+
+purpose Verify #lock_cache brick
+
+desc
+	Consistency checks on one lock manager together with two caches.
+	The lock manager and lock cache should have each already been approved in single tests.
+	sub-bricks:
+		* memory provider #mem gets multiuser-protected by #monitor
+		* a number of #map_selector bricks each pick out a piece from the memory cake for their respective client
+		* the #lock_manager takes two selectors, one for its config input, one for the main input
+		* the two #lock_cache's main inputs each get connected to the lock manager's output
+		* the #lock cache's config inputs each get connected to an own selector
+		* the #lock_cache's outputs each get connected to a separate local input (:<user_*)
+enddesc
+
+static_data {
+	// sprintf for athomux data types
+	#include "ath_stdio.h"
+	
+	// Unfortunately, this is necessary, since generic types cannot be used in functions
+	struct lmgr_meta {
+		addr_t addr;
+		len_t len;
+		mand_t mand;
+		int4 flags;
+	};
+	//TODO: remove!
+	//void lock_manager_out_1_gadrtranswaitdeletepadr(const union connector * on, struct args * _args, const char * _param);
+	//void lock_manager_wa_out_0_retract(const union connector * on, struct args * _args, const char * _param);
+}
+
+// Memory
+instance #device_mem_nest_ulinux as mem;
+instance #adapt_multi as monitor;
+wire :<in as ##mem:>out;
+instance #map_select as sel_con;
+wire :<in as ##monitor:>out;
+instance #map_select as sel_rsc;
+wire :<in as ##monitor:>out;
+instance #map_select as sel_lm;
+wire :<in as ##monitor:>out;
+instance #map_select as sel_lc_a;
+wire :<in as ##monitor:>out;
+instance #map_select as sel_lc_b;
+wire :<in as ##monitor:>out;
+instance #map_select as sel_bma;
+wire :<in as ##monitor:>out;
+// Locking and blocking
+instance #lock_manager as lm;
+wire :<tmp as ##sel_lm:>out;
+wire :<in as ##sel_rsc:>out;
+instance #block_ops as block_ma;
+wire :<tmp as ##sel_bma:>out;
+wire :<in as ##lm:>out;
+instance #lock_cache as lc_a;
+wire :<tmp as ##sel_lc_a:>out;
+wire :<in as ##block_ma:>out;
+wire :>out as :<userA;
+instance #lock_cache as lc_b;
+wire :<tmp as ##sel_lc_b:>out;
+wire :<in as ##block_ma:>out;
+wire :>out as :<userB;
+// asynchronous locking
+instance #thread_ulinux as lc_a_async;
+wire :<exec as ##lc_a:>out;
+// Logging
+instance #device_console_ulinux as con_a;
+wire :<buf as ##sel_con:>out;
+wire :>read as :<usrinp;
+wire :>write as :<log;
+instance #format_metanest as fmt_lm;
+wire :<meta as ##lm:>out;
+wire :<text as ##con_a:>write;
+instance #format_metanest as fmt_lc_a;
+wire :<meta as ##lc_a:>out;
+wire :<text as ##con_a:>write;
+instance #format_metanest as fmt_lc_b;
+wire :<meta as ##lc_b:>out;
+wire :<text as ##con_a:>write;
+
+@.define log (FMTSTR, ...) (athprintf(&@:<log, FALSE, 0, TRUE, FMTSTR ...))
+
+operation $brick_init {
+	if (@destr && !@constr) {
+		INIT_ALL_OUTPUTS ();
+		INIT_ALL_INSTANCES ();
+		INIT_ALL_INPUTS ();
+	}
+	if (@constr && !@destr) {
+		success_t ok;
+		INIT_ALL_INPUTS ();
+		// local inputs and outputs need extra initialization
+		@=inputcall :<userA$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not initialize :<userA!");
+		@=inputcall :<userB$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not initialize :<userB!");
+		@=inputcall :<usrinp$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not initialize :<usrinp!");
+		@=inputcall :<log$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not initialize :<log!");
+		// memory
+		INIT_ONE_INSTANCE (mem, "");
+		INIT_ONE_INSTANCE (monitor, "");
+		INIT_ONE_INSTANCE (sel_con,  "address=0000000 length=0100000");
+		INIT_ONE_INSTANCE (sel_lm,   "address=0100000 length=0100000");
+		INIT_ONE_INSTANCE (sel_lc_a, "address=0200000 length=0100000");
+		INIT_ONE_INSTANCE (sel_lc_b, "address=0300000 length=0100000");
+		INIT_ONE_INSTANCE (sel_bma,  "address=0400000 length=0200000");
+		INIT_ONE_INSTANCE (sel_rsc,  "address=0500000 length=1000000");
+		// blocking
+		INIT_ONE_INSTANCE (block_ma, "Lock Manager:>out");
+		// locking
+		INIT_ONE_INSTANCE (lm, "");
+		INIT_ONE_INSTANCE (lc_a, "");
+		INIT_ONE_INSTANCE (lc_b, "");
+		// asynchronization
+		INIT_ONE_INSTANCE (lc_a_async, "");
+		// logging
+		INIT_ONE_INSTANCE (con_a, "Lock Cache Test");
+		INIT_ONE_INSTANCE (fmt_lm, "name=\"lock manager\"");
+		INIT_ONE_INSTANCE (fmt_lc_a, "name=\"lock cache A\"");
+		INIT_ONE_INSTANCE (fmt_lc_b, "name=\"lock cache B\"");
+		INIT_ALL_OUTPUTS ();
+	}
+	@success = TRUE;
+}
+
+local input :<usrinp
+
+local input :<log
+
+local input :<userA
+
+	operation $retract {
+		success_t ok;
+		log ("[[UserA]] retract [0x%L..0x%L)\n", @try_addr, @try_addr + @try_len);
+		@=outputcall $unlock [1001] (@try_addr, @try_len) => (ok);
+	}
+
+local input :<userB
+
+	operation $retract {
+		success_t ok;
+		log ("[[UserB]] retract [0x%L..0x%L)\n", @try_addr, @try_addr + @try_len);
+		@=outputcall $unlock [2002] (@try_addr, @try_len) => (ok);
+	}
+
+input :<strat
+
+output :>program
+
+	@.func pause () {
+		char textbuf[8];
+		@=outputcall :<usrinp$gadrtranswaitdeletepadr (MAKE_PADDR (textbuf), (plen_t)sizeof textbuf) => (@success, @phys_len);
+	}
+
+	operation $output_init {
+		success_t ok;
+		log ("mandates: ##lm==%m ##lc_a==%m ##lc_b==%m ##lm#impl==%m\n", @##lm._mand, @##lc_a._mand, @##lc_b._mand, @##lm#impl._mand);
+		{
+			struct input *inp = @##lm#impl:>out._output_.rev_chain;
+			log ("&##lm#impl==%P &##lm#impl:>out==%P &##lm:<wa_out==%P\n", &@##lm#impl, &@##lm#impl:>out, &@##lm:<wa_out);
+			log ("$retract==%P==%P &##lm#impl:>out.rev_chain==", @##lm:<wa_out._input_.ops[0][1], lock_manager_wa_out_0_retract);
+			while (inp) {
+				log ("0x%P -->", (plen_t)inp);
+				inp = inp->rev_next;
+			}
+			log ("null\n");
+		}		
+		@=inputcall ##lm:<wa_out$input_init (FALSE, TRUE) => (ok);
+		{
+			struct input *inp = @##lm#impl:>out._output_.rev_chain;
+			log ("$retract==%P==%P &##lm#impl:>out.rev_chain==", @##lm:<wa_out._input_.ops[0][1], lock_manager_wa_out_0_retract);
+			while (inp) {
+				log ("0x%P -->", (plen_t)inp);
+				inp = inp->rev_next;
+			}
+			log ("null\n");
+		}
+		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
+		log ("-------- TEST 1: retraction --------\n");
+		@=outputcall :<userA(:0:)$lock [1001] (0x100, 0x20) => (ok);
+		@=outputcall :<userB(:0:)$lock [2002] (0x108, 0x10) => (ok);
+		log ("Press ENTER in the line above to continue...\n");
+		pause ();
+		@success = FALSE;
+		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
+		
+		log ("-------- TEST 2:  --------\n");
+		@=outputcall ##lc_a_async:>cpu$lock [1001] (0xF0, 0x60) => ();
+		@=outputcall :<userB$lock [2002] (0xE0, 0x50) => (ok);
+		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
+		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
+		log ("Press ENTER in the line above to continue...\n");
+		@success = FALSE;
+		
+		@success = TRUE;
+	}
