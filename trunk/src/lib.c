@@ -112,8 +112,9 @@ void init_all_instances(const struct loader * loader, void * brick, struct args 
 // Roland Niese: workaround for manual initialization of subinstances in the right order (from left to right).
 void init_one_instance (const struct loader * loader, void * brick, void *subbrick, struct args * args, const char * param) {
 	int i;
+	size_t subbrick_offset = (char *)subbrick - (char *)brick;
 	for (i = 0; i < loader->inst_count; i++) {
-		if (loader->instances[i].offset == (char *)subbrick - (char *)brick) {
+		if (loader->instances[i].offset == subbrick_offset) {
 			loader->instances[i].loader->init_brick ((void *)brick + loader->instances[i].offset, args, param);
 			return;
 		}
