@@ -155,6 +155,11 @@ operation $brick_init {
 
 input :<exec
 
+operation $retract {
+	trace ("Operation $retract [0x%llX..0x%llX] ignored by #thread_ulinux!\n");
+	@success = TRUE;
+}
+
 output :>cpu
 
 operation $op
