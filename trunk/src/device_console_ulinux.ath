@@ -70,15 +70,14 @@ operation $brick_init {
 		close(@#.to_child[READ]);
 		close(@#.from_child[WRITE]);
 		INIT_ALL_INPUTS ();
-		@success = TRUE;
 	}
 	if (@constr) {
 		INIT_ALL_INPUTS ();
 		INIT_ONE_INSTANCE (readlock, "");
 		@#.child_pid = -1;
-		@.fatal (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0, "Error creating pipes for connection to child program!\n");
+		@.check (pipe(@#.to_child) < 0 || pipe(@#.from_child) < 0, "Error creating pipes for connection to child program!\n");
 		int pid = fork();
-		@.fatal (pid < 0, "Error creating child process!\n");
+		@.check (pid < 0, "Error creating child process!\n");
 		if (pid == 0) {
 			// Child process:
 			// Link the pipes to stdin/stdout, close the pipes' other ends.
@@ -93,10 +92,11 @@ operation $brick_init {
 			// Signal the parent an error via closure of the connection.
 			close(@#.to_child[READ]);
 			close(@#.from_child[WRITE]);
+			exit(1);
 		}
 		else {
 			char buf[256];
-			int buf_len;
+			size_t buf_len;
 			// Parent process:
 			// Close the pipes' ends that belong to the child.
 			@#.child_pid = pid;
@@ -105,9 +105,14 @@ operation $brick_init {
 			close(@#.from_child[WRITE]);
 			@#.from_child[WRITE] = -1;
 			INIT_ALL_OUTPUTS ();
-			@success = TRUE;
+			@success = FALSE;
+			buf_len = read(@#.from_child[READ], buf, sizeof buf - 1);
+			@.check (buf_len <= 0, "The client program \"" DEFAULT_CHILD_PROGRAM "\" could not be startet! Did you build it? There should be a target for it!");
+			buf[buf_len] = '\0';
+			trace ("Output from console is \"%s\"\n", buf);
 		}
 	}
+	@success = TRUE;
 }
 
 /* Storage for brick status. */
