@@ -1,6 +1,8 @@
 #ifndef __ATH_STDIO_H__
 #define __ATH_STDIO_H__
 
+#include <stdarg.h>
+
 /* These functions work similar to the corresponding stdio.h functions, except for these differences:
  *
  * They all understand type specifiers different from the stdio functions. Furthermore, they (currently) accept no modifiers.
@@ -28,8 +30,8 @@
  * for example, call: athprintf(&@#superbrick#subbrick:>out, TRUE, 0, TRUE, "Range is [0x%L..0x%L]\n", @log_addr, @log_addr + @log_len);
  */
 
-extern char *athsnprintf(char *buf, int bufsize, const char *fmt, ...) {
-extern char *athvsnprintf(char *buf, int bufsize, const char *fmt, va_list args) {
-extern plen_t athprintf(void *connector, bool is_output, mand_t mand, bool wait, const char *fmt, ...) {
+extern char *athsnprintf(char *buf, int bufsize, const char *fmt, ...);
+extern char *athvsnprintf(char *buf, int bufsize, const char *fmt, va_list args);
+extern plen_t athprintf(void *connector, bool is_output, mand_t mand, bool wait, const char *fmt, ...);
 
 #endif
