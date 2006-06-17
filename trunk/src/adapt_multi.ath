@@ -3,8 +3,8 @@ Author: Roland Niese (modified to use lock_mutex instead of lock_ulinux)
 Copyright: Hardy Kahl
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context: pconf *
-context: cconf *
+context pconf: *
+context cconf: *
 
 brick #adapt_multi
 

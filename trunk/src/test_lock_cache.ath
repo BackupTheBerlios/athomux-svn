@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context: pconf ulinux*
-context: cconf ulinux*
+context pconf: ulinux*
+context cconf: ulinux*
 
 brick #test_lock_cache
 
@@ -32,9 +32,6 @@ static_data {
 		mand_t mand;
 		int4 flags;
 	};
-	//TODO: remove!
-	//void lock_manager_out_1_gadrtranswaitdeletepadr(const union connector * on, struct args * _args, const char * _param);
-	//void lock_manager_wa_out_0_retract(const union connector * on, struct args * _args, const char * _param);
 }
 
 // Memory

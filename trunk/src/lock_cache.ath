@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context: pconf *
-context: cconf *
+context pconf: *
+context cconf: *
 
 brick #lock_cache
 
@@ -12,8 +12,8 @@ purpose outpost of #lock_mand
 desc
        +-------------+
 tmp---<:             |
-       |        - - -:>---out
-in----<:- - - /      |
+       |             |
+in----<:- - - - - - -:>---out
        +-------------+
 
 A cache for lock resources to improve performance on long and/or slow paths between a lock manager and lock users.
@@ -22,7 +22,7 @@ The 'main' path where all operations except $lock, $unlock and $retract are simp
 Requests for locks ($lock) not held by the cache get forwarded to the 'superordinate' lock manager somewhere behind :<in. Speculative locking can be added here through a brick that returns more locks than requested by the cache.
 Requests for locks ($lock) held by the cache are immediately server from the cache's pool, without (possibly costly) lock requests to the lock manager.
 Releases of locks ($unlock) only return locks to this cache's lock pool. It never returns any resources to the lock manager behind :<in without being asked to (via $retract).
-This brick is totally stateless, it does not even use instance attributes. All 'state' is stored externally in :<tmp.
+This brick is totally stateless, it does not even use instance attributes. All runtime variables are stored externally in :<tmp.
 This brick is, naturally, multiuser-safe.
 enddesc
 
