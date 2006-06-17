@@ -78,6 +78,8 @@ int main(int argc, char *argv[]) {
 	/* Nifty: install input surveillance (no extra thread necessary). */
 	input_handle = gdk_input_add(STDIN_FILENO, GDK_INPUT_READ, input_available, NULL);
 	
+	write(STDOUT_FILENO, title_str, strlen(title_str));
+	
 	gtk_main();
 	return 0;
 }

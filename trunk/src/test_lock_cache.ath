@@ -53,20 +53,20 @@ instance #map_select as sel_lc_b;
 wire :<in as ##monitor:>out;
 instance #map_select as sel_bma;
 wire :<in as ##monitor:>out;
-// Locking and blocking
+// Locking
 instance #lock_manager as lm;
 wire :<tmp as ##sel_lm:>out;
 wire :<in as ##sel_rsc:>out;
-instance #block_ops as block_ma;
+instance #spy_block as spylmout;
 wire :<tmp as ##sel_bma:>out;
 wire :<in as ##lm:>out;
 instance #lock_cache as lc_a;
 wire :<tmp as ##sel_lc_a:>out;
-wire :<in as ##block_ma:>out;
+wire :<in as ##spylmout:>out;
 wire :>out as :<userA;
 instance #lock_cache as lc_b;
 wire :<tmp as ##sel_lc_b:>out;
-wire :<in as ##block_ma:>out;
+wire :<in as ##spylmout:>out;
 wire :>out as :<userB;
 // asynchronous locking
 instance #thread_ulinux as lc_a_async;
@@ -115,8 +115,8 @@ operation $brick_init {
 		INIT_ONE_INSTANCE (sel_lc_b, "address=0300000 length=0100000");
 		INIT_ONE_INSTANCE (sel_bma,  "address=0400000 length=0200000");
 		INIT_ONE_INSTANCE (sel_rsc,  "address=0500000 length=1000000");
-		// blocking
-		INIT_ONE_INSTANCE (block_ma, "Lock Manager:>out");
+		// surveillance
+		INIT_ONE_INSTANCE (spylmout, "title='Lock Manager:>out' mode=trace");
 		// locking
 		INIT_ONE_INSTANCE (lm, "");
 		INIT_ONE_INSTANCE (lc_a, "");
@@ -124,7 +124,9 @@ operation $brick_init {
 		// asynchronization
 		INIT_ONE_INSTANCE (lc_a_async, "");
 		// logging
+		@success = FALSE;
 		INIT_ONE_INSTANCE (con_a, "Lock Cache Test");
+		@.check(!@success, "Could not start console program!");
 		INIT_ONE_INSTANCE (fmt_lm, "name=\"lock manager\"");
 		INIT_ONE_INSTANCE (fmt_lc_a, "name=\"lock cache A\"");
 		INIT_ONE_INSTANCE (fmt_lc_b, "name=\"lock cache B\"");
@@ -161,46 +163,58 @@ output :>program
 		char textbuf[8];
 		@=outputcall :<usrinp$gadrtranswaitdeletepadr (MAKE_PADDR (textbuf), (plen_t)sizeof textbuf) => (@success, @phys_len);
 	}
+	
+	@.func lock_and_test (void *output, mand_t mand, addr_t try_start, addr_t start, addr_t end, addr_t try_end, lock_t data, lock_t addr, action_t action, addr_t exp_start, addr_t exp_end) => (success_t ok) {
+		struct args argums = {
+			success: FALSE,
+			mandate: mand,
+			log_addr: start,
+			log_len: end - start,
+			try_addr: try_start,
+			try_len: try_end - try_start,
+			data_lock: data,
+			addr_lock: addr,
+			action: action,
+			sect_code: 0,
+			op_code: opcode_lock,
+		};
+		ok = FALSE;
+		log ("$lock [%m] (?0x%L..!0x%L..0x%L!..0x%L %k%k)\n", mand, try_start, start, end, try_end, data, addr);
+		((struct output *)output)->ops[0][opcode_lock] (output, &argums, "");
+		if (!argums.success) {
+			log ("locking of [0x%L..[0x%L..0x%L]..0x%L] failed!\n", try_start, start, end, try_end);
+			return;
+		}
+		if (argums.try_addr != exp_start || argums.try_addr + argums.try_len != exp_end) {
+			log ("locking of [0x%L..[0x%L..0x%L]..0x%L] unexpectedly resulted in lock of [0x%L..0x%L]!\n", try_start, start, end, try_end, argums.try_addr, argums.try_addr + argums.try_len);
+			return;
+		}
+		ok = TRUE;
+	}
 
+	// "main ()"
 	operation $output_init {
 		success_t ok;
 		log ("mandates: ##lm==%m ##lc_a==%m ##lc_b==%m ##lm#impl==%m\n", @##lm._mand, @##lc_a._mand, @##lc_b._mand, @##lm#impl._mand);
-		{
-			struct input *inp = @##lm#impl:>out._output_.rev_chain;
-			log ("&##lm#impl==%P &##lm#impl:>out==%P &##lm:<wa_out==%P\n", &@##lm#impl, &@##lm#impl:>out, &@##lm:<wa_out);
-			log ("$retract==%P==%P &##lm#impl:>out.rev_chain==", @##lm:<wa_out._input_.ops[0][1], lock_manager_wa_out_0_retract);
-			while (inp) {
-				log ("0x%P -->", (plen_t)inp);
-				inp = inp->rev_next;
-			}
-			log ("null\n");
-		}		
 		@=inputcall ##lm:<wa_out$input_init (FALSE, TRUE) => (ok);
-		{
-			struct input *inp = @##lm#impl:>out._output_.rev_chain;
-			log ("$retract==%P==%P &##lm#impl:>out.rev_chain==", @##lm:<wa_out._input_.ops[0][1], lock_manager_wa_out_0_retract);
-			while (inp) {
-				log ("0x%P -->", (plen_t)inp);
-				inp = inp->rev_next;
-			}
-			log ("null\n");
-		}
 		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
 		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
 		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
 		log ("-------- TEST 1: retraction --------\n");
-		@=outputcall :<userA(:0:)$lock [1001] (0x100, 0x20) => (ok);
-		@=outputcall :<userB(:0:)$lock [2002] (0x108, 0x10) => (ok);
+		lock_and_test (&@##lc_a:>out, 1001, 0x100, 0x100, 0x200, 0x200, lock_write, lock_write, action_wait, 0x100, 0x200) => (ok);
+		if (!ok) return;
+		lock_and_test (&@##lc_b:>out, 2002, 0x80, 0x140, 0x1C0, 0x280, lock_write, lock_write, action_wait, 0x140, 0x1C0) => (ok);
+		if (!ok) return;
 		log ("Press ENTER in the line above to continue...\n");
 		pause ();
 		@success = FALSE;
 		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
 		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
-		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
-		
+		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);		
 		log ("-------- TEST 2:  --------\n");
-		@=outputcall ##lc_a_async:>cpu$lock [1001] (0xF0, 0x60) => ();
-		@=outputcall :<userB$lock [2002] (0xE0, 0x50) => (ok);
+		@=outputcall ##spylmout:>out$output_init (TRUE, TRUE) : "mode=block" => ();
+		lock_and_test (&@##lc_a_async:>cpu, 1001, 0xC0, 0xC0, 0x1C0, 0x1C0, lock_write, lock_write, action_wait, 0xC0, 0x1C0) => (ok);
+		lock_and_test (&@##lc_b:>out, 2002, 0x100, 0x100, 0x220, 0x220, lock_write, lock_write, action_wait, 0x100, 0x220) => (ok);
 		@=outputcall ##fmt_lm:>trigger$gadr (0) => (ok);
 		@=outputcall ##fmt_lc_a:>trigger$gadr (0) => (ok);
 		@=outputcall ##fmt_lc_b:>trigger$gadr (0) => (ok);
