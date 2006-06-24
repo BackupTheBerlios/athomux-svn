@@ -2448,18 +2448,126 @@ brick /= buffer_dummy_linux
 n
 \family default 
 .
+ Since bricks can assume more states than 
+\begin_inset Quotes eld
+\end_inset 
+
+uninitialized
+\begin_inset Quotes erd
+\end_inset 
+
+ and 
+\begin_inset Quotes eld
+\end_inset 
+
+initialized
+\begin_inset Quotes erd
+\end_inset 
+
+ (see 
+\begin_inset LatexCommand \ref{sec:The-Lifecycle-of}
+
+\end_inset 
+
+), the additional operations 
+\begin_inset Quotes eld
+\end_inset 
+
+
+\family typewriter 
++=
+\family default 
+
+\begin_inset Quotes erd
+\end_inset 
+
+ (initialization), 
+\begin_inset Quotes eld
+\end_inset 
+
+
+\family typewriter 
+-=
+\family default 
+
+\begin_inset Quotes erd
+\end_inset 
+
+ (shutdown) and 
+\begin_inset Quotes eld
+\end_inset 
+
+
+\family typewriter 
+^=
+\family default 
+
+\begin_inset Quotes erd
+\end_inset 
+
+ (reinitialization) can be performed on bricks.
+ These commands invoke 
+\family typewriter 
+$brick_init
+\family default 
+ with 
+\family typewriter 
+@constr
+\family default 
+, 
+\family typewriter 
+@destr
+\family default 
+, or both set to TRUE, respectively.
+ This way, the complete brick lifecyle can be implemented via the strategy
+ interface.
+\layout Standard
+
+Note that you don't need to specify the whole structure each time you want
+ to act upon only one element of a brick.
+ For example, it is sufficient to transfer the string 
+\begin_inset Quotes eld
+\end_inset 
+
+
+\family typewriter 
+connect my_in:=28F7C:oth_out
+\backslash 
+n
+\family default 
+
+\begin_inset Quotes erd
+\end_inset 
+
+ to connect one input to some other bricks's output.
 \layout Standard
 
 As another example, when you submit a string 
+\begin_inset Quotes erd
+\end_inset 
+
+
 \family typewriter 
 connect dev/=11:out
 \backslash 
 n
 \family default 
- the wire to the output 
+
+\begin_inset Quotes eld
+\end_inset 
+
+ along the wire to the output 
+\begin_inset Quotes erd
+\end_inset 
+
+
 \family typewriter 
 out
 \family default 
+
+\begin_inset Quotes eld
+\end_inset 
+
  of the 
 \family typewriter 
 device_dummy_linux
@@ -3161,6 +3269,11 @@ condition
 \family default 
  is true, print a warning message without returning.
 \layout Section
+
+
+\begin_inset LatexCommand \label{sec:The-Lifecycle-of}
+
+\end_inset 
 
 The Lifecycle of Brick Instances
 \layout Standard

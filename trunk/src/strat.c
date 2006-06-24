@@ -28,7 +28,7 @@ void copy_str(char * dst, int maxlen, const char * src, int start, int end)
   ({ while(*ptr && *ptr++ != '\n') /*empty*/; })
 
 #define _skip_blanks(ptr)                                                     \
-  ({ while(*ptr && *ptr == ' ') ptr++; })
+  ({ while(*ptr == ' ') ptr++; })
 
 void skip_line(const char ** str)
 {
@@ -56,10 +56,10 @@ int scan_multi(const char ** str, const char * search[], const int lens[], int n
     }
     for(i = 0; i < nr; i++) {
       if(!strncmp(tmp, search[i], lens[i])) {
-	tmp += lens[i];
-	_skip_blanks(tmp);
-	*str = tmp;
-	return i;
+  tmp += lens[i];
+  _skip_blanks(tmp);
+  *str = tmp;
+  return i;
       }
     }
     _skip_line(tmp);
@@ -98,6 +98,14 @@ const bool hex_table[256] = {
   ['a'...'f'] = 1,
   ['A'...'F'] = 1,
   ['x'] = 1,
+};
+
+const bool op_table[256] = {
+  ['='] = 1, // query
+  [':'] = 1, // instantiate
+  ['/'] = 1, // deinstantiate
+  ['+'] = 1, // initialize
+  ['-'] = 1, // shutdown
 };
 
 const bool ws_table[256] = {
@@ -142,6 +150,7 @@ int scan_not_table(const char ** str, const bool table[], const char ** res)
   for(i = 0; tmp[i] && OP table[(unsigned)tmp[i]]; i++) {                     \
   }                                                                           \
   if(i >= reslen) {                                                           \
+    fputs("too long!\n", stderr);                                             \
     return -1;                                                                \
   }                                                                           \
   strncpy(res, tmp, i);                                                       \
@@ -161,9 +170,13 @@ int scan_not_table_copy(const char ** str, const bool table[], char * res, int r
 
 char scan_op(const char ** str)
 {
-  const char * tmp = *str;
+  const char *tmp = *str;
   char res = *tmp++;
-  while(*tmp && *tmp == '=') tmp++;
+  if (!op_table[(unsigned)res]) res = '?';
+  if (*tmp == '=') tmp++;
+  else {
+    if (*tmp != '=' && res != '=') res = '?';
+  }
   *str = tmp;
   return res;
 }
@@ -188,15 +201,22 @@ bool scan_connstr(const char ** str, struct conn_info * conn)
   int count = scan_table_copy(str, id_table, conn->conn_name, sizeof(conn->conn_name));
   if(**str == '[') {
     (*str)++;
-    sscanf(*str, "%d", &conn->conn_index);
+    if (sscanf(*str, "%d", &conn->conn_index) < 1) {
+      fputs("Could not parse connector index!\n", stderr);
+      return FALSE;
+    }
     while(**str && *(*str)++ != ']') {
       // empty
     }
+  }
+  else {
+    conn->conn_index = 0;
   }
   if(**str == ',') {
     (*str)++;
   }
   if(!**str && count <= 0) {
+    fputs("Parse error in connector specifier!\n", stderr);
     return FALSE;
   }
   return TRUE;
@@ -362,4 +382,3 @@ int parse_inout(char * buf, int len, int * res_type, char * res_op, struct conn_
   found = parse_connstr(found, conn);
   return (long)found - (long)buf;
 }
-

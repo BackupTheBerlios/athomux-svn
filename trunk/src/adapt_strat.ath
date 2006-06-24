@@ -36,9 +36,10 @@ operation $trans
       case scod_brick:
         op = scan_op(&buf);
         scan_table_copy(&buf, id_table, @name, sizeof(@name));
-        if(op == ':') {
-          @constr = FALSE;
-          @destr = FALSE;
+        if(op == ':' || op == '+' || op == '-' || op == '^') {
+          printf("operation %c on \"%s\"\n", op, @name);
+          @constr = (op == '+' | op == '^');
+          @destr = (op == '-' | op == '^');
           @=call :<strat$instbrick @args;
           if(!@success) {
             return;
@@ -47,6 +48,9 @@ operation $trans
           @destr = TRUE;
           @=call :<strat$deinstbrick @args;
           return;
+        }
+        else {
+          fprintf(stderr, "Unknown operation \'%c\\n'", op);
         }
         skip_line(&buf);
         continue;
@@ -58,12 +62,12 @@ operation $trans
           return;
         }
         if(op == ':') {
-	  @constr = TRUE;
-	  @destr = FALSE;
+          @constr = TRUE;
+          @destr = FALSE;
           @=call :<strat$instconn @args;
         } else if(op == '/') {
-	  @constr = FALSE;
-	  @destr = TRUE;
+          @constr = FALSE;
+          @destr = TRUE;
           @=call :<strat$deinstconn @args;
         } else {
           goto skip;
@@ -78,17 +82,21 @@ operation $trans
         if(!scan_connstr(&buf, &conn1)) {
           return;
         }
+        trace("connect %llX:%s\n", conn1.conn_addr, conn1.conn_name);
         op = scan_op(&buf);
         if(op == '/') { // delete
-	  @=call $disconnect @args;
+          @=call $disconnect @args;
           goto test;
         }
         if(op != ':') {
+          trace("Unkown op \'%c\'\n", op);
           goto skip;
         }
+        trace("new connections:\n");
         while(scan_connstraddr(&buf, &conn2)) {
+          trace("connect to %llX:%s\n", conn2.conn_addr, conn2.conn_name);
           @success = FALSE;
-	  @=call $connect @args;
+          @=call $connect @args;
           if(!@success) {
             return;
           }
