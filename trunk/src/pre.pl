@@ -124,7 +124,7 @@ sub purge {
     while($$text =~ m/^\#line (\w+) (.+)\n/m) {
       $parsed .= $PREMATCH;
       if($1 != $oldline+1 or $2 ne $oldfile) {
-	$parsed .= $MATCH;
+        $parsed .= $MATCH;
       }
       $$text = $POSTMATCH;
       $oldline = $1;
@@ -295,8 +295,8 @@ sub parse_def {
     if(defined($options) and $options =~ s/preexpand,?//) {
       my $submacros = $macros;
       if($options =~ s/prescope,?//) {
-	my %new_macros = %$macros;
-	$submacros = \%new_macros;
+        my %new_macros = %$macros;
+        $submacros = \%new_macros;
       }
       eval_macros(\$body, $levels, $suppress, $submacros);
     }
@@ -317,21 +317,21 @@ sub parse_def {
     if($params) {
       $search .= "$ws\\(";
       foreach my $param (split /,/, $inparams) {
-	if($param eq "\\.\\.\\.") {
-	  $search =~ s/,\Z//m;
-	  $search .= "(,$ws(?:$wsargmatch$ws,$ws)*$wsargmatch)?$ws,";
-	} else {
-	  $search .= "$ws($wsargmatch)$ws,";
-	}
+        if($param eq "\\.\\.\\.") {
+          $search =~ s/,\Z//m;
+          $search .= "(,$ws(?:$wsargmatch$ws,$ws)*$wsargmatch)?$ws,";
+        } else {
+          $search .= "$ws($wsargmatch)$ws,";
+        }
       }
       $search =~ s/,\Z//m;
       $search .= "$ws\\)";
       if(defined($outparams)) {
-	$search .= "$ws=>$ws\\(";
-	foreach my $param (split /,/, $outparams) {
-	  $search .= "$ws($wsargmatch)$ws,";
-	}
-	$search =~ s/,\Z/\\\)/m;
+        $search .= "$ws=>$ws\\(";
+        foreach my $param (split /,/, $outparams) {
+          $search .= "$ws($wsargmatch)$ws,";
+        }
+        $search =~ s/,\Z/\\\)/m;
       }
     } else {
       # make empty parens optional
@@ -348,15 +348,15 @@ sub parse_def {
       $stub .= ",$params" if($params);
       $stub .= ")";
       if(defined($outsig)) {
-	my $refsig = $outsig;
-	$refsig =~ s/(\w+$ws(?:,|$))/\*$1/mg;
-	$text .= ", " . $refsig;
-	foreach my $outparam (split /\s*,\s*/, $outsig) {
-	  $outparam =~ m/(\w+)\s*$/;
-	  my $outsearch = $1;
-	  $body =~ s/(?<!\w)$outsearch(?!\w)/\(\*$outsearch\)/mg;
-	  $stub =~ s/(?<!\w)$outsearch(?!\w)/&\($outsearch\)/;
-	}
+        my $refsig = $outsig;
+        $refsig =~ s/(\w+$ws(?:,|$))/\*$1/mg;
+        $text .= ", " . $refsig;
+        foreach my $outparam (split /\s*,\s*/, $outsig) {
+          $outparam =~ m/(\w+)\s*$/;
+          my $outsearch = $1;
+          $body =~ s/(?<!\w)$outsearch(?!\w)/\(\*$outsearch\)/mg;
+          $stub =~ s/(?<!\w)$outsearch(?!\w)/&\($outsearch\)/;
+        }
       }
       $text .= ")\n" . $body;
       $$macros{$name} = [$search, $params, "", $stub, $options];
@@ -534,16 +534,16 @@ sub treat_builtins {
       next if $success;
       $expr = 1 if $1 eq "else" or not defined($expr);
       if($levels > 0) {
-	eval_macros(\$expr, $levels, 1, $macros);
+        eval_macros(\$expr, $levels, 1, $macros);
       }
       my $subst = eval_compute($expr);
       if($subst) {
-	if($levels > 0) {
-	  strip_braces(\$body);
-	  eval_macros(\$body, $levels, $suppress, $macros);
-	}
-	$done .= $body;
-	$success = 1;
+        if($levels > 0) {
+          strip_braces(\$body);
+          eval_macros(\$body, $levels, $suppress, $macros);
+        }
+        $done .= $body;
+        $success = 1;
       }
     }
     return ($done, $candidate);
@@ -572,7 +572,7 @@ sub treat_builtins {
       $rest = $str x $count;
     } else {
       for(my $i = 0; $i < $count; $i++) {
-	eval_macros(\$rest, $sublevels, 1, $macros);
+        eval_macros(\$rest, $sublevels, 1, $macros);
       }
     }
     $done .= $rest;
@@ -597,14 +597,14 @@ sub treat_builtins {
       my $select = $textlist[$nr];
       die "bad shuffle index $nr" unless defined($select);
       if(defined($exp_mode)) {
-	$textlist[$nr] = $select;
+        $textlist[$nr] = $select;
       } else {
-	$done .= $select;
+        $done .= $select;
       }
     }
     if(defined($exp_mode)) {
       foreach my $text (@textlist) {
-	$done .= $text;
+        $done .= $text;
       }
     }
     return ($done, $rest);
@@ -630,7 +630,7 @@ sub eval_macros {
   # however the total result is rescanned for further substitutions
   $levels--;
   while ((defined($quick) or $quick = $$macros{"quick@"} or $quick = make_quick($macros)) and 
-	 $$text =~ m/$anchor$quick/m) {
+         $$text =~ m/$anchor$quick/m) {
     $done .= $PREMATCH;
     my $m = $MATCH;
     my $p = $POSTMATCH;
@@ -646,10 +646,10 @@ sub eval_macros {
       # skip this for non-@ commands (performance)
       my ($subdone, $tail) = treat_builtins($candidate, $done, $levels, $suppress, $macros);
       if(defined($subdone)) {
-	$quick = undef;
-	$done = $subdone;
-	$$text = $tail;
-	next;
+        $quick = undef;
+        $done = $subdone;
+        $$text = $tail;
+        next;
       }
     } 
     # treat ordinary macros
@@ -693,10 +693,10 @@ sub eval_macros {
       $sub_suppress = 2;
       my %newmac = ();
       if($levels > 0) {
-	%newmac = %$macros;
-	delete $newmac{$::name};
-	$sublevels = $levels;
-	$sub_suppress = $suppress;
+        %newmac = %$macros;
+        delete $newmac{$::name};
+        $sublevels = $levels;
+        $sub_suppress = $suppress;
       }
       $submacros = \%newmac;
     }
@@ -713,50 +713,50 @@ sub eval_macros {
       #$pre_expand = 1;
       #$mode = "def";
       while(defined($sigparam) and $sigparam =~ s/\A\s*@(!)?(<-|->|def)?:\s*//) {
-	$pre_expand = 1 if defined($1);
-	$mode = $2 if defined($2);
+        $pre_expand = 1 if defined($1);
+        $mode = $2 if defined($2);
       }
       # allow outside-in expansion
       if($pre_expand) {
-	eval_macros(\$subst, $levels, $suppress, $macros);
-	$quick = undef;
+        eval_macros(\$subst, $levels, $suppress, $macros);
+        $quick = undef;
       }
       # try to evaluate actual parameter at runtime only once (if possible)
       # by assigning to $sigparam
       if(defined($sigparam) and $sigparam ne $param) {
-	# create lexically scoped assignments for signature params
-	if($subst =~ m/(?:^|(?<!\w))$param(?:\Z|(?!\w))/m) {
-	  # This is HELL! you cannot define int x = x in C such that the new
-	  # x is _truly_ _hiding_ an x from the outer scope.
-	  # But in Ada you can! In C you even get a stupid assignment of
-	  # an unitialized value to itself, without any warning from the
-	  # compiler!
-	  # Should we blame the C language definition or the implementation?
-	  # We cannot just do nothing, since
-	  #   (a) the types of the two x'es could be different
-	  #   (b) an assignment to the inner x should not affect the outer one
-	  # FIXME: replacement affects _all_ identifiers, even field
-	  # names of structures, type names, etc.
-	  my $newparam = "__q_${param}_";
-	  $body =~ s/(?:^|(?<!\w))$param(?:\Z|(?!\w))/$newparam/mg;
-	  $sigparam =~ s/$param\Z/$newparam/;
-	  $param = $newparam;
-	}
-	insert_pseudoparam(\$body, "$sigparam = $subst; (void)$param; ");
+        # create lexically scoped assignments for signature params
+        if($subst =~ m/(?:^|(?<!\w))$param(?:\Z|(?!\w))/m) {
+          # This is HELL! you cannot define int x = x in C such that the new
+          # x is _truly_ _hiding_ an x from the outer scope.
+          # But in Ada you can! In C you even get a stupid assignment of
+          # an unitialized value to itself, without any warning from the
+          # compiler!
+          # Should we blame the C language definition or the implementation?
+          # We cannot just do nothing, since
+          #   (a) the types of the two x'es could be different
+          #   (b) an assignment to the inner x should not affect the outer one
+          # FIXME: replacement affects _all_ identifiers, even field
+          # names of structures, type names, etc.
+          my $newparam = "__q_${param}_";
+          $body =~ s/(?:^|(?<!\w))$param(?:\Z|(?!\w))/$newparam/mg;
+          $sigparam =~ s/$param\Z/$newparam/;
+          $param = $newparam;
+        }
+        insert_pseudoparam(\$body, "$sigparam = $subst; (void)$param; ");
       } elsif($param =~ m/^\\\./) {
-	# handle ... open param list
-	$body =~ s/$param/$subst/mg;
+        # handle ... open param list
+        $body =~ s/$param/$subst/mg;
       } elsif($mode eq "<-") {
-	# handle ordinary params
-	$body =~ s/(?<!\w)$param(?!\w)/$subst/mg;
+        # handle ordinary params
+        $body =~ s/(?<!\w)$param(?!\w)/$subst/mg;
       } elsif($mode eq "->") {
-	# handle late expansion
-	$later{$param} = $subst;
+        # handle late expansion
+        $later{$param} = $subst;
       } else {
-	if($param ne $subst) {
-	  #print"$::name: $param <--- $subst\n";
-	  create_subst($param, $subst, $submacros);
-	}
+        if($param ne $subst) {
+          #print"$::name: $param <--- $subst\n";
+          create_subst($param, $subst, $submacros);
+        }
       }
     }
     eval_macros(\$body, $sublevels, $sub_suppress, $submacros) unless defined($options) and $options =~ s/postprotect,?//;
@@ -1060,9 +1060,9 @@ sub wire_out2in {
     if(my $subst_l = ($::out2in{$short} || $::out2in{$core})) {
       my @sublist = wire_out2in(@$subst_l);
       foreach my $subst (@sublist) {
-	my $new = $spec;
-	$new =~ s/$short/$subst/;
-	push @res, $new;
+        my $new = $spec;
+        $new =~ s/$short/$subst/;
+        push @res, $new;
       }
     } else {
       push @res, $spec;
@@ -1104,16 +1104,16 @@ sub parse_typedef {
       # flatten the namespace
       my @sublabels = grep(/\A\./, keys %$subhash);
       foreach my $sublabel (@sublabels) {
-	my $subinfo = $$subhash{$sublabel};
-	delete $$subhash{$sublabel};
-	my $newlabel = $label . $sublabel;
-	die "duplicate sublabel '$newlabel'" if exists $hash{$newlabel};
-	$hash{$newlabel} = $subinfo;
+        my $subinfo = $$subhash{$sublabel};
+        delete $$subhash{$sublabel};
+        my $newlabel = $label . $sublabel;
+        die "duplicate sublabel '$newlabel'" if exists $hash{$newlabel};
+        $hash{$newlabel} = $subinfo;
       }
       $hash{$label} = [ keys %$subhash ];
       while(my ($key, $value) = each %$subhash) {
-	die "variant field '$key' conflicts with outer field" if exists $hash{$key};
-	$hash{$key} = $value;
+        die "variant field '$key' conflicts with outer field" if exists $hash{$key};
+        $hash{$key} = $value;
       }
       # note: this could become negative, thus use signed arithmetic!
       my $sublen = "(int)($suboffset) - (int)($lastoffset)";
@@ -1129,25 +1129,25 @@ sub parse_typedef {
       my $cmd = $1;
       my $label = $2;
       if($cmd eq "=") {
-	#print"hire $label\n";
-	$hire{$label} = 1;
+        #print"hire $label\n";
+        $hire{$label} = 1;
       } else {
-	#print"fire $label\n";
-	$fire{$label} = 1;
+        #print"fire $label\n";
+        $fire{$label} = 1;
       }
     }
     if(scalar(%hire) or scalar(%fire)) {
       my @all = grep(/\A\./, keys %hash);
       foreach my $label (@all) {
-	if(exists $fire{$label} or (scalar(%hire) and not exists $hire{$label})) {
-	  #print"delete label $label\n";
-	  my $fields = $hash{$label} or die "label '$label' not present";
-	  delete $hash{$label};
-	  foreach my $field (@$fields) {
-	    #print"delete field $field\n";
-	    delete $hash{$field};
-	  }
-	}
+        if(exists $fire{$label} or (scalar(%hire) and not exists $hire{$label})) {
+          #print"delete label $label\n";
+          my $fields = $hash{$label} or die "label '$label' not present";
+          delete $hash{$label};
+          foreach my $field (@$fields) {
+            #print"delete field $field\n";
+            delete $hash{$field};
+          }
+        }
       }
       next;
     }
@@ -1576,11 +1576,11 @@ sub gen_call {
       my $inst = sp_conn_instance($target);
       $call .= "const union connector * _other_ = (void*)&_brick->$inst._input_; ";
       if($op eq "op") {
-	$call .= "_other_->input.ops[$section][$arg->op_code - opcode_output_max - 1](_other_, $arg, $param); ";
+        $call .= "_other_->input.ops[$section][$arg->op_code - opcode_output_max - 1](_other_, $arg, $param); ";
       } else {
-	die "bad input operation \$$op" unless exists $$opset{$op};
-	my $directname = sp_name(spec_bricktype($target));
-	$call .= "$directname(_other_, $arg, $param); ";
+        die "bad input operation \$$op" unless exists $$opset{$op};
+        my $directname = sp_name(spec_bricktype($target));
+        $call .= "$directname(_other_, $arg, $param); ";
       }
     } else { # call on output
       warn "you should not @=inputcall \$$op on an output\n" if $op =~ m/_init\Z/;
@@ -1654,9 +1654,9 @@ sub gen_paramcall {
     my $arg = $1;
     if($arg ne "") {
       if($field =~ m/^name/) {
-	$call .= "strcpy($arg, _tmp_.$field); ";
+        $call .= "strcpy($arg, _tmp_.$field); ";
       } else {
-	$call .= "$arg = _tmp_.$field; ";
+        $call .= "$arg = _tmp_.$field; ";
       }
     }
   }
@@ -1742,7 +1742,7 @@ sub eval_code {
       my $list = $inargs . "," . $outargs;
       $list .= "," . $clobberargs if defined($clobberargs);
       foreach my $arg (@::always_allowed, split ',', $list) {
-	$$code =~ s/@($arg)/@.OK.$1/mg;
+        $$code =~ s/@($arg)/@.OK.$1/mg;
       }
       $$code =~ s/@\.OK\.(\w+)/\(_args->$1\)/mg;
       $$code =~ s/@(\w+)/\(@ NOT_OK_$1\)/mg;
@@ -1802,8 +1802,8 @@ sub make_ops {
     if($spec =~ m/($sectmatch)/) {
       my $sect = $1;
       if($sect ne "(:0:)") {
-	warn "operation $opname can be only defined at section (:0:), never at another section like $sect\nprobably this will not compile\n";
-	$spec =~ s/$sectmatch/\(:0:\)/;
+        warn "operation $opname can be only defined at section (:0:), never at another section like $sect\nprobably this will not compile\n";
+        $spec =~ s/$sectmatch/\(:0:\)/;
       }
     }
   }
@@ -1886,8 +1886,8 @@ sub parse_2 {
     if($text =~ m/\A(${ws}(static[^(]+$parenmatch)$ws$bracematch)/m) {
       $text = $POSTMATCH;
       if($remember) {
-	push @::funcs, $1;
-	push @::funcs_outputs, sp_shorten($::current, 3);
+        push @::funcs, $1;
+        push @::funcs_outputs, sp_shorten($::current, 3);
       }
       next;
     }
@@ -1897,45 +1897,45 @@ sub parse_2 {
       $text = $POSTMATCH;
       $names =~ s/\$init/\$output_init/ and warn "operation \$init is deprecated, please replace by \$output_init!";
       if($remember) {
-	if($names eq "\$op") {
-	  $::current = sp_complete($names);
-	  make_ops($::current, $body);
-	  my $secspec = sp_shorten($::current, 3);
-	  my @trylist = ();
-	  foreach my $ops_spec (keys %::ops_aliases) {
-	    next unless sp_shorten($ops_spec, 3) eq $secspec;
-	    my $tryname = sp_part($ops_spec, 4, 0);
-	    push @trylist, $tryname;
-	  }
-	  foreach my $opname (keys %$opset) {
-	    my $allowed = 1;
-	    foreach my $tryname (@trylist) {
-	      $allowed = 0 if $opname =~ m/$tryname/;
-	    }
-	    next unless $allowed;
-	    my $target_spec = sp_complete("\$$opname");
-	    gen_ops_aliases($target_spec, $::current, 1, $opset);
-	  }
-	} elsif($body =~ m/OP_NAME/m) {
-	  foreach my $level2 (split ',', $names) {
-	    die "bad operation type '$level2'" if sp_type($level2) != 4;
-	    $::current = sp_complete($level2);
-	    make_ops($::current, $body);
-	    gen_ops_aliases($::current, $::current, 0, $opset);
-	  }
-	} else {
-	  # avoid code bloat when OP_NAME is missing (generate 1 instance)
-	  my $level2 = $names;
-	  $level2 =~ s/\$//g;
-	  $level2 =~ s/,/X/g;
-	  $level2 =~ s/^/\$/;
-	  $::current = sp_complete($level2);
-	  make_ops($::current, $body);
-	  foreach my $name (split ',', $names) {
-	    my $single = sp_complete($name);
-	    gen_ops_aliases($single, $::current, 0, $opset);
-	  }
-	}
+        if($names eq "\$op") {
+          $::current = sp_complete($names);
+          make_ops($::current, $body);
+          my $secspec = sp_shorten($::current, 3);
+          my @trylist = ();
+          foreach my $ops_spec (keys %::ops_aliases) {
+            next unless sp_shorten($ops_spec, 3) eq $secspec;
+            my $tryname = sp_part($ops_spec, 4, 0);
+            push @trylist, $tryname;
+          }
+          foreach my $opname (keys %$opset) {
+            my $allowed = 1;
+            foreach my $tryname (@trylist) {
+              $allowed = 0 if $opname =~ m/$tryname/;
+            }
+            next unless $allowed;
+            my $target_spec = sp_complete("\$$opname");
+            gen_ops_aliases($target_spec, $::current, 1, $opset);
+          }
+        } elsif($body =~ m/OP_NAME/m) {
+          foreach my $level2 (split ',', $names) {
+            die "bad operation type '$level2'" if sp_type($level2) != 4;
+            $::current = sp_complete($level2);
+            make_ops($::current, $body);
+            gen_ops_aliases($::current, $::current, 0, $opset);
+          }
+        } else {
+          # avoid code bloat when OP_NAME is missing (generate 1 instance)
+          my $level2 = $names;
+          $level2 =~ s/\$//g;
+          $level2 =~ s/,/X/g;
+          $level2 =~ s/^/\$/;
+          $::current = sp_complete($level2);
+          make_ops($::current, $body);
+          foreach my $name (split ',', $names) {
+            my $single = sp_complete($name);
+            gen_ops_aliases($single, $::current, 0, $opset);
+          }
+        }
       }
       next;
     }
@@ -1959,65 +1959,65 @@ sub parse_subinstances {
       $rest =~ s/${ws}//mg;
       die "incomplete instance sub-parse in $filename\n$rest" if $rest;
       if($remember) {
-	add_instance($name, $type);
-	$::instances{$name} = $type;
+        add_instance($name, $type);
+        $::instances{$name} = $type;
       }
       $::current = $oldcurrent;
       while($text =~ m/\A${ws}(wire|alias)${ws}($specmatch)${ws}as${ws}($specmatch)$ws;/) {
-	my $cmd = $1;
-	my $sub_conn = $2;
-	my $loc_conn = $3;
-	$text = $POSTMATCH;
-	die "bad specified type '$sub_conn'" unless sp_type($sub_conn) == 2;
-	die "bad specified type '$loc_conn'" unless sp_type($loc_conn) == 2;
-	warn "do not start specifier $sub_conn with '##', probably means something different you dont want\n" if $sub_conn =~ m/\A\#\#/;
-	my $new_spec = sp_part($::current, 1) . "#$name";
-	my $sub_complete = sp_complete($sub_conn, $new_spec);
-	$sub_complete = wire_in2out($sub_complete);
-	my $loc_complete = sp_complete($loc_conn);
+        my $cmd = $1;
+        my $sub_conn = $2;
+        my $loc_conn = $3;
+        $text = $POSTMATCH;
+        die "bad specified type '$sub_conn'" unless sp_type($sub_conn) == 2;
+        die "bad specified type '$loc_conn'" unless sp_type($loc_conn) == 2;
+        warn "do not start specifier $sub_conn with '##', probably means something different you dont want\n" if $sub_conn =~ m/\A\#\#/;
+        my $new_spec = sp_part($::current, 1) . "#$name";
+        my $sub_complete = sp_complete($sub_conn, $new_spec);
+        $sub_complete = wire_in2out($sub_complete);
+        my $loc_complete = sp_complete($loc_conn);
 #print "new_spec: $new_spec sub_comnplete: $sub_conn -> $sub_complete loc_complete: $loc_conn -> $loc_complete\n";
-	my $sub_core = $sub_complete;
-	my $loc_core = $loc_complete;
-	$sub_core =~ s/\[\]//;
-	$loc_core =~ s/\[\]//;
-	#print "SUB: $sub_complete LOC: $loc_complete\n";
-	if(($sub_complete =~ m/:</) xor ($loc_complete =~ m/:</)) {
-	  warn "WARNING: in future releases keyword 'wire' will be REQUIRED instead of '$cmd' for specifiers $sub_conn $loc_conn. Please update your sourcecode!" unless $cmd eq "wire";
-	  # create internal wire
-	  if($loc_complete =~ m/\[\]/) {
-	    die "you can alias only a sub-instance array to a local array" unless $sub_complete =~ m/\[\]/;
-	  } else {
-	    die "you must alias a sub-instance array to a local array as a whole" if $sub_complete =~ m/\[\]/;
-	  }
-	  if($sub_complete =~ m/:</) {
-	    # alias a sub-input to a local output
-	    $::wires{$sub_complete} = $loc_complete if $remember;
-	    make_wire($sub_core, $loc_core);
-	  } else {
-	    # alias a local input to a sub-output
-	    $::wires{$loc_complete} = $sub_complete if $remember;
-	    make_wire($loc_core, $sub_core);
-	  }
-	} else {
-	  warn "WARNING: in future releases keyword 'alias' will be required instead of '$cmd' for specifiers $sub_conn $loc_conn" unless $cmd eq "alias";
-	  # create an external alias
-	  die "target of external alias $loc_conn must not be a sub-instance" if defined(sp_part($loc_conn, 1, 1));
-	  make_alias($loc_core, $sub_core);
-	  my $full_spec = $::sub_conns{$sub_core} or die "sub-specifier $sub_conn does not exist";
-	  if($full_spec =~ m/$brackmatch/) {
-	    die "sub-specifier $sub_conn must be written $sub_core\[]" unless $sub_conn =~ m/\[\]/;
-	    die "alias-specifier $loc_complete must be written $loc_core\[]" unless $loc_complete =~ m/\[\]/;
-	  }
-	  if($remember) {
-	    my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
-	    add_connector($conn_type, $full_spec, $loc_complete, 1, "TRUE", "FALSE", "FALSE");
-	  }
-	  my $xname = sp_name(spec_bricktype($sub_complete), 2);
-	  my $yname = sp_name(spec_bricktype($loc_complete), 2);
-	  #print "xname=$xname yname=$yname ($::extern_type_defs{$xname})\n";
-	  die "undefined type info for $xname (internal inconsistency)" unless exists $::extern_type_defs{$xname};
-	  $::extern_type_defs{$yname} = $::extern_type_defs{$xname};
-	}
+        my $sub_core = $sub_complete;
+        my $loc_core = $loc_complete;
+        $sub_core =~ s/\[\]//;
+        $loc_core =~ s/\[\]//;
+        #print "SUB: $sub_complete LOC: $loc_complete\n";
+        if(($sub_complete =~ m/:</) xor ($loc_complete =~ m/:</)) {
+          warn "WARNING: in future releases keyword 'wire' will be REQUIRED instead of '$cmd' for specifiers $sub_conn $loc_conn. Please update your sourcecode!" unless $cmd eq "wire";
+          # create internal wire
+          if($loc_complete =~ m/\[\]/) {
+            die "you can alias only a sub-instance array to a local array" unless $sub_complete =~ m/\[\]/;
+          } else {
+            die "you must alias a sub-instance array to a local array as a whole" if $sub_complete =~ m/\[\]/;
+          }
+          if($sub_complete =~ m/:</) {
+            # alias a sub-input to a local output
+            $::wires{$sub_complete} = $loc_complete if $remember;
+            make_wire($sub_core, $loc_core);
+          } else {
+            # alias a local input to a sub-output
+            $::wires{$loc_complete} = $sub_complete if $remember;
+            make_wire($loc_core, $sub_core);
+          }
+        } else {
+          warn "WARNING: in future releases keyword 'alias' will be required instead of '$cmd' for specifiers $sub_conn $loc_conn" unless $cmd eq "alias";
+          # create an external alias
+          die "target of external alias $loc_conn must not be a sub-instance" if defined(sp_part($loc_conn, 1, 1));
+          make_alias($loc_core, $sub_core);
+          my $full_spec = $::sub_conns{$sub_core} or die "sub-specifier $sub_conn does not exist";
+          if($full_spec =~ m/$brackmatch/) {
+            die "sub-specifier $sub_conn must be written $sub_core\[]" unless $sub_conn =~ m/\[\]/;
+            die "alias-specifier $loc_complete must be written $loc_core\[]" unless $loc_complete =~ m/\[\]/;
+          }
+          if($remember) {
+            my $conn_type = ($full_spec =~ m/:</) ? "input" : "output";
+            add_connector($conn_type, $full_spec, $loc_complete, 1, "TRUE", "FALSE", "FALSE");
+          }
+          my $xname = sp_name(spec_bricktype($sub_complete), 2);
+          my $yname = sp_name(spec_bricktype($loc_complete), 2);
+          #print "xname=$xname yname=$yname ($::extern_type_defs{$xname})\n";
+          die "undefined type info for $xname (internal inconsistency)" unless exists $::extern_type_defs{$xname};
+          $::extern_type_defs{$yname} = $::extern_type_defs{$xname};
+        }
       }
       next;
     }
@@ -2035,8 +2035,8 @@ sub parse_1 {
     if($text =~ m/\A(${ws}(static[^(]+$parenmatch)$ws$bracematch)/m) {
       $text = $POSTMATCH;
       if($remember) {
-	push @::funcs, $1;
-	push @::funcs_outputs, sp_shorten($::current, 3);
+        push @::funcs, $1;
+        push @::funcs_outputs, sp_shorten($::current, 3);
       }
       next;
     }
@@ -2045,9 +2045,9 @@ sub parse_1 {
       my $body = $2;
       $text = $POSTMATCH;
       if($remember) {
-	$::current = sp_complete($name, $::current);
-	make_ops($::current, $body);
-	gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
+        $::current = sp_complete($name, $::current);
+        make_ops($::current, $body);
+        gen_ops_aliases($::current, $::current, 0, $::op_args{"brick"});
       }
       next;
     }
@@ -2093,57 +2093,57 @@ sub parse_1 {
       $initbody = "{\n}" if not defined($initbody);
       $exitbody = "{\n}" if not defined($exitbody);
       if($type eq "input") {
-	die "bad input specifier '$level1'" unless $level1 =~ m/^:</;
-	while($text =~ m/\A${ws}use\s/) {
-	  die "'use' statement not allowed on arrays" if $array;
-	  next if parse_types(\$text);
-	  if($text =~ m/\A${ws}use\s+PC\s(\w+)$ws($sectmatch)?$ws(?:\[($argmatch)\]$ws)?(?:(aligned)$ws(?:($parenmatch)$ws)?(round$ws))?;/) {
-	    my $name = $1;
-	    my $sect = $2;
-	    my $max = $3;
-	    $max = "16" unless defined($max);
-	    my $aligned = $4;
-	    my $align_size = $5;
-	    $align_size = "DEFAULT_TRANSFER" if $aligned and not defined($align_size);
-	    $align_size = "sizeof(void*)" unless defined($align_size);
-	    my $whole_size = defined($6) ? $align_size : "1";
-	    $text = $POSTMATCH;
-	    if($remember) {
-	      $sect = sp_part($sect, 3, 0) if defined($sect);
-	      my $input = sp_part($enhanced_spec, 2, 0);
-	      $::pc_defs{$name} = [$input, $sect, $max, $align_size, $whole_size];
-	    }
-	    next;
-	  }
-	  if($text =~ m/\A${ws}use\s+HASH\s+(\w+)${ws}\[$ws($argmatch)$ws\]${ws}on\s+(\w+)$ws,$ws(\w+)${ws}function$ws($parenmatch)$ws;/) {
-	    my $name = $1;
-	    my $max = $2;
-	    my $base_cache = $3;
-	    my $elem_cache = $4;
-	    $text = $POSTMATCH;
-	    $$macros{"BASE_$name"} = ["BASE_$name", "", "", $base_cache];
-	    next;
-	  }
-	  die "bad use syntax";
-	}
+        die "bad input specifier '$level1'" unless $level1 =~ m/^:</;
+        while($text =~ m/\A${ws}use\s/) {
+          die "'use' statement not allowed on arrays" if $array;
+          next if parse_types(\$text);
+          if($text =~ m/\A${ws}use\s+PC\s(\w+)$ws($sectmatch)?$ws(?:\[($argmatch)\]$ws)?(?:(aligned)$ws(?:($parenmatch)$ws)?(round$ws))?;/) {
+            my $name = $1;
+            my $sect = $2;
+            my $max = $3;
+            $max = "16" unless defined($max);
+            my $aligned = $4;
+            my $align_size = $5;
+            $align_size = "DEFAULT_TRANSFER" if $aligned and not defined($align_size);
+            $align_size = "sizeof(void*)" unless defined($align_size);
+            my $whole_size = defined($6) ? $align_size : "1";
+            $text = $POSTMATCH;
+            if($remember) {
+              $sect = sp_part($sect, 3, 0) if defined($sect);
+              my $input = sp_part($enhanced_spec, 2, 0);
+              $::pc_defs{$name} = [$input, $sect, $max, $align_size, $whole_size];
+            }
+            next;
+          }
+          if($text =~ m/\A${ws}use\s+HASH\s+(\w+)${ws}\[$ws($argmatch)$ws\]${ws}on\s+(\w+)$ws,$ws(\w+)${ws}function$ws($parenmatch)$ws;/) {
+            my $name = $1;
+            my $max = $2;
+            my $base_cache = $3;
+            my $elem_cache = $4;
+            $text = $POSTMATCH;
+            $$macros{"BASE_$name"} = ["BASE_$name", "", "", $base_cache];
+            next;
+          }
+          die "bad use syntax";
+        }
       } elsif($type eq "output") {
-	die "bad output specifier '$level1'" unless $level1 =~ m/^:>/;
-	while($text =~ m/\A${ws}define\s/) {
-	  die "'define' statement not allowed on arrays" if $array;
-	  next if parse_types(\$text);
-	  die "bad define syntax";
-	}
+        die "bad output specifier '$level1'" unless $level1 =~ m/^:>/;
+        while($text =~ m/\A${ws}define\s/) {
+          die "'define' statement not allowed on arrays" if $array;
+          next if parse_types(\$text);
+          die "bad define syntax";
+        }
       } else {
-	die "this should not happen";
+        die "this should not happen";
       }
       if($remember) {
-	die "$enhanced_spec already defined" if exists $::conn_spec{$enhanced_spec};
-	$::conn_spec{$enhanced_spec} = [$def, $initbody, $exitbody];
+        die "$enhanced_spec already defined" if exists $::conn_spec{$enhanced_spec};
+        $::conn_spec{$enhanced_spec} = [$def, $initbody, $exitbody];
       } else {
-	my $short_spec = sp_shorten($enhanced_spec, 2);
-	$short_spec =~ s/$brackmatch//;
-	#print "ENH: $enhanced_spec | $short_spec\n";
-	$::sub_conns{$short_spec} = $enhanced_spec;
+        my $short_spec = sp_shorten($enhanced_spec, 2);
+        $short_spec =~ s/$brackmatch//;
+        #print "ENH: $enhanced_spec | $short_spec\n";
+        $::sub_conns{$short_spec} = $enhanced_spec;
       }
       $text = parse_2($text, $macros);
       next;
@@ -2387,22 +2387,22 @@ sub gen_header {
       my %copy_ops = %$opset;
       my $shortspec = sp_shorten($secspec, 3);
       foreach my $ops_spec (keys %::ops_aliases) {
-	next unless sp_shorten($ops_spec, 3) eq $shortspec;
-	my $dst_name = sp_name($ops_spec);
-	print OUT "static_operation $dst_name;\n";
-	$dst_name = sp_part($ops_spec, 4, 0);
-	delete $copy_ops{$dst_name};
+        next unless sp_shorten($ops_spec, 3) eq $shortspec;
+        my $dst_name = sp_name($ops_spec);
+        print OUT "static_operation $dst_name;\n";
+        $dst_name = sp_part($ops_spec, 4, 0);
+        delete $copy_ops{$dst_name};
       }
       # print unimplemented names
       print OUT "// unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
-	my $dst_name = sp_name($secspec . "\$" . $bare);
-	if($bare =~ m/_init\Z/) {
-	  print OUT "static_operation $dst_name;\n";
-	  next;
-	}
-	my $src_name = "missing_$bare";
-	print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
+        my $dst_name = sp_name($secspec . "\$" . $bare);
+        if($bare =~ m/_init\Z/) {
+          print OUT "static_operation $dst_name;\n";
+          next;
+        }
+        my $src_name = "missing_$bare";
+        print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
       }
       print OUT "\n";
     }
@@ -2479,6 +2479,7 @@ sub gen_conn_init {
   #$res .= "  _on->_${type}_.ops = ops_$name;\n" unless $exit_mode;
   $res .= "  _on->_${type}_.ops = uninitialized_$type;\n" unless $exit_mode;
   $res .= "  _on->_output_.rev_chain = NULL;\n" if $type eq "output";
+  $res .= "  _on->_input_.connect = NULL;\n  _on->_input_.rev_next = NULL;\n" if $type eq "input";
   $res .= "  _on->_brick_ptr_ = _brick;\n" if $spec =~ m/\[/ and not $exit_mode;
   $code =~ s/\@param/_param/mg;
   eval_vars(\$code, $spec);
@@ -2524,11 +2525,11 @@ sub gen_initexit {
     my $code = $optype eq "init" ? $initcode : $exitcode;
     if($code =~ m/\A$ws\{$ws\}$ws\Z/) { # inline expansion only in trivial case
       if($optype eq "init") {
-	my $inittext = gen_conn_init($spec, $tuple, 0);
-	indent(\$inittext, "    ");
-	print OUT "  { void * _conn = &_brick->$shortname$index;\n$inittext  }\n";
+        my $inittext = gen_conn_init($spec, $tuple, 0);
+        indent(\$inittext, "    ");
+        print OUT "  { void * _conn = &_brick->$shortname$index;\n$inittext  }\n";
       } else {
-	print OUT "  // not called\n";
+        print OUT "  // not called\n";
       }
     } else {
       my $funcname = "${optype}_conn_" . sp_name($spec, 2);
@@ -2581,29 +2582,29 @@ sub gen_init {
       my $secspec = sp_complete("(:" . $sect . ":)", $spec);
       my %copy_ops = %$opset;
       while(my ($ops_spec,$op) = each %::ops_aliases) {
-	next unless sp_shorten($ops_spec, 2) eq sp_shorten($secspec, 2);
-	my $op_sect = sp_part($op, 3, 0);
-	if($op_sect =~ m/\A(.*)\.\.(.*)\Z/) {
-	  my $start = $1;
-	  my $end = $2;
-	  $start = eval_compute($start, "start-value");
-	  $end = eval_compute($end, "end-value");
-	  next unless ($start <= $sect and $sect <= $end);
-	} else {
-	  next unless ($op_sect eq $sect or $op_sect eq "ALL");
-	}
-	my $dst_name = sp_part($ops_spec, 4, 0);
-	my $src_name = sp_name($op);
-	$op_defined = $src_name if $dst_name eq "op";
-	print OUT "    [opcode_$dst_name$index_shift] = &${src_name},\n";
-	delete $copy_ops{$dst_name};
+        next unless sp_shorten($ops_spec, 2) eq sp_shorten($secspec, 2);
+        my $op_sect = sp_part($op, 3, 0);
+        if($op_sect =~ m/\A(.*)\.\.(.*)\Z/) {
+          my $start = $1;
+          my $end = $2;
+          $start = eval_compute($start, "start-value");
+          $end = eval_compute($end, "end-value");
+          next unless ($start <= $sect and $sect <= $end);
+        } else {
+          next unless ($op_sect eq $sect or $op_sect eq "ALL");
+        }
+        my $dst_name = sp_part($ops_spec, 4, 0);
+        my $src_name = sp_name($op);
+        $op_defined = $src_name if $dst_name eq "op";
+        print OUT "    [opcode_$dst_name$index_shift] = &${src_name},\n";
+        delete $copy_ops{$dst_name};
       }
       # print unimplemented names
       print OUT "    // unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
-	my $dst_name = sp_name($secspec . "\$" . $bare);
-	my $src_name = defined($op_defined) ? $op_defined : "missing_${sect}_$bare";
-	print OUT "    [opcode_$bare$index_shift] = &$src_name,\n";
+        my $dst_name = sp_name($secspec . "\$" . $bare);
+        my $src_name = defined($op_defined) ? $op_defined : "missing_${sect}_$bare";
+        print OUT "    [opcode_$bare$index_shift] = &$src_name,\n";
       }
       print OUT "  },\n";
     }
@@ -2629,8 +2630,8 @@ sub gen_init {
     if($whole_array_in or $whole_array_out) {
       my $full_spec = undef;
       foreach my $sub_core ($input, $output) {
-	$sub_core =~ s/$brackmatch//;
-	$full_spec = $::sub_conns{$sub_core} unless defined($full_spec);
+        $sub_core =~ s/$brackmatch//;
+        $full_spec = $::sub_conns{$sub_core} unless defined($full_spec);
       }
       die "cannot find connector $input / $output" unless defined($full_spec);
       my $bound = sp_part($full_spec, 2, 1);
