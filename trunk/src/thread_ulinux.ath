@@ -156,7 +156,7 @@ operation $brick_init {
 input :<exec
 
 operation $retract {
-	trace ("Operation $retract [0x%llX..0x%llX] ignored by #thread_ulinux!\n");
+	trace ("Operation $retract [0x%llX..0x%llX] ignored by #thread_ulinux!\n", @try_addr, @try_addr + @try_len);
 	@success = TRUE;
 }
 
