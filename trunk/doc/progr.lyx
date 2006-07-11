@@ -2329,257 +2329,281 @@ DEFAULT_TRANSFER
 NULL
 \family default 
 -terminated ASCII string with a C-like syntax.
- Here is an example:
-\layout Standard
-\noindent 
+ When you 
+\emph on 
+trans-read
+\emph default 
+ from a strategy nest, you will get a string similar to this one:
+\layout LyX-Code
 
-\begin_inset ERT
-status Open
+brick==some_brick {
+\layout LyX-Code
 
-\layout Standard
- { 
-\backslash 
-baselineskip 1ex
-\layout Standard
+  b_param some_brick=This is some brick, eh?
+\layout LyX-Code
 
-\backslash 
-begin{verbatim}
-\layout Standard
-brick=buffer_dummy_linux {
-\layout Standard
-  param buffer_dummy_linux=init_param
-\layout Standard
-  input=dev {
-\layout Standard
-    param dev=other_param
-\layout Standard
-    connect dev==11:out
-\layout Standard
+  attr some_attr=some_setting
+\layout LyX-Code
+
+  attr illum=23
+\layout LyX-Code
+
+  input==whatever {
+\layout LyX-Code
+
+    c_param whatever=This is some input, eh?
+\layout LyX-Code
+
+    attr physio=:>stuff
+\layout LyX-Code
+
+    attr logio=none
+\layout LyX-Code
+
+    connect whatever==F000:suck
+\layout LyX-Code
+
   }
-\layout Standard
-  output=out {
-\layout Standard
-    param out=out_param
-\layout Standard
-    connect out=13:in
-\layout Standard
+\layout LyX-Code
+
+  (output)==stuff {
+\layout LyX-Code
+
+    c_param stuff=plenty of resources here
+\layout LyX-Code
+
+    attr physio=:<whatever
+\layout LyX-Code
+
+    connect stuff==370C1000:leech,400:spy
+\layout LyX-Code
+
   }
-\layout Standard
+\layout LyX-Code
+
 }
 \layout Standard
 
+Lines are terminated by linefeeds (
+\family typewriter 
+'
 \backslash 
-end{verbatim}}
-\end_inset 
-
-
-\layout Standard
-
-When calling 
-\family typewriter 
-$transwait
-\family default 
- for reading, you will get a string with 
-\family typewriter 
-LF
-\family default 
--terminated lines.
- When you write such a string, actions may be performed by the strategy
- level (e.g.
- 
-\family typewriter 
-control_*
+n'
 \family default 
 ).
- However, actions will only be performed by those lines where a 
-\family typewriter 
-:=
-\family default 
- or 
-\family typewriter 
-/=
-\family default 
- is used in place of 
-\family typewriter 
-==
-\family default 
-.
- When you simply write back the original string containing only 
-\family typewriter 
-==
-\family default 
-, nothing will happen.
- When something cannot be changed at all (
+ In this textual information block, a brick's runtime parameters, its attributes
+ and external connectors are listed.
+ Currently, attributes are set statically in the source code, but this will
+ change in the future: instance attributes will be introduced whose values
+ are set on brick initialization.
+ They will probably replace the parameter strings, so better consider them
+ deprecated.
+ Elements of the brick (even the brick itself) may appear in parentheses
+ to signal an inoperable state.
+ Such elements have been 
 \emph on 
-immutability
+instantiated
 \emph default 
-), a single 
-\family typewriter 
-=
-\family default 
- indicates this in place of 
-\family typewriter 
-==
-\family default 
-.
- You cannot replace 
-\family typewriter 
-=
-\family default 
- by 
-\family typewriter 
-:=
-\family default 
- or 
-\family typewriter 
-/=
-\family default 
-.
- There is only one single exeption: the 
+ but not 
 \emph on 
-type
-\emph default 
- of a brick instance (its name) is immutable at runtime (since changing
- it would affect the existence of inputs and outputs), but you can de-instantiat
-e it by saying 
-\family typewriter 
-brick /= buffer_dummy_linux
-\backslash 
-n
-\family default 
-.
- Since bricks can assume more states than 
-\begin_inset Quotes eld
-\end_inset 
-
-uninitialized
-\begin_inset Quotes erd
-\end_inset 
-
- and 
-\begin_inset Quotes eld
-\end_inset 
-
 initialized
-\begin_inset Quotes erd
-\end_inset 
-
- (see 
+\emph default 
+ yet (see 
 \begin_inset LatexCommand \ref{sec:The-Lifecycle-of}
 
 \end_inset 
 
-), the additional operations 
+).
+ Connections to other connectors feature one 
+\begin_inset Quotes eld
+\end_inset 
+
+connect
+\begin_inset Quotes erd
+\end_inset 
+
+ line.
+ While inputs can be connected to only zero or one output, outputs can have
+ an arbitrary number of connections.
+ They are represented by a comma-separated list.
+\layout Standard
+
+Those elements denoted with a 
+\family typewriter 
+'=='
+\family sans 
+ can be modified via a writing 
+\family default 
+operation (
+\family typewriter 
+$trans
+\family default 
+ or 
+\family typewriter 
+$put
+\family default 
+) to the nest.
+ You
+\family sans 
+ can either simply write back the strategy information formerly read from
+ the nest, replacing the 
+\begin_inset Quotes eld
+\end_inset 
+
+keep
+\begin_inset Quotes erd
+\end_inset 
+
+ operator 
+\family typewriter 
+'=='
+\family sans 
+ with one of the 
+\begin_inset Quotes eld
+\end_inset 
+
+modification
+\begin_inset Quotes erd
+\end_inset 
+
+ operators where intended, or just provide the element to be changed in
+ a new command string (e.g.
+ 
 \begin_inset Quotes eld
 \end_inset 
 
 
 \family typewriter 
-+=
+output+=stuff
+\family sans 
+{}
 \family default 
 
 \begin_inset Quotes erd
 \end_inset 
 
- (initialization), 
-\begin_inset Quotes eld
-\end_inset 
+)
+\family sans 
+ written to the brick's location in the nest.
+ Note that attributes are fixed right now, but attributes set at initialization
+ may be introduced soon.
+ 
+\layout Standard
 
 
+\family sans 
+Modification operators are:
+\layout Itemize
+
+
+\emph on 
+instantiation :=
+\emph default 
+
+\newline 
+Brings the element into very existence.
+ Makes sense only on bricks, after allocating memory in the strategy nest
+ using 
 \family typewriter 
--=
-\family default 
-
-\begin_inset Quotes erd
-\end_inset 
-
- (shutdown) and 
-\begin_inset Quotes eld
-\end_inset 
+$gadrcreate
+\family sans 
+, or on dynamic connector arrays.
+ Static connectors get instantiated on brick instantiation.
+\layout Itemize
 
 
-\family typewriter 
-^=
-\family default 
+\emph on 
+destruction /=
+\emph default 
 
-\begin_inset Quotes erd
-\end_inset 
+\newline 
+Removes a brick.
+ All connectors must have been completely disconnected (and thus shutdown)
+ before.
+ After this operation, another brick may be instantiated.
+\layout Itemize
 
- (reinitialization) can be performed on bricks.
- These commands invoke 
+
+\emph on 
+initialization +=
+\emph default 
+
+\newline 
+Initializes an element.
+ The 
 \family typewriter 
 $brick_init
-\family default 
- with 
-\family typewriter 
-@constr
-\family default 
+\family sans 
 , 
 \family typewriter 
-@destr
-\family default 
-, or both set to TRUE, respectively.
- This way, the complete brick lifecyle can be implemented via the strategy
- interface.
-\layout Standard
-
-Note that you don't need to specify the whole structure each time you want
- to act upon only one element of a brick.
- For example, it is sufficient to transfer the string 
-\begin_inset Quotes eld
-\end_inset 
-
-
+$input_init
+\family sans 
+ or 
 \family typewriter 
-connect my_in:=28F7C:oth_out
-\backslash 
-n
-\family default 
-
-\begin_inset Quotes erd
-\end_inset 
-
- to connect one input to some other bricks's output.
-\layout Standard
-
-As another example, when you submit a string 
-\begin_inset Quotes erd
-\end_inset 
-
-
+$output_init
+\family sans 
+ operation gets called with 
 \family typewriter 
-connect dev/=11:out
-\backslash 
-n
-\family default 
-
-\begin_inset Quotes eld
-\end_inset 
-
- along the wire to the output 
-\begin_inset Quotes erd
-\end_inset 
-
-
+constr=true
+\family sans 
+, respectively.
+ 
 \family typewriter 
-out
-\family default 
+$brick_init
+\family sans 
+, depending on the implementation, may automatically initialize certain
+ inputs and outputs, too.
+ Note that all inputs (resource users) to be initialized need to be connected
+ to an active (operating) output before this transition, but outputs (resource
+ providers) don't.
+\layout Itemize
 
-\begin_inset Quotes eld
-\end_inset 
 
- of the 
+\emph on 
+shutdown -=
+\emph default 
+
+\newline 
+Takes a brick into 'stateless' mode where it can be (re)moved without loss
+ of data.
+ This is performed through a call to 
 \family typewriter 
-device_dummy_linux
-\family default 
- instance at logical address 11 will be de-instantiated.
- With 
+*_init
+\family sans 
+ with 
 \family typewriter 
-:=
+destr=true
 \family default 
- you can afterwards create a new wire.
- Whether a parameter or an attribute of a brick (or of an input or of an
- output) can be changed at all is indicated by == versus =.
+.
+ Inactive bricks should not contain any internal variables necessary for
+ construction of an identical instance somewhere else.
+\layout Itemize
+
+
+\emph on 
+reinitialization ^=
+\emph default 
+
+\newline 
+A combination of shutdown followed by an initialization.
+ In particular, this means a call to 
+\family typewriter 
+*_init
+\family sans 
+ with both parameters 
+\family typewriter 
+constr
+\family default 
+ and 
+\family typewriter 
+destr
+\family default 
+ set to 
+\family typewriter 
+true
+\family default 
+.
+ Such an operation can be regarded a reset operation.
 \layout Standard
 
 You can use regular expressions for searching and replacing strings in a
@@ -2640,7 +2664,7 @@ fs_*
 , the string representation may induce serious performance problems.
 \layout Standard
 
-In order to address such performance issues, I have decided to add further
+In order to address such performance issues, we have decided to add further
  operations for performing manipulations inside strategy nests.
  These operations are 
 \emph on 
@@ -2667,6 +2691,25 @@ ity by strategy operations and let them automatically be called when somebody
 \layout Standard
 
 The following is experimental and may be changed in later revisions.
+\layout Standard
+
+
+\emph on 
+WARNING:
+\emph default 
+ there is an ongoing discussion about whether to remove the strategy operations
+ again.
+ Those operations are considered too specialized for a generic interface
+ (and so are avoided) by some developers.
+ A binary strategy interface (instead of the textual one) has been proposed
+ as a tradeoff between the flexibility of the generic nest interface and
+ the performance of operations.
+ Since changes in the strategy nest can be easily adapted by, well, adapter
+ bricks, strategy operations can not.
+ 
+\layout Standard
+
+Following strategy operations have been defined:
 \layout Standard
 \noindent 
 
