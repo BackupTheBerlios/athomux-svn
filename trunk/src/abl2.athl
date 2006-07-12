@@ -1,0 +1,131 @@
+Author: Hardy Kahl
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !klinux
+context cconf: !klinux
+
+brick #abl2
+
+purpose ATHOMUX brick loader for userspace linux
+
+desc
+enddesc
+
+example
+endexample
+
+
+
+
+static_data {
+  #include "control_simple2.h"
+  #include "ath_stdio.h"
+
+  // create one instance of myself
+  struct brick_abl2 brick;
+
+  // address of program brick
+  addr_t pbrickaddr;
+  char pbricktype[64];
+
+  extern void init_static_control_simple2();
+  extern void exit_static_control_simple2();
+
+  void abl2_BRICK_0_brick_init(const union connector * on, struct args * _args, const char * _param);
+
+  void _athomux_init_(char *pbrick_name, char *pbrick_param) {
+    // store name of program brick in phys_addr
+    struct args args = { .constr = TRUE, .destr = FALSE, .phys_addr = MAKE_PADDR(pbrick_name) };
+
+    // create control instance
+    init_static_control_simple2();
+
+    // connect local input to control brick
+    brick._conn_control._input_.connect = root_strategy;
+
+    // instantiate program brick
+    abl2_BRICK_0_brick_init((void *)&(brick), &args, pbrick_param);
+  }
+
+
+
+
+  void _athomux_exit_() {
+    struct args args = { .constr = FALSE, .destr = TRUE };
+
+    // deinstantiate program brick
+    abl2_BRICK_0_brick_init((void *)&(brick), &args, "");
+
+    // destroy control instance
+    exit_static_control_simple2();
+  }
+
+
+
+
+  int main(int argc, char * argv[]) {
+    // initialize the instance of myself
+    init_abl2(&brick, NULL, 0);
+
+    if (argc==2) _athomux_init_(argv[1], "");
+    else if (argc==3) _athomux_init_(argv[1], argv[2]);
+    else {
+      printf("usage: abl2 <brick_name> [<param_string>]\n");
+      return 1;
+    }
+
+    _athomux_exit_();
+
+    return 0;
+  }
+}
+
+@.define cmd (ADDR, NAME, CMD_STR, ...) {
+success_t ok;
+    char stratbuf[DEFAULT_TRANSFER];
+    athsnprintf(stratbuf, sizeof stratbuf, CMD_STR ...);
+    @=outputcall :<control$trans ((ADDR), DEFAULT_TRANSFER, MAKE_PADDR (stratbuf), direct_write) => (ok);
+    @.check (!ok, "Command to brick \"%s\" failed!", NAME);
+}
+
+operation $brick_init
+{
+  const addr_t control_addr = DEFAULT_TRANSFER;
+  
+  if (@destr && @constr) {
+    // flush state
+    // nothing to do...
+  }
+  else if (@destr) {
+    // deinintialize brick loader
+    // deinitialize program brick
+    cmd (pbrickaddr, "program", "brick-=%s {\n}\n", pbricktype);
+    // disconnect from control
+    cmd (pbrickaddr, "program", "connect strat/=%x:control\n", control_addr);
+    // deinstantiate program brick
+    cmd (pbrickaddr, "program", "brick/=%s {\n}\n", pbricktype);
+    // free memory
+    @=call :<control$delete (pbrickaddr, DEFAULT_TRANSFER) : "" => (@success);
+    @.fatal(@success!=TRUE, "delete failed");
+  }
+  else if (@constr) {
+    // initialize brick loader
+	strncpy(pbricktype, (char *)MAKE_PTR(@args->phys_addr), sizeof pbricktype);
+	pbricktype[sizeof pbricktype - 1] = '\0';
+    // allocate new memory for program brick
+    @=call :<control$gadr (DEFAULT_TRANSFER) : "" => (@success, pbrickaddr);
+    @.fatal(@success!=TRUE, "gadr failed");
+    // instantiate program brick
+    cmd (pbrickaddr, "program", "brick:=%s {\n}\n", pbricktype);
+    // connect to control
+    cmd (pbrickaddr,"program", "connect strat:=%x:control\n", control_addr);    
+    // run the program
+    cmd (pbrickaddr, "program", "brick+=%s {\n}\n", pbricktype);
+  }
+
+  @success = TRUE;
+}
+
+
+local input :<control
