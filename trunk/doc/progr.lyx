@@ -2317,13 +2317,47 @@ strat.c
 \family default 
 .
  It is just a special data format for the interpretation of the contents
- of a nest.
- Each brick instance of a network is represented by one data block.
+ of a strategy nest.
+ Currently, only 
+\family typewriter 
+#control_simple
+\family default 
+ and 
+\family typewriter 
+#control_simple2
+\family default 
+ provide such a strategy nest 
+\begin_inset Quotes eld
+\end_inset 
+
+from scratch
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ Use the latter one in the future, as the first one will not be developed
+ any further.
+ 
+\family typewriter 
+#control_simple2
+\family default 
+ was forked off when certain developments in brick creation/ destruction/
+ connection caused severe incompatibilities that would have rendered existing
+ code non-functional.
+\layout Standard
+
+By now, there exists a number of strategy modifying bricks that perform
+ certain functions, like hiding or merging parts of the global strategic
+ structure.
+ But they all rely on some strategy nest(s) provided to them at their inputs.
+\layout Standard
+
+Each brick instance of a network is represented by one data block.
  Currently its size is limited by 
 \family typewriter 
 DEFAULT_TRANSFER
 \family default 
-, but this may be changed at a later revision.
+, but this may change at a later revision or new version.
  Each brick instance is represented by a 
 \family typewriter 
 NULL
@@ -2339,7 +2373,7 @@ trans-read
 brick==some_brick {
 \layout LyX-Code
 
-  b_param some_brick=This is some brick, eh?
+  b_param some_brick=This is some brick
 \layout LyX-Code
 
   attr some_attr=some_setting
@@ -2351,7 +2385,7 @@ brick==some_brick {
   input==whatever {
 \layout LyX-Code
 
-    c_param whatever=This is some input, eh?
+    c_param whatever=This is some input
 \layout LyX-Code
 
     attr physio=:>stuff
@@ -2382,6 +2416,8 @@ brick==some_brick {
 \layout LyX-Code
 
 }
+\layout LyX-Code
+
 \layout Standard
 
 Lines are terminated by linefeeds (
@@ -2395,9 +2431,8 @@ n'
  and external connectors are listed.
  Currently, attributes are set statically in the source code, but this will
  change in the future: instance attributes will be introduced whose values
- are set on brick initialization.
- They will probably replace the parameter strings, so better consider them
- deprecated.
+ are determined on brick initialization.
+ They will probably replace the parameter strings in the future.
  Elements of the brick (even the brick itself) may appear in parentheses
  to signal an inoperable state.
  Such elements have been 
@@ -2610,7 +2645,7 @@ You can use regular expressions for searching and replacing strings in a
  generic strategy nest.
  The intention behind this approach is to ease the development of 
 \emph on 
-universally generic
+universal, generic
 \emph default 
  
 \family typewriter 
@@ -2627,6 +2662,36 @@ transformations
  by tree automata, by L-systems, or by some expert system, or by many other
  methodologies developed in theoretical computer science or artificial intellige
 nce.
+\layout Standard
+
+When you read a nest range that was formerly occupied by the information
+ string of a brick instance, but has been deleted, the read operation at
+ this place will succeed, although it will return a string of length 0.
+ This is contrary to the behavior when trying to read from a nest address
+ range that has never been used before.
+ The 
+\family typewriter 
+$trans
+\family default 
+ operation will fail there! This technique allows you to analyze the whole
+ strategical structure in this scope and allows for, i.e., automatic clean-up
+ operations.
+ To get a strategical overview, just keep reading the strategy nest from
+ the beginning until the 
+\family typewriter 
+$trans
+\family default 
+ operation fails.
+\layout Standard
+
+
+\emph on 
+Note:
+\emph default 
+ this technique is just a dirty hack and should be replaced by a nicer method,
+ like a metanest describing the structure of the strategy nest.
+ Nonetheless, it works and can safely been kept for a while, for backwards
+ compatibility.
 \layout Subsection
 
 Additional Strategy Operations
@@ -2697,8 +2762,7 @@ The following is experimental and may be changed in later revisions.
 \emph on 
 WARNING:
 \emph default 
- there is an ongoing discussion about whether to remove the strategy operations
- again.
+ there is an ongoing discussion about whether to remove the strategy operations.
  Those operations are considered too specialized for a generic interface
  (and so are avoided) by some developers.
  A binary strategy interface (instead of the textual one) has been proposed
