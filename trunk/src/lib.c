@@ -492,39 +492,40 @@ void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * a
   ADD_UNINITIALIZED(putdeletepadr,sect,),                                     \
   ADD_UNINITIALIZED(gadrtranswaitdeletepadr,sect,),                           \
   ADD_UNINITIALIZED(gadrcreatetranswaitpadr,sect,),                           \
-},
+}
 
-                                                                              \
 #define ADD_ALL_UNINITIALIZED_INPUT(sect)                                     \
 {                                                                             \
   ADD_UNINITIALIZED(input_init,sect,-opcode_output_max-1),                    \
   ADD_UNINITIALIZED(retract,sect,-opcode_output_max-1),                       \
 }
-                                                                              \
+
 #define ADD_ALL_UNINITIALIZED_BRICK(sect)                                     \
+{                                                                             \
   ADD_UNINITIALIZED(brick_init,sect,-opcode_input_max-1),                     \
 }
 
-output_operation_set uninitialized_output[4] = {
-  ADD_ALL_UNINITIALIZED_OUTPUT(0)
-  ADD_ALL_UNINITIALIZED_OUTPUT(1)
-  ADD_ALL_UNINITIALIZED_OUTPUT(2)
-  ADD_ALL_UNINITIALIZED_OUTPUT(3)
+const output_operation_set uninitialized_output[4] = {
+  ADD_ALL_UNINITIALIZED_OUTPUT(0),
+  ADD_ALL_UNINITIALIZED_OUTPUT(1),
+  ADD_ALL_UNINITIALIZED_OUTPUT(2),
+  ADD_ALL_UNINITIALIZED_OUTPUT(3),
 };
-#if 0
-input_operation_set uninitialized_input[4] = {
-  ADD_ALL_UNINITIALIZED_INPUT(0)
-  ADD_ALL_UNINITIALIZED_INPUT(1)
-  ADD_ALL_UNINITIALIZED_INPUT(2)
-  ADD_ALL_UNINITIALIZED_INPUT(3)
+#if 1
+const input_operation_set uninitialized_input[4] = {
+  ADD_ALL_UNINITIALIZED_INPUT(0),
+  ADD_ALL_UNINITIALIZED_INPUT(1),
+  ADD_ALL_UNINITIALIZED_INPUT(2),
+  ADD_ALL_UNINITIALIZED_INPUT(3),
 };
 
-brick_operation_set uninitialized_brick[4] = {
-  ADD_ALL_UNINITIALIZED_BRICK(0)
-  ADD_ALL_UNINITIALIZED_BRICK(1)
-  ADD_ALL_UNINITIALIZED_BRICK(2)
-  ADD_ALL_UNINITIALIZED_BRICK(3)
+const brick_operation_set uninitialized_brick[4] = {
+  ADD_ALL_UNINITIALIZED_BRICK(0),
+  ADD_ALL_UNINITIALIZED_BRICK(1),
+  ADD_ALL_UNINITIALIZED_BRICK(2),
+  ADD_ALL_UNINITIALIZED_BRICK(3),
 };
+
 #endif
 name_t op_names[opcode_brick_max+1] = {
   // OUTPUT OPCODES
