@@ -1,0 +1,34 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+//context pconf: *
+//context cconf: *
+
+brick #identity
+
+purpose pure dummy, just forwards any ops 1:1 between :<in and :>out
+
+input :<in
+
+	attr physio = :>out
+	attr logio = :>out
+	attr dyn = :>out
+	attr addr = :>out
+	attr lock = :>out
+
+	operation $op {
+		@=inputcall :>out$op @args;
+	}
+	
+output :>out
+
+	attr physio = :<in
+	attr logio = :<in
+	attr dyn = :<in
+	attr addr = :<in
+	attr lock = :<in
+
+	operation $op {
+		@=inputcall :<in$op @args;
+	}
