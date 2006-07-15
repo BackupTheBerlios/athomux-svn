@@ -1,0 +1,187 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+//context pconf: *
+//context cconf: *
+
+brick #heap
+
+purpose Implement heap functionality on a resource nest
+
+desc
+This brick implements heap functionality ($gadr/$padr) on an existing nest.
+$gadr and $padr don't need to be called pairwise, i.e., $padr does not need to match former $gadr calls exactly.
+Saves a configuration table of size DEFAULT_TRANSFER at address 0 in :<tmp. :<tmp must support pairwise $create, $delete, $get, $put and $transwait.
+If :<tmp has not been connected until brick initialization, state information will be placed in :<in instead.
+Use :<tmp only if you want to keep configuration information in a separate nest (e.g., for performance reasons or insufficient capabilities of :<in).
+enddesc
+
+static_data {
+	struct rec {
+		addr_t addr;
+		len_t len;
+	};
+}
+
+@.define STATE_SIZE (DEFAULT_TRANSFER)
+@.define N_RECS_MAX ((DEFAULT_TRANSFER - sizeof (index_t)) / sizeof (struct rec))
+
+operation $brick_init {
+	success_t ok;
+	if (@destr && !@constr) {
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$delete (0, STATE_SIZE) => (ok); }
+		else { @=outputcall :<in$delete (0, STATE_SIZE) => (ok); }
+		@.warn (!ok, "Could not delete state!");
+	}
+	if (IS_INPUT_CONNECTED (@:<tmp)) {
+		@=inputcall :<tmp$input_init (@destr, @constr) => (ok);
+		@.check (!ok, "Could not init :<tmp!");
+	}
+	@=inputcall :<in$input_init (@destr, @constr) => (ok);
+	@.check (!ok, "Could not init :<in!");
+	@=outputcall :>out$output_init (@destr, @constr) => (ok);
+	@.check (!ok, "Could not init :>out!");
+	if (@constr && !@destr) {
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$create (0, STATE_SIZE, TRUE) => (ok); }
+		else { @=outputcall :<in$create (0, STATE_SIZE, TRUE) => (ok); }
+		@.check (!ok, "Could not create state!");
+		@success = TRUE;
+	}
+}
+
+input :<tmp
+
+input :<in
+
+	attr physio = :>out
+	attr logio = :>out
+	attr dyn = :>out
+	attr addr = none
+	attr lock = none
+
+output :>out
+
+	operation $gadr {
+		// simple strategy: always allocate new address space right behind the last block in the list.
+		// Under certain circumstances(*), we could get out of free address space after a while, but most probably we will run out of records first.
+		// (*): this would fail soon:
+		//            :>out$gadr (1) => (success, addr0);
+		//            while (1) {
+		//                :>out$gadr (0x100000000) => (success, addr);
+		//                :>out$padr (addr0 + 1, addr - (addr0 + 1));
+		//            }
+		success_t ok;
+		paddr_t state_addr;
+		plen_t state_len;
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		else { @=outputcall :<in$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		@.check (!ok || state_len < STATE_SIZE, "Could not get state!");
+		index_t *const n_recs = (index_t *)MAKE_PTR (state_addr);
+		struct rec *const recs = (struct rec *)MAKE_PTR (state_addr + sizeof *n_recs);
+		@.check (*n_recs >= N_RECS_MAX, "No more records available!");
+		if (*n_recs > 0) {
+			//TODO: check for depletion of address resources!
+			@log_addr = recs[*n_recs].addr = recs[*n_recs - 1].addr + recs[*n_recs - 1].len;
+			recs[*n_recs].len = @log_len;
+		}
+		else {
+			@log_addr = recs[0].addr = STATE_SIZE;
+			recs[0].len = @log_len;
+		}
+		(*n_recs)++;
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (0, STATE_SIZE) => (ok); }
+		else { @=outputcall :<in$put (state_addr, state_len) => (ok); }
+		@.check (!ok, "Could not put state!");
+		@success = TRUE;
+	}
+	
+	operation $padr {
+		if (@log_len == 0) {
+			@success = TRUE;
+			return;
+		}
+		success_t ok;
+		paddr_t state_addr;
+		plen_t state_len;
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		else { @=outputcall :<in$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		@.check (!ok || state_len < STATE_SIZE, "Could not get state!");
+		index_t *const n_recs = (index_t *)MAKE_PTR (state_addr);
+		struct rec *const recs = (struct rec *)MAKE_PTR (state_addr + sizeof *n_recs);
+		trace ("$padr the nest range [0x%llX..0x%llX]\n", @log_addr, @log_addr + @log_len);
+		if (*n_recs > 0) {
+			// binary search for first record to be affected
+			index_t left = 0;
+			index_t right = *n_recs;
+			while (right - left > 0) {
+				index_t mid = (left + right) / 2;
+				if (recs[mid].addr <= @log_addr && recs[mid].addr + recs[mid].len > @log_addr) {
+					// Found our element, shortcut.
+					left = right = mid;
+				}
+				else if (recs[mid].addr < @log_addr) left = mid + 1;
+				else right = mid;
+			}
+			if (left < *n_recs) {
+				struct rec *rec = &recs[left];
+				if (rec->addr < @log_addr && rec->addr + rec->len > @log_addr + @log_len) {
+					trace ("Cutting a hole into record [0x%llX..0x%llX]\n", rec->addr, rec->addr + rec->len);
+					// Nest range to be $padr'ed truly contained inside one record. Split it.
+					@.check (*n_recs >= N_RECS_MAX, "No more records available!");
+					// Insert space for the right half of the split block.
+					// TODO: this might be done by $move in the future.
+					memmove(rec + 1, rec, (*n_recs - left) * sizeof (struct rec));
+					(*n_recs)++;
+					(rec + 1)->addr = @log_addr + @log_len;
+					(rec + 1)->len = rec->len - ((rec + 1)->addr - rec->addr);
+					rec->len = @log_addr - rec->addr;
+				}
+				else {
+					trace ("Starting $padr at record [0x%llX..0x%llX]\n", rec->addr, rec->addr + rec->len);
+					if (rec->addr < @log_addr + @log_len) {
+						// Yes, there are any records at all overlapping the specified nest range.
+						if (rec->addr < @log_addr) {
+							trace ("Shortening record [0x%llX..0x%llX]\n", rec->addr, rec->addr + rec->len);
+							// A record overlaps the left border of the nest region to be $padr'ed.
+							rec->len = @log_addr - rec->addr;
+							rec++;
+							left++;
+						}
+						// Determine the records to be deleted completely := [left..right-1]
+						right = left;
+						while (rec->addr + rec->len <= @log_addr + @log_len) {
+							// One more record completely inside the specified nest range. Will be deleted.
+							rec++;
+							right++;
+						}
+						if (right - left > 0) {
+							// Delete the blocks completely contained insider the range to be $padr'ed.
+							trace ("Removing %d records in the range [0x%llX..0x%llX]\n", right - left, recs[left].addr, recs[right - 1].addr + recs[right - 1].len);
+							memmove(&recs[left], &recs[right], *n_recs - right);
+							*n_recs -= right - left;
+							right = left;
+							rec = &recs[right];
+						}
+						if (rec->addr < @log_addr + @log_len) {
+							trace ("One record [0x%llX..0x%llX] on the right remaining. Shortening it.\n", rec->addr, rec->addr + rec->len);
+							// A record overlaps the right border of the nest region to be $padr'ed.
+							rec->len -= @log_addr + @log_len - rec->addr;
+							rec->addr = @log_addr + @log_len;
+						}
+					}
+				}
+			}
+		}
+		else {
+			trace ("No records exist at all.\n");
+		}
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (state_addr, state_len) => (ok); }
+		else { @=outputcall :<in$put (0, STATE_SIZE) => (ok); }
+		@.check (!ok, "Could not put state!");
+		@success = TRUE;
+	}
+	
+	operation $op {
+		@=outputcall :<in$op @args;
+	}
