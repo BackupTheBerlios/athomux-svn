@@ -284,7 +284,7 @@ static struct connector_header * find_param(struct brick_header * brick,
 
 static void create_conn(struct brick_header * brick, struct connector_header * conn, const struct load_conn * load_conn, index_t index)
 {
-  if (brick->connectors) printf("brick->connectors is brick '%s' ", brick->connectors->load_conn->name);
+  //if (brick->connectors) printf("brick->connectors is brick '%s' ", brick->connectors->load_conn->name);
   printf("now creating conn '%s'@%lX\n", load_conn->name, (long)conn);
   conn->belonging = brick;
   conn->load_conn = load_conn;
@@ -297,7 +297,7 @@ static void create_conn(struct brick_header * brick, struct connector_header * c
   } else {
     conn->instance = brick->instance + load_conn->offset + load_conn->size * index;
   }
-  if (brick->connectors) printf("brick->connectors is now brick '%s'\n", brick->connectors->load_conn->name);
+  //if (brick->connectors) printf("brick->connectors is now brick '%s'\n", brick->connectors->load_conn->name);
 }
 
 static void insert_conn(struct brick_header * brick, struct connector_header * conn)
@@ -464,13 +464,9 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
   for(conn = brick->connectors; conn; conn = conn->conn_next) {
     if (conn->load_conn->type) continue;
     if (conn->c_param) {
-      PR("  input=%s {\n", conn->load_conn->name);
-      if (*conn->c_param) {
-        PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
-      }
-    }
-    else {
-      PR("  (input)=%s {\n", conn->load_conn->name);
+    PR("  input=%s {\n", conn->load_conn->name);
+    if (conn->c_param && *conn->c_param) {
+      PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
     }
     PR("%s", conn->load_conn->static_info);
     if (conn->link.first) {
@@ -492,14 +488,9 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
   // produce output info
   for(conn = brick->connectors; conn; conn = conn->conn_next) {
     if (!conn->load_conn->type) continue;
-    if (conn->c_param) {
-      PR("  output=%s {\n", conn->load_conn->name);
-      if (*conn->c_param)
-        PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
-    }
-    else {
-      PR("  (output)=%s {\n", conn->load_conn->name);
-    }
+    PR("  output=%s {\n", conn->load_conn->name);
+    if (conn->c_param && *conn->c_param)
+      PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
     if (conn->link.first) {
         PR("%s    connect %s=", conn->load_conn->static_info, conn->load_conn->name);
         struct connector_link * chain;
@@ -668,7 +659,7 @@ static_exit {
 // static exit of all other brick types
 const struct loader ** loader;
 for(loader = loaders; *loader; loader++) {
-  if ((*loader)->static_exit != &exit_static_control_simple)
+  if (*loader != &loader_control_simple && *loader != &loader_control_simple2)
     (*loader)->static_exit();
 }
 }
@@ -830,7 +821,7 @@ operation $instconn
   }
   conn1->conn_index = conn->c_index;
   @success = TRUE;
-  trace("instantiated '%s' index %d c_param '%s'\n", conn1->conn_name, conn1->conn_index, @param);
+  trace("created '%s' index %d c_param '%s'\n", conn1->conn_name, conn1->conn_index, @param);
 }
 
 operation $deinstconn
