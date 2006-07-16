@@ -463,7 +463,6 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
   // produce input info
   for(conn = brick->connectors; conn; conn = conn->conn_next) {
     if (conn->load_conn->type) continue;
-    if (conn->c_param) {
     PR("  input=%s {\n", conn->load_conn->name);
     if (conn->c_param && *conn->c_param) {
       PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
@@ -646,7 +645,7 @@ struct args args = { .constr = TRUE, .destr = FALSE };
 loader_control_simple.init_brick((void*)root_instance, &args, "");
 @.rawfatal (!args.success, "Initialization of root control brick failed!");
 gen_info(boot, buf, sizeof buf);
-printf("Strategy brick:\n%s\n", buf);
+printf("#control_simple:\n%s\n", buf);
 struct conn_info root_conn1 = {0, 0, "control" };
 struct args args1 = { .conn1 = &root_conn1, };
 //root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
