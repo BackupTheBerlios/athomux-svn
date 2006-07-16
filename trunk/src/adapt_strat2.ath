@@ -1,0 +1,149 @@
+  Author: Thomas Schoebel-Theuer
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+strategy brick #adapt_strat
+purpose convert $trans operations into strategy operations
+desc
+  Provisionary implementation
+enddesc
+
+input :<strat
+
+output :>control
+
+operation $op
+{
+  @=call :<strat$op @args;
+}
+
+operation $trans
+{
+  if(@direction == direct_read) {
+    // NYI .....
+    @=call :<strat$op @args;
+  } else if(@direction == direct_write) {
+    const char * buf = MAKE_PTR(@phys_addr);
+    struct conn_info conn1 = { .conn_addr = @log_addr, };
+    struct conn_info conn2 = {};
+    @conn1 = &conn1;
+    @conn2 = &conn2;
+    for(;;) {
+      @success = FALSE;
+      int code = scan_multi(&buf, strat_keywords, strat_keylens, scod_max);
+      char op;
+      switch(code) {
+      case scod_brick:
+        op = scan_op(&buf);
+        scan_table_copy(&buf, id_table, @name, sizeof(@name));
+        if(op == ':' || op == '+' || op == '-' || op == '^') {
+          char *param_str = "";
+          printf("operation \"%c\" on \"%s\"\n", op, @name);
+          if (op == '+') {
+            // Check optional param string on brick initialization.
+            skip_line(&buf);
+            const char *tmp = buf;
+            static const char b_param_keyword[] = "b_param";
+            trace ("Now looking for param string\n");
+            tmp = scan_single(buf, b_param_keyword, sizeof b_param_keyword - 1);
+            if (tmp) {
+              trace ("Found param string\n");
+              buf = tmp;
+              skip_blanks(&buf);
+              if (scan_op (&buf) == ':') {
+                const char *end;
+                trace ("Found \":=\"\n");
+                skip_blanks(&buf);
+                tmp = buf;
+                skip_line(&buf);
+                end = buf;
+                if (end - tmp > 0 && *(end - 1) == '\n') {
+                  end--;
+                }
+                param_str = malloc(end - tmp + 1);
+                @.check (!param_str, "Could not allocate param string!");
+                strncpy(param_str, tmp, end - tmp);
+                param_str[end - tmp] = '\0';
+                trace ("param string is \"%s\"\n", param_str);                  
+              }
+              else {
+                trace ("No \":=\" found\n");
+              }
+            }
+            else {
+              trace ("No param string specified!");
+            }
+          }
+          @constr = ((op == '+') | (op == '^'));
+          @destr = ((op == '-') | (op == '^'));
+          @=call :<strat$instbrick @args : param_str;
+          if(!@success) {
+            return;
+          }
+        } else if(op == '/') { // delete it
+          @destr = TRUE;
+          @=call :<strat$deinstbrick @args;
+          return;
+        }
+        else {
+          fprintf(stderr, "Unknown operation \'%c\\n'", op);
+          skip_line(&buf);
+        }
+        continue;
+      case scod_input:
+        //@.warn("input translation NYI");
+      case scod_output:
+        op = scan_op(&buf);
+        if(!scan_connstr(&buf, &conn1)) {
+          return;
+        }
+        if(op == ':' || op == '+' || op == '-' || op == '^') {
+          printf("operation %c on \"%s\"\n", op, @name);
+          @constr = (op == '+' || op == '^');
+          @destr = (op == '-' || op == '^');
+          @=call :<strat$instconn @args;
+        } else if(op == '/') {
+          @constr = FALSE;
+          @destr = TRUE;
+          @=call :<strat$deinstconn @args;
+        } else {
+          goto skip;
+        }
+      test:
+        if(!@success)
+          return;
+      skip:
+        skip_line(&buf);
+        continue;
+      case scod_connect:
+        if(!scan_connstr(&buf, &conn1)) {
+          return;
+        }
+        trace("connect %llX:%s\n", conn1.conn_addr, conn1.conn_name);
+        op = scan_op(&buf);
+        if(op == '/') { // delete
+          @=call $disconnect @args;
+          goto test;
+        }
+        if(op != ':') {
+          trace("Unkown op \'%c\'\n", op);
+          goto skip;
+        }
+        trace("new connections:\n");
+        while(scan_connstraddr(&buf, &conn2)) {
+          trace("connect to %llX:%s\n", conn2.conn_addr, conn2.conn_name);
+          @success = FALSE;
+          @=call $connect @args;
+          if(!@success) {
+            return;
+          }
+        }
+        goto skip;
+      default:
+        @success = TRUE;
+      }
+      puts("Done");
+      return;
+    }
+  }
+}
