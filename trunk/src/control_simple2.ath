@@ -642,10 +642,10 @@ root_strategy->ops[0][opcode_connect]((void*)root_strategy, &args2, "");
 }
 
 static_exit {
-// static exit of all other brick types
+// static exit of all other brick types (except of control_* bricks)
 const struct loader ** loader;
 for(loader = loaders; *loader; loader++) {
-  if ((*loader)->static_exit != &exit_static_control_simple2)
+  if (*loader != &loader_control_simple && *loader != &loader_control_simple2)
     (*loader)->static_exit();
 }
 }
@@ -663,15 +663,15 @@ init {
 
 ///////////////////////////////////////////////////////////////////////////
 
-instance #adapt_strat as adapt;
+instance #adapt_strat2 as adapt;
 wire :<strat as :>control;
 
 operation $brick_init {
-  trace ("#control_simple$brick_init(constr==%d destr==%d called\n", @constr, @destr);
+  trace ("#control_simple2$brick_init(constr==%d destr==%d called\n", @constr, @destr);
   INIT_ALL_INPUTS ();
   INIT_ALL_INSTANCES ();
   INIT_ALL_OUTPUTS ();
-  trace ("Initialization of #control_simple successful\n");
+  trace ("Initialization of #control_simple2 successful\n");
   @success = TRUE;
 }
 
@@ -680,7 +680,7 @@ input :<hook
 output :>control
 
 operation $output_init {
-  trace ("#control_simple:>control$output_init called!\n");
+  trace ("#control_simple2:>control$output_init called!\n");
   @success = TRUE;
 }
 
@@ -990,12 +990,12 @@ operation $trans
   @success = TRUE;
 }
 
-operation $wait,$create,$delete
+operation $wait,$create,$delete,$padr,$deletepadr
 {
   @success = TRUE;
 }
 
-operation $get,$createget
+operation $get,$createget,$gadrcreateget
 {
   @.abort("not implemented");
 }
@@ -1005,7 +1005,7 @@ operation $put
   @.abort("not implemented");
 }
 
-operation $gadr
+operation $gadr,$gadrcreate
 {
   // no real freespace management, just allocate new virtual address each time
   // ignore input parameters
