@@ -1,0 +1,155 @@
+Author: Hardy Kahl, Roland Niese
+Copyright: Hardy Kahl
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: ulinux*
+context cconf: ulinux*
+
+brick #strategy_display2
+
+purpose displays bricks and wiring
+
+desc
+	- $brick_init expects filename in @param ("fname=<name>")
+	- depends on the existence of the programs "graphviz" and "display"
+	- first is usually available at "graphviz.org", but usually also available as native package for various operating systems.
+	- the latter may be contained with other programs, e.g., lyx.
+	- creates "<fname>.dot" and "<fname>.ps"
+	- repeatedly creates and displays those files. Close the display window to trigger a reconstruction
+
+            +----------------------------------------------------+
+            |                                                    |
+            |     +--------------+       +---------------+       |
+    strat --+-----+ strat_dot2   +--   --+ thread_ulinux +--     |
+            |     +--------------+       +---------------+       |
+            |                                                    |
+            +----------------------------------------------------+
+
+enddesc
+
+static_data {
+	#include "param_scanner.h"
+	#include <limits.h>
+	#include <errno.h>
+	#include <unistd.h>
+	#include <wait.h>
+}
+
+data {
+	#define STRBUFLEN 256
+	char fname[STRBUFLEN];
+}
+
+instance #strat_dot2 as sg;
+alias :<strat as :<strat;
+wire :>dot as :<graph;
+
+instance #thread_ulinux as th;
+wire :<exec as :>gloop;
+
+operation $brick_init
+{
+	if (@destr) {
+		@=inputcall :<graph$input_init (@destr, @constr) => ();
+		INIT_ONE_INSTANCE (th, "");
+		INIT_ONE_INSTANCE (sg, "");
+		@=outputcall :>gloop$output_init (@destr, @constr) => ();
+		@success = TRUE;
+		//don't exit aliases: @=inputcall :<strat$input_init (@destr, @constr) => ();
+	}
+	if (@constr) {
+		const char *str;
+		int str_len;
+		success_t succ;
+		
+		@.check (!param_check (@param, "fname", &str, &str_len), "Parameter \"fname\" missing!");
+		strncpy(@#.fname, str, STRBUFLEN);
+		@#.fname[STRBUFLEN - 1] = '\0';
+		
+		//don't init aliases: @=inputcall :<strat$input_init (@destr, @constr) => (succ);
+		@=outputcall :>gloop$output_init (@destr, @constr) => (succ);
+		@.check(!succ, "init failed on local output");
+		INIT_ONE_INSTANCE (sg, "");
+		INIT_ONE_INSTANCE (th, "");
+		@=inputcall :<graph$input_init (@destr, @constr) => (succ);
+		
+		// start thread
+		@=call ##th:>cpu$wait [@mandate] (@args) : "";
+		@.check(@success!=TRUE, "thread failed");
+		@success = TRUE;
+	}
+}
+
+
+local input :<graph
+
+local output :>gloop
+
+@.func gen_loop()
+{
+	#define BUFSIZE (DEFAULT_TRANSFER*10)
+	char buf[BUFSIZE];
+	success_t succ;
+	plen_t plen;
+	size_t ret;
+	pid_t pid;
+
+	char dotfile[STRBUFLEN];
+	char psfile[STRBUFLEN];
+	strcpy(dotfile, @#.fname);
+	strcpy(psfile, @#.fname);
+	strncat(dotfile, ".dot", STRBUFLEN-1);
+	strncat(psfile, ".ps", STRBUFLEN-1);
+
+	while (1) {
+		@=call :<graph$transwait [@mandate] (0, BUFSIZE, MAKE_PADDR(buf), direct_read) => (succ, plen);
+		@.check(succ!=TRUE, "cannot read graph");
+
+		//trace ("Read graph: \"%s\"\n", buf);
+
+		// write graph to file
+		plen--;
+		FILE *fd=fopen(dotfile, "w");
+		@.check (!fd, "cannot create file");
+		plen_t sum = 0;
+		while (sum < plen) {
+			ret = fwrite(buf+sum, 1, plen-sum, fd);
+			if (ret>0) sum+=ret;
+		}
+		fclose(fd);
+
+		// convert graph to postscript
+		pid = fork();
+		@.check(pid<0, "cannot fork");
+		if (pid==0) {
+			execlp("dot", "", "-Gsize=7,10", "-Tps", "-o", psfile, dotfile, NULL);
+			@.msg("ERROR", "cannot exec \"dot\": %s", strerror(errno));
+			exit(1);
+		}
+		else {
+			int status;
+			@.check (waitpid(pid, &status, 0) != pid, "failed to wait for child 'dot' to exit");
+			@.check (!WIFEXITED(status) || WEXITSTATUS(status) != 0, "execution of 'dot' returned an error!");
+		}
+
+		// display postscript
+		pid = fork();
+		@.check(pid<0, "cannot fork");
+		if (pid==0) {
+			execlp("display", "", "-density", "150", psfile, NULL);
+			@.msg ("ERROR", "cannot exec \"display\": %s", strerror(errno));
+			exit(2);
+		}
+		else {
+			int status;
+			@.check (waitpid(pid, &status, 0) != pid, "failed to wait for child 'display' to exit");
+			@.check (!WIFEXITED(status) || WEXITSTATUS(status) != 0, "execution of 'display' returned an error!");
+		}
+	}
+}
+
+operation $wait
+{
+	gen_loop();
+	@success = TRUE;
+}
