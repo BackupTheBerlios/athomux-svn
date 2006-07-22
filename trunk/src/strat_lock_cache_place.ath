@@ -1,0 +1,248 @@
+Author: Roland Niese
+Copyright: Roland Niese
+License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+// replace device_timer_ulinux to make this brick fit for other environments
+context pconf: ulinux*
+context cconf: ulinux*
+
+strategy brick #strat_lock_cache_place
+
+purpose automatic placement of lock caches
+
+desc
+This brick checks for the need of lock caches on brick initialization. A bricks inputs must have been connected prior to their being initialized.
+Note that on connection of an input, the output connected to need not be initialized. No timing checks can be made on it.
+So, not connection is the time to check for brick placement, but input initialization. 
+enddesc
+
+static_data {
+	#include "ath_stdio.h"
+	#include "binstrat.h"
+	
+	#define TIMER_BRICK_TYPE "op_timer_ulinux"
+}
+
+data {
+	addr_t strat_addr_this;
+	addr_t strat_addr_timer;
+}
+
+	// Find a certain or any (if name == NULL) brick from "start_addr".
+	// Read out its strategy information and return it in binary form.
+	@.func find_brick (const char *name, addr_t addr, void *const binbuf, const size_t binbuf_size) => (addr_t brick_addr) {
+		success_t ok;
+		brick_addr = 0;
+		void *bin;
+		size_t bin_size;
+		struct brick_rec *brick_info = (struct brick_rec *)binbuf;
+		while (!brick_addr) {
+			char textbuf[DEFAULT_TRANSFER];
+			plen_t textbuf_len;
+			const char *_text = textbuf;
+			@=outputcall :<strat$trans (addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok, textbuf_len);
+			if (!ok) break;
+			if (textbuf_len == 0) continue;
+			bin = binbuf;
+			bin_size = binbuf_size;
+			@.check (!convert_brick(&_text, &bin, &bin_size), "Could not read brick at 0x%llX!\n", addr);
+			if (!name || strcmp(name, brick_info->name) == 0) {
+				brick_addr = addr;
+			}
+			addr += DEFAULT_TRANSFER;
+		}
+	}
+	
+	@.func test_connection (struct conn_rec *input) => (success_t success, len_t latency_microsec) {
+		success = FALSE;
+		latency_microsec = 0;
+		success_t ok;
+		trace ("Testing connection \"%s\"\n", input->name);
+		@.check (!IS_CONN_INPUT (*input), "Connector is no input!");
+		@.check (!input->target, "Input is not connected!");
+		// Connect timer brick to connection to be tested.
+		if (athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, @#._mand, "connect ping:=%L:%s\n", input->target->brick_addr, input->target->name)) {
+			// Activate the timer brick.
+			if (athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, @#._mand, "brick+=op_timer_ulinux{\n}\n")) {
+				// Activate this strategy brick's connection to the timer brick.
+				@=inputcall :<ping$input_init (FALSE, TRUE) => (ok);
+				if (ok) {
+					// Send an effectless operation throught the timer brick to the next lock manager.
+					@=outputcall :<ping$unlock [@#._mand] (0, (len_t)-1) => (ok);
+					if (ok) {
+						// Read the time the operation took.
+						latency_microsec = 123;
+						@=outputcall :<ping(:1:)$transwait (0, (len_t)sizeof (len_t), MAKE_PADDR (&(latency_microsec)), direct_read) => (ok);
+						if (ok) {
+							trace ("The connection has a latency of %lldµs.\n", latency_microsec);
+							success = TRUE;
+						}
+						else { @.msg ("ERROR", "Could not measure the connection\'s latency!"); }
+					}
+					else { @.msg ("ERROR", "Could not reach any lock manager for latency measure!"); }
+					// Shutdown this strategy brick's connection to the timer brick.
+					@=inputcall :<ping$input_init (FALSE, TRUE) => (ok);
+				}
+				else { @.msg ("ERROR", "Could not init :<ping!"); }
+				// Shutdown the timer brick.
+				athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, @#._mand, "brick-=op_timer_ulinux{\n}\n");
+			}
+			else { @.err("Could not initialize timer brick!"); }
+			// Disconnect timer brick from tested connection.
+			athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, @#._mand, "connect ping/=%L:%s\n", input->target->brick_addr, input->target->name);
+		}
+		else { @.msg ("ERROR", "Could not connect timer brick!"); }
+	}
+	
+	// Replaces the connection at "input" with a connection to a lock_cache that in turn gets connected to input's original connection target.
+	// Returns the new cache brick's address on success, 0 on failure.
+	@.func insert_cache (addr_t brick_addr, struct brick_rec *brick_info, struct conn_rec *input) => (addr_t cache_addr) {
+		trace ("insert cache at \":<%s\"\n", input->name);
+		success_t ok;
+		@.check (!IS_CONN_INPUT (*input), "Connector is no input!");
+		@.check (!input->target, "Input is not connected!");
+		// Create a new lock cache instance.
+		@=outputcall :<strat$gadrcreate (DEFAULT_TRANSFER) => (ok, cache_addr);
+		if (ok) {
+			if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick:=lock_cache{\n}\n")) {
+				const struct conn_target_rec *target = input->target;
+				// Remove the connection the cache is to replace.
+				trace ("other side is 0x%llX:%s\n", target->brick_addr, target->name);
+				if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s/=0x%llX:%s\n", input->name, target->brick_addr, target->name)) {
+					// Connect the cache to the output to be cached.
+					if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=0x%llX:%s\n", target->brick_addr, target->name)) {
+						// Connect the client input to the lock cache.
+						if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=0x%llX:out\n", input->name, cache_addr)) {
+							// Activate the cache just inserted.
+							if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick+=lock_cache{\n}\n")) {
+								// All operations succeeded, lock cache inserted.
+								return;
+							}
+						}
+						@.fatal (!athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=0x%llX:%s\n", target->brick_addr, target->name), "Could not unconnect the lock cache from the cached output!");
+					}
+					@.fatal (!athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=0x%llX:%s\n", input->name, target->brick_addr, target->name), "Could not reconnect the two bricks after failure!");
+				}
+				athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick/=lock_cache{\n}\n");
+			}
+			@=outputcall :<strat$deletepadr (cache_addr, DEFAULT_TRANSFER) => ();
+		}
+		// Indicate failure 
+		cache_addr = 0;
+	}
+	
+operation $brick_init {
+	char binbuf[DEFAULT_TRANSFER];
+	success_t ok;
+	if (@destr) {
+		// Destroy timer brick.
+		@.check (!athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, 0, "brick/=" TIMER_BRICK_TYPE "{\n}\n"), "Could not deinstantiate timer brick!");
+		@=outputcall :<strat$deletepadr (@#.strat_addr_timer, DEFAULT_TRANSFER) => (ok);
+		@.check (!ok, "Could not free timer brick!");
+	}
+	// Initialize inputs and outputs. Order doesn't matter.
+	// Do not init :<ping, is (de)initialized on demand.
+	@=inputcall :<strat$input_init (@destr, @constr) => (ok);
+	@.check (!ok, "Could not init :<strat!");
+	@=outputcall :>control$output_init (@destr, @constr) => (ok);
+	@.check (!ok, "Could not init :>control!");
+	// Find out own address in strategy nest.
+	if (@constr) {
+		// FIXME: This call only works if following preconditions apply:
+		// (a) this brick can be found in :<strat, and
+		// (b) this is the only instance of #strat_lock_cache_placement in that strategy nest.
+		// Once direct calls via the strategy nest are possible, this will not be necessary anymore.
+		find_brick ("strat_lock_cache_place", DEFAULT_TRANSFER, binbuf, sizeof binbuf) => (@#.strat_addr_this);
+		@.check (!@#.strat_addr_this, "Could not find out own address!");
+		// Instantiate and connect a new timer brick for later use.
+		// Right now, since we use a connector of the strategy brick, there may always only one strategy operation
+		// running at a time!
+		@=outputcall :<strat$gadr (DEFAULT_TRANSFER) => (ok, @#.strat_addr_timer);
+		@.check (!ok, "Could not alloc space for timer brick!");
+		@.check (!athnestprintf(&@:<strat, FALSE, @#.strat_addr_timer, @#._mand, "brick:=" TIMER_BRICK_TYPE "{\n}\n"), "Could not instantiate timer brick!");
+		@.check (!athnestprintf(&@:<strat, FALSE, @#.strat_addr_this, @#._mand, "connect ping:=%L:eval\n", @#.strat_addr_timer), "Could not connect to timer brick!");
+	}
+}
+
+input :<ping
+
+input :<strat
+
+	attr physio = :>control
+	attr logio = :>control
+	attr dyn = :>control
+	attr addr = :>control
+	attr lock = :>constrol
+	attr strat = text0
+
+output :>control
+
+	@.define LATENCY_THRESHOLD (250000)
+
+	operation $trans,$transwait {
+		if (@direction == direct_write && @log_addr != 0) {
+			@.check (@log_addr % DEFAULT_TRANSFER != 0, "Odd address, must be a multiple of 0x%llX!", (len_t)DEFAULT_TRANSFER);
+			@.check (@log_len > DEFAULT_TRANSFER, "Transfer size too high, maximum is 0x%llX!", (len_t)DEFAULT_TRANSFER);
+			success_t ok;
+			char textbuf[DEFAULT_TRANSFER];
+			const char *textptr;
+			char binbuf[DEFAULT_TRANSFER];
+			struct brick_rec *const brick_info = (struct brick_rec *)binbuf;
+			void *bin;
+			size_t bin_size;
+			const char *cmdbuf = MAKE_PTR (@phys_addr);
+			// Check whether the incoming strategy command needs any treatment.
+			bin = binbuf;
+			bin_size = sizeof binbuf;
+			trace ("STRAT_LOCK_CACHE_PLACE: Got command \"%s\"\n", cmdbuf);
+			if (convert_brick(&cmdbuf, (void **)&bin, &bin_size)) {
+				trace ("STRAT_LOCK_CACHE_PLACE: brick name=\"%s\", action=%d\n", brick_info->name, GET_BRICK_ACTION(*brick_info));
+				if (GET_BRICK_ACTION (*brick_info) == STRAT_INIT) {
+					trace ("STRAT_LOCK_CACHE_PLACE: brick \"%s\" about to be initialized\n", brick_info->name);
+					// Read the complete info from the strategy nest.
+					@=outputcall :<strat$trans (@log_addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok);
+					@.check (!ok, "Could not read brick info!");
+					trace ("STRAT_LOCK_CACHE_PLACE: Read strategy info \"%s\"\n", textbuf);
+					textptr = textbuf;
+					bin = binbuf;
+					bin_size = sizeof binbuf;
+					if (convert_brick(&textptr, &bin, &bin_size)) {
+						// The brick is about to be initialized.
+						// This is the moment to check the inputs for the need of caching.
+						struct conn_rec *conn;
+						for (conn = brick_info->conn; conn; conn = conn->next_conn) {
+							trace ("STRAT_LOCK_CACHE_PLACE: looking at connection \"%s\"\n", conn->name);
+							success_t ok;
+							len_t microseconds;
+							if (IS_CONN_INPUT (*conn) && conn->target) {
+								test_connection (conn) => (ok, microseconds);
+								trace ("STRAT_LOCK_CACHE_PLACE: Tested the connection, ping took %lldµs\n", microseconds);
+								@.check (!ok, "Could not test the connection!");
+								if (microseconds > LATENCY_THRESHOLD) {
+									addr_t cache_addr;
+									insert_cache (@log_addr, brick_info, conn) => (cache_addr);
+									@.check (!cache_addr, "Could not insert cache at 0x%llX:%s!", @log_addr, conn->name);
+									trace ("Inserted cache at 0x%llX\n", cache_addr);
+								}
+							}
+						}
+					}
+					else {
+						trace ("STRAT_LOCK_CACHE_PLACE: Could not analyze the brick!");
+					}
+				}
+			}
+			// TODO: check alternatively for separate input inits, too.
+			// For example, initially unused inputs, connected and initialized at brick runtime, or dynamic inputs.
+		}
+		@=outputcall :<strat$op @args;
+	}
+	
+	operation $wait {
+		@success = TRUE;
+	}
+	
+	operation $op {
+		@=outputcall :<strat$op @args;
+	}
+
