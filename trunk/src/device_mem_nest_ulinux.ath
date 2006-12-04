@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-//context pconf: *
-//context cconf: *
+context pconf: ulinux*
+context cconf: ulinux*
 
 brick #device_mem_nest_ulinux
 
@@ -15,7 +15,7 @@ desc
 	Operations $get, $put, $trans, $wait can be performed on $create'd address ranges.
 	No overlapping creates allowed.
 	$create and $delete must be used pairwise.
-	No $gadr or $padr supported.
+	No $gadr or $padr supported, use a brick like #heap to add address management.
 	THIS BRICK IS NOT MULTIUSER-SAFE, USE #adapt_multi ON CONCURRENT USE!
 enddesc
 

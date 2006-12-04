@@ -17,7 +17,7 @@ desc
       +---------------+
 
 Specify a time in ms at initialization. example: "delay_ms=200".
-All incoming ops will be blocked for the duration specified until forwarded to the opposite connector.
+All incoming ops will be blocked for the duration specified before being forwarded to the opposite connector.
 enddesc
 
 static_data {
@@ -41,11 +41,18 @@ operation $brick_init {
 	@.check (!@success, "Could not init :>out");
 	@.check (!param_check (@param, "delay_ms", &value, &value_len), "No delay given!");
 	@.check (sscanf(value, "%li", &delay) != 1, "Invalid delay!");
-	@#.delay.tv_sec = 0;
-	@#.delay.tv_nsec = delay * 1000L;
+	@#.delay.tv_sec = delay / 1000L;
+	@#.delay.tv_nsec = (delay % 1000L) * 1000000L;
+	trace ("Delay set to %ld ms\n", @#.delay.tv_nsec);
 }
 
 input :<in
+
+	attr physio = :>out
+	attr logio = :>out
+	attr dyn = :>out
+	attr addr = :>out
+	attr lock = :>out
 
 	operation $op {
 		struct timespec remainder;
@@ -54,6 +61,12 @@ input :<in
 	}
 
 output :>out
+
+	attr physio = :<in
+	attr logio = :<in
+	attr dyn = :<in
+	attr addr = :<in
+	attr lock = :<in
 
 	operation $op {
 		struct timespec remainder;

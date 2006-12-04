@@ -11,7 +11,11 @@ purpose Catch incoming ops and let the user decide about their forthcoming.
 
 desc
 :<in <---> :>out - path operations take through this brick.
-:<tmp - information about blocked ops is stored here. Must be an exclusive nest supporting pairwise $create/$delete as well as $get/$put/$trans/$wait
+:<tmp - information about blocked ops is stored here. Must be an exclusive nest supporting pairwise $create/$delete as well as $get+$put+$trans+$wait
+
+parameters to $brick_init:
+title=String         --- set the window title
+mode=(trace|block)   --- specify whether all ops at :<in and :>out should be just traced or temporarily blocked.
 
 All operations coming through this brick get logged in a separate window and can be even blocked if desired.
 In "trace" mode, all operations coming through this brick simply get logged.
@@ -19,7 +23,7 @@ In "block" mode, a list of currently blocked operations is shown to the user. Sh
 A handy tool when testing bricks in multiuser environments: with this brick put in front of a connector, the order in which concurrent operations come in can be influenced, and the behaviour of the connector tested.
 Of course, this brick is multiuser-safe.
 
-TODO: right now, only the ops $lock, $unlock and $retract get logged correctly, other ops get have only name and mandate logged.
+TODO: right now, combined operations are not handled specifically. Should.
 enddesc
 
 // root record of doubly linked list of blocked ops. Additional space is for a short description string.
@@ -30,14 +34,18 @@ static_data {
 	#include "ath_stdio.h"
 	#include "param_scanner.h"
 	
+	// brick modes: block incoming operations, or just trace them?
 	enum mode_t { MODE_TRACE, MODE_BLOCK };
 	
+	// descriptor of an operation, with opcode and functions for printing the essential arguments or results from "args"
 	struct op_desc {
 		op_t op;
 		char *(*op_args_to_string)(char *buf, int bufsize, struct args *args);
 		char *(*op_result_to_string)(char *buf, int bufsize, struct args *args);
 	};
 	
+	// describes one operation that has been caught inside this brick
+	// characterized by a unique id number and a description string
 	struct rec {
 		addr_t next_addr;
 		len_t next_len;
@@ -47,18 +55,107 @@ static_data {
 		char description[0];
 	};
 
+	// Default argument print function, does not know what to print
 	char *default_args_to_string(char *buf, int bufsize, struct args *args) {
 		return athsnprintf(buf, bufsize, "(@args)");
 	}
-	
+
+	// Default result print function. Just prints out success. Often sufficient.
 	char *default_result_to_string(char *buf, int bufsize, struct args *args) {
 		return athsnprintf(buf, bufsize, " => (%o)", args->success);
 	}
+	
+	// $trans arguments
+	char *trans_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, 0x%P, dir=%d, prio=%r)", args->log_addr, args->log_addr + args->log_len, args->phys_addr, args->direction, args->prio);
+	}
 
+	// $trans results
+	char *trans_result_to_string(char *buf, int bufsize, struct args *args) {
+		if (args->success) {
+			return athsnprintf(buf, bufsize, " => (%o, len=0x%P)", args->success, args->phys_len);
+		}
+		else {
+			return default_result_to_string(buf, bufsize, args);
+		}
+	}
+	
+	// $wait arguments
+	char *wait_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, prio=%r, action=%a)", args->log_addr, args->log_addr + args->log_len, args->prio, args->action);
+	}
+
+	// $get arguments
+	char *get_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, write=%y)", args->log_addr, args->log_addr + args->log_len, args->forwrite);
+	}
+	
+	// $get results
+	char *get_result_to_string(char *buf, int bufsize, struct args *args) {
+		if (args->success) {
+			return athsnprintf(buf, bufsize, " => (%o, 0x%P..0x%P, vers=%v)", args->success, args->phys_addr, args->phys_addr + args->phys_len, args->version);
+		}
+		else {
+			return default_result_to_string(buf, bufsize, args);
+		}
+	}
+	
+	// $put arguments
+	char *put_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, prio=%r", args->log_addr, args->log_addr + args->log_len, args->prio);
+	}
+	
+	// $gadr arguments
+	char *gadr_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L (up to 0x%L), reader=%y, exclu=%y, action=%a)", args->log_len, args->try_len, args->reader, args->exclu, args->action);
+	}
+
+	// $gadr results
+	char *gadr_result_to_string(char *buf, int bufsize, struct args *args) {
+		if (args->success) {
+			return athsnprintf(buf, bufsize, " => (%o, 0x%L..0x%L)", args->success, args->log_addr, args->log_addr + args->log_len);
+		}
+		else {
+			return default_result_to_string(buf, bufsize, args);
+		}
+	}
+
+	// $padr arguments
+	char *padr_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, reader=%y)", args->log_addr, args->log_len, args->reader);
+	}
+	
+	// $create arguments
+	char *create_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, clr=%y, melt=%y)", args->log_addr, args->log_addr + args->log_len, args->clear, args->melt);
+	}
+
+	// $delete arguments
+	char *delete_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, melt=%y)", args->log_addr, args->log_addr + args->log_len, args->melt);
+	}
+
+	// $move arguments
+	char *move_args_to_string(char *buf, int bufsize, struct args *args) {
+		return athsnprintf(buf, bufsize, "(0x%L..0x%L, min--> 0x%L..0x%L max--> 0x%L..0x%L)", args->log_addr, args->log_addr + args->log_len, args->log_addr + args->offset, args->log_addr + args->log_len + args->offset, args->log_addr + args->offset_max, args->log_addr + args->log_len + args->offset_max);
+	}
+	
+	// $move results
+	char *move_result_to_string(char *buf, int bufsize, struct args *args) {
+		if (args->success) {
+			return athsnprintf(buf, bufsize, " => (%o, --> 0x%L..0x%L)", args->log_addr + args->offset, args->log_addr + args->log_len + args->offset);
+		}
+		else {
+			return default_result_to_string(buf, bufsize, args);
+		}
+	}
+	
+	// $lock arguments
 	char *lock_args_to_string(char *buf, int bufsize, struct args *args) {
 		return athsnprintf(buf, bufsize, "(0x%L.. 0x%L..0x%L ..0x%L, d=%k, a=%k, %a)", args->try_addr, args->log_addr, args->log_addr + args->log_len, args->try_addr + args->try_len, args->data_lock, args->addr_lock, args->action);
 	}
 	
+	// $lock results
 	char *lock_result_to_string(char *buf, int bufsize, struct args *args) {
 		if (args->success) {
 			return athsnprintf(buf, bufsize, " => (%o, 0x%L..0x%L)", args->success, args->try_addr, args->try_addr + args->try_len);
@@ -68,15 +165,27 @@ static_data {
 		}
 	}
 	
+	// $unlock arguments
 	char *unlock_args_to_string(char *buf, int bufsize, struct args *args) {
 		return athsnprintf(buf, bufsize, "(0x%L..0x%L)", args->try_addr, args->try_addr + args->try_len);
 	}
 	
+	// $unlock results
 	char *retract_args_to_string(char *buf, int bufsize, struct args *args) {
 		return athsnprintf(buf, bufsize, "(0x%L..0x%L, %r)", args->try_addr, args->try_addr + args->try_len, args->prio);
 	}
 	
+	// List of operations with supported individual printing. Operations not listed here will be logged by the default functions.
 	struct op_desc op_descs[] = {
+		{ opcode_trans, trans_args_to_string, trans_result_to_string },
+		{ opcode_wait, wait_args_to_string, default_result_to_string },
+		{ opcode_get, get_args_to_string, get_result_to_string },
+		{ opcode_put, put_args_to_string, default_result_to_string },
+		{ opcode_gadr, gadr_args_to_string, gadr_result_to_string },
+		{ opcode_padr, padr_args_to_string, default_result_to_string },
+		{ opcode_create, create_args_to_string, default_result_to_string },
+		{ opcode_delete, delete_args_to_string, default_result_to_string },
+		{ opcode_move, move_args_to_string, move_result_to_string },
 		{ opcode_lock, lock_args_to_string, lock_result_to_string },
 		{ opcode_unlock, unlock_args_to_string, default_result_to_string },
 		{ opcode_retract, retract_args_to_string, default_result_to_string },
@@ -86,7 +195,7 @@ static_data {
 	/* Creates a string representing an operation call.
 	 * buf - the buffer to write the string to
 	 * bufsize - maximum size of buf (including trailing '\0').
-	 * args_now - the current arguments. On precall, it contains the input arguments, on postcall, it contains the results.
+	 * args_now - the current arguments. When calling, it contains the input arguments, when returning, it contains the results.
 	 * args_old - !=NULL indicates a return from a call, it contains the arguments of the former op call then.
 	 * param - parameter string provided with the call.
 	 */
@@ -169,10 +278,10 @@ wire :<exec as :>usrinp;
 	addr_t rec_addr;
 	len_t rec_len;
 	struct rec *rec;
-	athprintf (&@##console:>write, TRUE, 0, TRUE, "--- operations currently stuck in this brick:\n");
+	athpipeprintf (&@##console:>write, TRUE, 0, "=== Operations currently stuck in this brick, enter id to release ===\n");
 	seek_first_rec () => (rec_addr, rec_len, rec);
 	while (rec) {
-		athprintf (&@##console:>write, TRUE, 0, TRUE, "id=%L op=%s\n", rec->id, rec->description);
+		athpipeprintf (&@##console:>write, TRUE, 0, "id=%L op=%s\n", rec->id, rec->description);
 		seek_next_rec_from (rec_addr, rec_len, rec) => (rec_addr, rec_len, rec);
 	}
 }
@@ -256,7 +365,7 @@ wire :<exec as :>usrinp;
 	char buf[512];
 	op_to_string(buf, sizeof buf, @args, args_in, @param);
 	trace ("Incoming operation %s\n", buf);
-	athprintf(&@##console:>write, TRUE, @mandate, TRUE, "%s\n", buf);
+	athpipeprintf(&@##console:>write, TRUE, @mandate,"%s\n", buf);
 }
 
 // Block the current operation, add it to the list and print out the list.
@@ -268,8 +377,9 @@ wire :<exec as :>usrinp;
 	struct rec *rec;
 	char buf[512];
 	
-	@success = FALSE;
+	trace ("Converting op to string.\n");
 	op_to_string(buf, sizeof buf, @args, args_in, @param);
+	@success = FALSE;
 	trace ("Blocking incoming operation %s\n", buf);
 	@=outputcall ##locks:>out$lock ((addr_t)-1, 1) => (ok);
 	@.check (!ok, "Could not grab mutex!");
@@ -306,7 +416,9 @@ operation $brick_init {
 		char console_param[256];
 		success_t ok;
 		// manually initialize local inputs and outputs
-		INIT_ALL_INPUTS ();
+		trace ("Initializing #spy_block\n");
+		@=inputcall :<in$input_init (@destr, @constr) => (ok);
+		@=inputcall :<tmp$input_init (@destr, @constr) => (ok);
 		@=outputcall :>wa_tmp$output_init (@destr, @constr) => (ok);
 		@.check (!ok, "#:>wa_tmp$output_init failed!");
 		@=outputcall :>usrinp$output_init (@destr, @constr) => (ok);
@@ -330,7 +442,7 @@ operation $brick_init {
 		INIT_ONE_INSTANCE (console, console_param);
 		@.check (!@success, "Could not start console!");
 		INIT_ONE_INSTANCE (locks, "");
-		INIT_ALL_OUTPUTS ();
+		@=outputcall :>out$output_init (@destr, @constr) => (ok);
 	}
 	@success = TRUE;
 }
@@ -345,6 +457,13 @@ local output :>wa_tmp
 
 input :<tmp
 
+	attr physio = all
+	attr logio = all
+	attr dyn = {create,delete}
+	attr addr = none
+	attr lock = none
+	attr avail = exclusive
+	
 local output :>usrinp
 
 	// asynchronous, infinite op reading user commands to release blocked operations
@@ -381,12 +500,20 @@ local output :>usrinp
 
 input :<in
 
+	attr physio = :>out
+	attr logio = :>out
+	attr dyn = :>out
+	attr addr = :>out
+	attr lock = :>out
+
 	operation $input_init {
 		@success = TRUE;
 	}
 
 	operation $op {
 		struct args args_in;
+		trace ("blocking operation %d (log_addr=0x%llX, log_len=0x%llX) &mode=%p &brick=%p\n", @op_code, @log_addr, @log_len, &@#.mode, _brick);
+		trace ("_on==%p #:<in==%p #:<in.ops=%p #spy_block.in.ops==%p\n", _on, &_brick->_conn_in, _brick->_conn_in._input_.ops, ops_spy_block_in);
 		if (@#.mode == MODE_TRACE) {
 			memcpy(&args_in, @args, sizeof args_in);
 			trace_op (NULL);
@@ -395,11 +522,10 @@ input :<in
 		}
 		else if (@#.mode == MODE_BLOCK) {
 			memcpy(&args_in, @args, sizeof args_in);
-			@success = FALSE;
 			block_op (NULL);
 			@.check (!@success, "Operation blocking failed!");
-			@success = args_in.success;
-			@=inputcall :>out$op @args;
+			memcpy(@args, &args_in, sizeof args_in);
+			@=inputcall :>out$op (@args);
 			args_in.success = @success;
 			@success = FALSE;
 			block_op (&args_in);
@@ -409,6 +535,12 @@ input :<in
 	}
 
 output :>out
+
+	attr physio = :<in
+	attr logio = :<in
+	attr dyn = :<in
+	attr addr = :<in
+	attr lock = :<in
 
 	operation $output_init {
 		if (@destr) {
@@ -426,6 +558,7 @@ output :>out
 			@.check (!ok, "Could not release mutex!");
 		}
 		if (@constr) {
+			trace ("Initializing #spy_block:>out\n");
 			// Construction: init list of pending ops.
 			success_t ok;
 			paddr_t paddr;
@@ -456,10 +589,7 @@ output :>out
 			@=outputcall ##async:>cpu$wait (0, 0) => (ok);
 			@.check (!ok, "Could not start reader thread!");
 			if (@#.mode == MODE_TRACE) {
-				athprintf(&@##console:>write, TRUE, 0, TRUE, "All operations that passed this brick are listed below\n=======================================================\n");
-			}
-			else {
-				athprintf(&@##console:>write, TRUE, 0, TRUE, "To release a blocked op, enter its id\n=====================================\n");
+				athpipeprintf(&@##console:>write, TRUE, 0, "Operations that passed this brick:\n");
 			}
 		}
 		@success = TRUE;
@@ -478,7 +608,7 @@ output :>out
 			@success = FALSE;
 			block_op (NULL);
 			@.check (!@success, "Operation blocking failed!");
-			@success = args_in.success;
+			memcpy(@args, &args_in, sizeof args_in);
 			@=outputcall :<in$op @args;
 			args_in.success = @success;
 			block_op (&args_in);

@@ -13,19 +13,29 @@ purpose automatic placement of lock caches
 desc
 This brick checks for the need of lock caches on brick initialization. A bricks inputs must have been connected prior to their being initialized.
 Note that on connection of an input, the output connected to need not be initialized. No timing checks can be made on it.
-So, not connection is the time to check for brick placement, but input initialization. 
+So, not connection is the time to check for brick placement, but input initialization.
+
+This brick needs the location of memory resources in the strategy nest to feed the lock caches it produces.
+Specify as "mem=<hex-addr>:<identifier>", e.g., "mem=3F00:out"
+This memory source must provide heap functionality.
 enddesc
 
 static_data {
 	#include "ath_stdio.h"
 	#include "binstrat.h"
+	#include "param_scanner.h"
 	
 	#define TIMER_BRICK_TYPE "op_timer_ulinux"
 }
 
 data {
+	// Address of this brick in :<strat
+	// Currently necessary, won't anymore once operation calls through the strategy nest are introduced.
 	addr_t strat_addr_this;
+	// Address of the timer brick used to test the quality of connections.
 	addr_t strat_addr_timer;
+	// The memory-providing connector created lock caches are plugged into.
+	char mem_conn[32];
 }
 
 	// Find a certain or any (if name == NULL) brick from "start_addr".
@@ -40,7 +50,7 @@ data {
 			char textbuf[DEFAULT_TRANSFER];
 			plen_t textbuf_len;
 			const char *_text = textbuf;
-			@=outputcall :<strat$trans (addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok, textbuf_len);
+			@=outputcall :<strat$transwait (addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok, textbuf_len);
 			if (!ok) break;
 			if (textbuf_len == 0) continue;
 			bin = binbuf;
@@ -97,31 +107,45 @@ data {
 	// Replaces the connection at "input" with a connection to a lock_cache that in turn gets connected to input's original connection target.
 	// Returns the new cache brick's address on success, 0 on failure.
 	@.func insert_cache (addr_t brick_addr, struct brick_rec *brick_info, struct conn_rec *input) => (addr_t cache_addr) {
+		addr_t selector_addr;
 		trace ("insert cache at \":<%s\"\n", input->name);
 		success_t ok;
 		@.check (!IS_CONN_INPUT (*input), "Connector is no input!");
 		@.check (!input->target, "Input is not connected!");
-		// Create a new lock cache instance.
-		@=outputcall :<strat$gadrcreate (DEFAULT_TRANSFER) => (ok, cache_addr);
+		// Create and connect a new selector instance to feed the new lock cache some memory (where it can store state info).
+		@=outputcall :<strat$gadrcreate (DEFAULT_TRANSFER) => (ok, selector_addr);
 		if (ok) {
-			if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick:=lock_cache{\n}\n")) {
-				const struct conn_target_rec *target = input->target;
-				// Remove the connection the cache is to replace.
-				trace ("other side is 0x%llX:%s\n", target->brick_addr, target->name);
-				if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s/=0x%llX:%s\n", input->name, target->brick_addr, target->name)) {
-					// Connect the cache to the output to be cached.
-					if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=0x%llX:%s\n", target->brick_addr, target->name)) {
-						// Connect the client input to the lock cache.
-						if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=0x%llX:out\n", input->name, cache_addr)) {
-							// Activate the cache just inserted.
-							if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick+=lock_cache{\n}\n")) {
-								// All operations succeeded, lock cache inserted.
-								return;
+			if (athnestprintf(&@:<strat, FALSE, selector_addr, @#._mand, "brick:=map_select {\nconnect in:=%s\n}\n", @#.mem_conn)) {
+				// Create a new lock cache instance and connect it to the selector.
+				@=outputcall :<strat$gadrcreate (DEFAULT_TRANSFER) => (ok, cache_addr);
+				if (ok) {
+					if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick:=lock_cache{\nconnect tmp:=%L:out\n}\n", selector_addr)) {
+						const struct conn_target_rec *target = input->target;
+						// Remove the connection the cache is intended to replace.
+						trace ("other side is 0x%llX:%s\n", target->brick_addr, target->name);
+						if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s/=%L:%s\n", input->name, target->brick_addr, target->name)) {
+							// Connect the cache to the output to be cached.
+							if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=%L:%s\n", target->brick_addr, target->name)) {
+								// Connect the client input to the lock cache.
+								if (athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=%L:out\n", input->name, cache_addr)) {
+									// Activate the selector.
+									if (athnestprintf(&@:<strat, FALSE, selector_addr, @#._mand, "brick+=map_select{\nb_param:=length=10000\n}\n")) {
+										// Activate the cache just inserted.
+										if (athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick+=lock_cache{\n}\n")) {
+											// All operations succeeded, lock cache inserted.
+											return;
+										}
+										@.fatal (!athnestprintf(&@:<strat, FALSE, selector_addr, @#._mand, "brick-=map_select{\n}\n"), "Could not shutdown the selector!");
+									}
+									@.fatal (!athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s/=%L:out", input->name, cache_addr), "Could not disconnect lock cache from the input to use the cache");
+								}
+								@.fatal (!athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=0x%llX:%s\n", target->brick_addr, target->name), "Could not unconnect the lock cache from the cached output!");
 							}
+							@.fatal (!athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=0x%llX:%s\n", input->name, target->brick_addr, target->name), "Could not reconnect the two bricks after failure!");
 						}
-						@.fatal (!athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "connect in:=0x%llX:%s\n", target->brick_addr, target->name), "Could not unconnect the lock cache from the cached output!");
+						athnestprintf(&@:<strat, FALSE, selector_addr, @#._mand, "brick/=map_select");
 					}
-					@.fatal (!athnestprintf(&@:<strat, FALSE, brick_addr, @#._mand, "connect %s:=0x%llX:%s\n", input->name, target->brick_addr, target->name), "Could not reconnect the two bricks after failure!");
+					@=outputcall :<strat$deletepadr (selector_addr, DEFAULT_TRANSFER) => (ok);
 				}
 				athnestprintf(&@:<strat, FALSE, cache_addr, @#._mand, "brick/=lock_cache{\n}\n");
 			}
@@ -148,10 +172,17 @@ operation $brick_init {
 	@.check (!ok, "Could not init :>control!");
 	// Find out own address in strategy nest.
 	if (@constr) {
+		const char *value;
+		const int value_len;
+		// Read the location of the memory resource for the lock caches.
+		@.check (!param_check (@param, "mem", &value, &value_len), "No \"mem=<brick_addr>:<output>\" parameter specified!");
+		strncpy(&@#.mem_conn, value, value_len);
+		@#.mem_conn[sizeof @#.mem_conn - 1] = '\0';
+		trace ("Uses memory resource  \"%s\"\n", @#.mem_conn);
 		// FIXME: This call only works if following preconditions apply:
 		// (a) this brick can be found in :<strat, and
 		// (b) this is the only instance of #strat_lock_cache_placement in that strategy nest.
-		// Once direct calls via the strategy nest are possible, this will not be necessary anymore.
+		// Once operation calls via the strategy nest are possible, this will not be necessary anymore.
 		find_brick ("strat_lock_cache_place", DEFAULT_TRANSFER, binbuf, sizeof binbuf) => (@#.strat_addr_this);
 		@.check (!@#.strat_addr_this, "Could not find out own address!");
 		// Instantiate and connect a new timer brick for later use.
@@ -164,6 +195,18 @@ operation $brick_init {
 	}
 }
 
+// This connector indicates a memory resource that can be used by bricks instatiated by this bricks.
+input :<mem
+
+	attr physio = all
+	attr logio = all
+	attr dyn = $create,$delete
+	attr addr = all
+	attr lock = none
+
+// preliminary input to test the quality of connections.
+// This makes the brick uncapable of handling multiple concurrent strategy operations.
+// Once operations calls via the strategy nest can be triggered, this will not be necessary anymore.
 input :<ping
 
 input :<strat
@@ -200,7 +243,7 @@ output :>control
 				if (GET_BRICK_ACTION (*brick_info) == STRAT_INIT) {
 					trace ("STRAT_LOCK_CACHE_PLACE: brick \"%s\" about to be initialized\n", brick_info->name);
 					// Read the complete info from the strategy nest.
-					@=outputcall :<strat$trans (@log_addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok);
+					@=outputcall :<strat$transwait (@log_addr, (len_t)sizeof textbuf, MAKE_PADDR (textbuf), direct_read) => (ok);
 					@.check (!ok, "Could not read brick info!");
 					trace ("STRAT_LOCK_CACHE_PLACE: Read strategy info \"%s\"\n", textbuf);
 					textptr = textbuf;

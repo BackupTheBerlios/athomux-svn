@@ -2,10 +2,11 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-strategy brick #adapt_strat
+strategy brick #adapt_strat2
 purpose convert $trans operations into strategy operations
 desc
-  Provisionary implementation
+  textual strategy nest, second revision
+  see #control_simple2 for usage, this brick is a subbrick of it
 enddesc
 
 input :<strat
@@ -28,6 +29,7 @@ operation $trans
     struct conn_info conn2 = {};
     @conn1 = &conn1;
     @conn2 = &conn2;
+    @phys_len = (plen_t)@log_len;
     for(;;) {
       @success = FALSE;
       int code = scan_multi(&buf, strat_keywords, strat_keylens, scod_max);

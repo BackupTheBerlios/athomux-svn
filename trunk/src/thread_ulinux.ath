@@ -21,7 +21,7 @@ desc
 enddesc
 
 static_data {
-#include "control_simple.h"
+//#include "control_simple.h"
 #include "param_scanner.h"
 #include <pthread.h>
 
@@ -127,7 +127,7 @@ void * thread_handler(void * _info)
     // Old behavior: give the asynchronous op a new mandate, necessary for good ol' lock_ulinux
     // HACK (not correct)
     // TODO: use atomic increment opcode instead
-    myargs.mandate = base_mand++;
+    //myargs.mandate = base_mand++;
   }
   int len = strlen(info->myparam);
   char myparam[len+1];

@@ -23,26 +23,33 @@ wire :<tmp as #:>wa_tmp;
 wire :>out as #:<wa_out;
 
 operation $brick_init {
+	trace ("lock_manager$brick_init\n");
 	if (@destr) {
 		INIT_ALL_OUTPUTS ();
 		INIT_ONE_INSTANCE (impl, "");
-		INIT_ALL_INPUTS ();		
+		INIT_ALL_INPUTS ();
 	}
 	if (@constr) {
+		trace ("Initializing lock manager\n");
 		success_t ok;
-		INIT_ALL_INPUTS ();
-		// Bad: it should be possible to init local outputs seperately from external ones.
-		// Good order would be:
-		// external inputs, internal outputs, local instances, internal inputs, external outputs
-		//@=inputcall :<wa_out$input_init (@destr, @constr) => (ok);
-		@=outputcall :>wa_tmp$output_init (@destr, @constr) => (ok);
+		@=inputcall :<tmp$input_init (@destr, @constr) => (ok);
+		@=inputcall :<in$input_init (@destr, @constr) => (ok);
 		@=outputcall :>dummylm$output_init (@destr, @constr) => (ok);
+		@=outputcall :>wa_tmp$output_init (@destr, @constr) => (ok);
 		INIT_ONE_INSTANCE (impl, "lock_all_on_init");
-		INIT_ALL_OUTPUTS ();
+		@=inputcall :<wa_out$input_init (@destr, @constr) => (ok);
+		@=outputcall :>out$output_init (@destr, @constr) => (ok);
 	}
 }
 
 input :<tmp
+
+	attr physio = all
+	attr logio = all
+	attr dyn = {create,delete}
+	attr addr = none
+	attr lock = none
+	attr avail = exclusive
 
 // Workaround for non-functional 'alias ##impl:<tmp as :<tmp'
 local output :>wa_tmp
@@ -61,11 +68,24 @@ local output :>dummylm
 local input :<wa_out
 
 	operation $retract {
-		//trace ("#lock_manager:<wa_out$retract [0x%llX..0x%llX] called!\n", @try_addr, @try_addr + @try_len);
+		struct input *inp;
+		trace ("#lock_manager:<wa_out$retract [0x%llX..0x%llX] called (opcode==%d)!\n", @try_addr, @try_addr + @try_len, @op_code);
+		#ifdef TRACE
+		trace ("connected inputs at :>out:\n");
+		for (inp = @:>out._output_.rev_chain; inp; inp = inp->rev_next) {
+			trace ("connenction=%p connection.ops=%p\n", inp, inp->ops);
+		}
+		#endif
 		@=inputcall :>out$retract [@mandate] @args;
 	}
 
 input :<in
+
+	attr physio = :>out
+	attr logio = :>out
+	attr dyn = :>out
+	attr addr = :>out
+	attr lock = {retract}
 
 	operation $retract {
 		// since we never acquired any locks via this input, retraction always succeeds.
@@ -77,6 +97,14 @@ input :<in
 	}
 
 output :>out(:2:)
+
+	attr nsect = 2
+	attr neststruct = 1
+	attr physio = :<in
+	attr logio = :<in
+	attr dyn = :<in
+	attr addr = :<in
+	attr lock = all
 
 	// Forward of lock_cache.lockrec_t for lock_cache meta nest (section 1).
 	// No "forward export" function available, so we need to do it this way.

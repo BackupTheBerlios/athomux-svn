@@ -10,16 +10,20 @@ brick #lock_protect
 purpose automatic locking for status nests
 
 desc
-	This brick can be used to protect operations from each other:
+	This bricks wraps automatic locks around data or address operations.
+	This way, multiple users can synchronize with other users of the same nest without explicit lock calls.
 	Io operations are protected by this brick from concurrent address or data modifications.
-	An address blocks gets protected between $get and $put. Concurrent $get ops with @forwrite==FALSE are allowed.
+	An address block is locked between $get and $put. Concurrent $get ops with @forwrite==FALSE are allowed.
 	$trans and $put are synchronized (become $transwait and $putwait) because there is no requirement to call $wait after those operations.
-	Note: locks are maintained only locally, they don't get forwarded to the 'protected' nest.
-	WARNING: This brick cannot give a singleuser output multiuser capability! Use adapt_multi for that.
-	         It is rather a protection for singleuser inputs (users not aware of concurrent users).
+	WARNING: This brick cannot make some nest behind :<in multiuser-safe! Use adapt_multi for that purpose!
+	         This brick protects ongoing operations from concurrent access!
 enddesc
 
-instance #lock_mutex as mutex;
+operation $brick_init {
+	trace ("#lock_protect$brick_init called\n");
+	@=inputcall :<in$input_init (@destr, @constr) => ();
+	@=outputcall :>out$output_init (@destr, @constr) => ();
+}
 
 input :<in
 
@@ -27,23 +31,28 @@ input :<in
 	attr LogIo = :>out
 	attr Dyn = :>out
 	attr Addr = :>out
-	attr Lock = :>out
+	attr Lock = all
 
 output :>out
 
-	// Turn on or off the internal mutex together with this brick.
+	attr PhIo = :<in
+	attr LogIo = :<in
+	attr Dyn = :<in
+	attr Addr = :<in
+	attr Lock = :<in
+
 	operation $output_init {
-		@=outputcall ##mutex:>out$output_init @args;
+		@success = TRUE;
 	}
-	
+
 	// $trans must be synchronized to guarantee the accessed address range to get unlocked in time.
 	operation $trans {
 		success_t ok;
-		@=outputcall ##mutex:>out$lock (@log_addr, @log_len, lock_write, lock_read) => (ok);
+		@=outputcall :<in$lock (@log_addr, @log_len, lock_write, lock_read) => (ok);
 		@.check (!ok, "Lock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 		@=outputcall :<in$transwait @args;
 		// @success may now be true, what is intended. The actual op succeeded then.
-		@=outputcall ##mutex:>out$unlock (@log_addr, @log_len) => (ok);
+		@=outputcall :<in$unlock (@log_addr, @log_len) => (ok);
 		// Unlocks never fail. If they do, there must have happened something serious.
 		@.fatal (!ok, "Unlock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 	}
@@ -58,7 +67,7 @@ output :>out
 		success_t ok;
 		addr_t orig_addr = @log_addr;
 		len_t orig_len = @log_len;
-		@=outputcall ##mutex:>out$lock (@log_addr, @log_len, @forwrite ? lock_write : lock_read, lock_read) => (ok);
+		@=outputcall :<in$lock (@log_addr, @log_len, @forwrite ? lock_write : lock_read, lock_read) => (ok);
 		@.check (!ok, "Lock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 		@=outputcall :<in$get @args;
 		// $get may fail partially or wholly. Adjust the lock accordingly.
@@ -69,7 +78,7 @@ output :>out
 			}
 		}
 		else {
-			@=outputcall ##mutex:>out$unlock (orig_addr, orig_len) => (ok);
+			@=outputcall :<in$unlock (orig_addr, orig_len) => (ok);
 			@.fatal (!ok, "Unlock [0x%llX..0x%llX] failed!", orig_addr, orig_addr + orig_len);
 		}
 	}
@@ -78,27 +87,27 @@ output :>out
 	operation $put {
 		success_t ok;
 		@=outputcall :<in$putwait @args;
-		@=outputcall ##mutex:>out$unlock (@log_addr, @log_len) => (ok);
+		@=outputcall :<in$unlock (@log_addr, @log_len) => (ok);
 		@.check (!ok, "Unlock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 	}
 	
 	// $create with @clear==FALSE could leave the data lock away only if concurrent $trans, $wait, $get, and $put ops were guaranteed not to be affected.
 	operation $create {
 		success_t ok;
-		@=outputcall ##mutex:>out$lock (@log_addr, @log_len, lock_write, lock_write) => (ok);
+		@=outputcall :<in$lock (@log_addr, @log_len, lock_write, lock_write) => (ok);
 		@.check (!ok, "Lock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 		@=outputcall :<in$create @args;
-		@=outputcall ##mutex:>out$unlock (@log_addr, @log_len) => (ok);
+		@=outputcall :<in$unlock (@log_addr, @log_len) => (ok);
 		@.check (!ok, "Unlock [0x%llX..0x%llX] failed!", @log_addr, @log_addr + @log_len);
 	}
 	
 	// Deletion needs a data lock, too, since it destroys data.
 	operation $delete {		
 		success_t ok;
-		@=outputcall ##mutex:>out$lock (@log_addr, @log_len, lock_write, lock_write) => (ok);
+		@=outputcall :<in$lock (@log_addr, @log_len, lock_write, lock_write) => (ok);
 		@.check (!ok, "Lock failed!");
 		@=outputcall :<in$get @args;
-		@=outputcall ##mutex:>out$unlock (@log_addr, @log_len) => (ok);
+		@=outputcall :<in$unlock (@log_addr, @log_len) => (ok);
 	}
 	
 	// Difficult: if the two areas concerned are separate, we should not use one single lock.
@@ -112,46 +121,46 @@ output :>out
 			// Source and destination ranges overlap. We can do a single lock.
 			addr_t start = src_start <= dst_start ? src_start : dst_start;
 			addr_t end = src_end >= dst_end ? src_end : dst_end;
-			@=outputcall ##mutex:>out$lock (start, end - start, lock_write, lock_write) => (ok);
+			@=outputcall :<in$lock (start, end - start, lock_write, lock_write) => (ok);
 			@.check (!ok, "Lock [0x%llX..0x%llX] failed!", start, end);
 			@=outputcall :<in$move @args;
-			@=outputcall ##mutex:>out$unlock (start, end - start) => (ok);
+			@=outputcall :<in$unlock (start, end - start) => (ok);
 		}
 		else {
 			// We must try to gain two separate locks, but avoid a deadlock.
 			// This could use multiple tries.
 			while (1) {
 				// Source and destination ranges are separate. First, lock the source range.
-				@=outputcall ##mutex:>out$lock (src_start, src_end - src_start, lock_write, lock_write,
+				@=outputcall :<in$lock (src_start, src_end - src_start, lock_write, lock_write,
 					src_start, src_end - src_start, action_wait) => (ok);
 				@.check (!ok, "Lock [0x%llX..0x%llX] failed!", src_start, src_end);
 				// Second, try to lock the destination range.
-				@=outputcall ##mutex:>out$lock (dst_start, dst_end - dst_start, lock_write, lock_write,
+				@=outputcall :<in$lock (dst_start, dst_end - dst_start, lock_write, lock_write,
 					dst_start, dst_end - dst_start, action_try) => (ok);
 				if (ok) {
 					// Fine, we got both ranges, the $move can take place.
 					@=outputcall :<in$move @args;
-					@=outputcall ##mutex:>out$unlock (dst_start, dst_end - dst_start) => (ok);
-					@=outputcall ##mutex:>out$unlock (src_start, src_end - src_start) => (ok);
+					@=outputcall :<in$unlock (dst_start, dst_end - dst_start) => (ok);
+					@=outputcall :<in$unlock (src_start, src_end - src_start) => (ok);
 					return;
 				}
 				// #@!X%&, the second lock failed. Release source, wait for destination to 
 				// become free, and then try again.
-				@=outputcall ##mutex:>out$unlock (src_start, src_end - src_start) => (ok);
-				@=outputcall ##mutex:>out$lock (dst_start, dst_end - dst_start, lock_write, lock_write,
+				@=outputcall :<in$unlock (src_start, src_end - src_start) => (ok);
+				@=outputcall :<in$lock (dst_start, dst_end - dst_start, lock_write, lock_write,
 					dst_start, dst_end - dst_start, action_wait) => (ok);
 				@.check (!ok, "Lock [0x%llX..0x%llX] failed!", dst_start, dst_end);
-				@=outputcall ##mutex:>out$lock (src_start, src_end - src_start, lock_write, lock_write,
+				@=outputcall :<in$lock (src_start, src_end - src_start, lock_write, lock_write,
 					src_start, src_end - src_start, action_try) => (ok);
 				if (ok) {
 					// This time we locked both ranges, we can $move now.
 					@=outputcall :<in$move @args;
-					@=outputcall ##mutex:>out$unlock (src_start, src_end - src_start) => (ok);
-					@=outputcall ##mutex:>out$unlock (dst_start, dst_end - dst_start) => (ok);
+					@=outputcall :<in$unlock (src_start, src_end - src_start) => (ok);
+					@=outputcall :<in$unlock (dst_start, dst_end - dst_start) => (ok);
 					return;
 				}
 				// Somebody locked the source range in the meantime...release destination and start over.
-				@=outputcall ##mutex:>out$unlock (dst_start, dst_end - dst_start) => (ok);
+				@=outputcall :<in$unlock (dst_start, dst_end - dst_start) => (ok);
 			}
 		}
 	}

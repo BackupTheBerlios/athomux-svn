@@ -7,14 +7,31 @@
 enum strat_action_t { STRAT_READ, STRAT_CREATE, STRAT_DESTROY, STRAT_INIT, STRAT_SHUTDOWN, STRAT_REINIT };
 enum conn_t { CONN_INPUT, CONN_OUTPUT };
 
+// Macros to get packed information out of binary strategy structures.
+
+// Reads from a 'struct brick_rec' the operation to be performed on a brick.
 #define GET_BRICK_ACTION(BRICK) ((enum strat_action_t)((BRICK).flags & 0x07))
+
+// Reads from a 'struct brick_rec' whether it has been initialized or not.
 #define IS_BRICK_ACTIVE(BRICK) (((BRICK).flags & 0x08) != 0)
+
+// Reads from a 'struct conn_rec' the operation to be performed on a connector.
 #define GET_CONN_ACTION(CONN) ((enum strat_action_t)((CONN).flags & 0x07))
+
+// Reads from a 'struct conn_rec' the type of connector: input or output.
 #define GET_CONN_TYPE(CONN) ((enum conn_t)(((CONN).flags & 0x08) >> 3))
+
+// Reads from a 'struct conn_rec' the operation to be performed on a connection to this connector.
+#define GET_CONN_TARGET_ACTION(CONN) ((enum strat_action_t)(((CONN).flags >> 4) & 0x07))
+
+// Reads from a 'struct conn_rec' whether it is an input or not.
 #define IS_CONN_INPUT(CONN) (((CONN).flags & 0x08) == 0)
+
+// Reads from a 'struct conn_rec' whether it is an output or not.
 #define IS_CONN_OUTPUT(CONN) (((CONN).flags & 0x08) != 0)
+
+// Reads from a 'struct conn_rec' whether it has been initialized or not.
 #define IS_CONN_ACTIVE(CONN) (((CONN).flags & 0x10) != 0)
-#define GET_CONN_TARGET_ACTION(TARGET) ((enum strat_action_t)((TARGET).flags & 0x07))
 
 // A brick/connector attribute. Part of a NULL-terminated list.
 struct attr_rec {
@@ -27,7 +44,6 @@ struct attr_rec {
 // contains the target brick's address in the strategy nest, and the name of the connector.
 struct conn_target_rec {
 	struct conn_target_rec *next_target;
-	short flags;
 	addr_t brick_addr;
 	char *name;
 };

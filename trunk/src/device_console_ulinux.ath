@@ -18,6 +18,7 @@ desc
 
 	Each brick instance starts a terminal window and provides two pipes
 	to write text (via "write") to or to read text (via "read") from the user.
+	Provide the window title in @param at $brick_init (just the string, no "title=..." etc.)
 	NOTE: currently, only physical IO is implemented on these pipes!
 	This will change as soon as a fully functional memory device brick (see below)
 	is available.

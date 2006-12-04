@@ -36,8 +36,10 @@ static_data {
 
 // Memory
 instance #device_mem_nest_ulinux as mem;
-instance #adapt_multi as monitor;
+instance #heap as heap;
 wire :<in as ##mem:>out;
+instance #adapt_multi as monitor;
+wire :<in as ##heap:>out;
 instance #map_select as sel_con;
 wire :<in as ##monitor:>out;
 instance #map_select as sel_rsc;
@@ -83,7 +85,7 @@ instance #format_metanest as fmt_lc_b;
 wire :<meta as ##lc_b:>out;
 wire :<text as ##con_a:>write;
 
-@.define log (FMTSTR, ...) (athprintf(&@:<log, FALSE, 0, TRUE, FMTSTR ...))
+@.define log (FMTSTR, ...) (athpipeprintf(&@:<log, FALSE, 0, FMTSTR ...))
 
 operation $brick_init {
 	if (@destr && !@constr) {
@@ -105,13 +107,15 @@ operation $brick_init {
 		@.check (!ok, "Could not initialize :<log!");
 		// memory
 		INIT_ONE_INSTANCE (mem, "");
+		
 		INIT_ONE_INSTANCE (monitor, "");
-		INIT_ONE_INSTANCE (sel_con,  "address=0000000 length=0100000");
-		INIT_ONE_INSTANCE (sel_lm,   "address=0100000 length=0100000");
-		INIT_ONE_INSTANCE (sel_lc_a, "address=0200000 length=0100000");
-		INIT_ONE_INSTANCE (sel_lc_b, "address=0300000 length=0100000");
-		INIT_ONE_INSTANCE (sel_bma,  "address=0400000 length=0200000");
-		INIT_ONE_INSTANCE (sel_rsc,  "address=0500000 length=1000000");
+		INIT_ONE_INSTANCE (heap, "");
+		INIT_ONE_INSTANCE (sel_con,  "length=0100000");
+		INIT_ONE_INSTANCE (sel_lm,   "length=0100000");
+		INIT_ONE_INSTANCE (sel_lc_a, "length=0100000");
+		INIT_ONE_INSTANCE (sel_lc_b, "length=0100000");
+		INIT_ONE_INSTANCE (sel_bma,  "length=0200000");
+		INIT_ONE_INSTANCE (sel_rsc,  "length=1000000");
 		// surveillance
 		INIT_ONE_INSTANCE (spylmout, "title='Lock Manager:>out' mode=trace");
 		// locking

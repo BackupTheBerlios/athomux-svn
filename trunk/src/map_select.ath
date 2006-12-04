@@ -11,7 +11,8 @@ purpose Verify lock_manager brick
 
 desc
 	Maps the address range [0..n-1] at :>out to a fixed address range [x..x+n-1] at :>in.
-	This address range is provided at initialization as instance attributes, currently as parameters "address=<hex-num>" and "length=<hex-num>".
+	This address range is provided at initialization as instance attributes, currently via parameters "address=<hex-num>" and "length=<hex-num>".
+	You can omit the "address" parameter, #map_select will $gadr the specified ("length" parameter) in this case.
 	Note the notation of the hexadecimal address and length without the prefix "0x"
 	This brick is completely stateless and multiuser-safe.
 enddesc
@@ -44,17 +45,32 @@ data {
 
 operation $brick_init {
 	INIT_ALL_CONNS ();
-	if (@constr && !@destr) {
+	if (@destr) {
+		// $padr my range, whether it was $gadr'ed before or not. Not expected to do any harm to anyone.
+		@=outputcall :<in$padr [@#._mand] (@#.addr, @#.len) => ();
+	}
+	if (@constr) {
+		success_t ok;
 		const char *param_address;
 		int param_address_len;
 		const char *param_length;
 		int param_length_len;
-		bool found;
-		param_getopt(@param, "address", &found, &param_address, &param_address_len);
-		@.check (!found || sscanf(param_address, "%llX", &@#.addr) < 1, "Parameter \"address=<hex-addr>\" not found or wrong format!");
-		param_getopt(@param, "length", &found, &param_length, &param_length_len);
-		@.check (!found || sscanf(param_length, "%llX", &@#.len) < 1, "Parameter \"length\" not found or wrong format!");
-		trace ("Initialized #map_select to address range 0x%llX..0x%llX\n", @#.addr, @#.addr + @#.len);
+		@.check (!param_check(@param, "length", &param_length, &param_length_len), "Obligatory parameter \"length\" not found!");
+		@.check (sscanf(param_length, "%llX", &@#.len) < 1, "Parameter \"length\" has wrong format!");
+		if (param_check(@param, "address", &param_address, &param_address_len)) {
+			@.check (sscanf(param_address, "%llX", &@#.addr) < 1, "Parameter \"address\" has wrong format!");
+		}
+		else {
+			len_t tmp_len;
+			trace ("No \"address\" parameter specified, using $gadr instead\n");
+			@=outputcall :<in$gadr (@#.len) => (ok, @#.addr, tmp_len);
+			@.check (!ok, "$gadr failed!");
+			if (tmp_len < @#.len) {
+				@=outputcall :<in$padr (@#.addr, tmp_len) => ();
+				@.err ("$gadr only returned 0x%llX bytes, need 0x%llX!", tmp_len, @#.len);
+			}
+		}
+		trace ("Initialized #map_select to address range [0x%llX..0x%llX]\n", @#.addr, @#.addr + @#.len);
 	}
 	@success = TRUE;
 }
@@ -64,7 +80,6 @@ input :<in
 output :>out
 
 	// Operations have been broken up into 4 groups, differing in the parameters that specify the logical address range they act upon.
-	// Future combined operations will (hopefully) be broken up into their elementary ops by default, so no change in semantics will occur.
 
 	// all operations involving address operations
 	operation $gadr,$padr,$gadrcreate,$deletepadr,$gadrcreatetranswaitpadr,$gadrtranswaitdeletepadr,$gadrgettranswait,$putdeletepadr,$gadrcreateget,$putpadr {

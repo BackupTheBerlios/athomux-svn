@@ -5,20 +5,53 @@ License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 strategy brick #control_simple2
 purpose (De)instantiate other bricks upon request from the control output
 desc
-  A control_* capable of controlling itself, i.e. running the instances
-  in the same address space as itself.
-  It has no code input, no dynamic linking, no image output.
-  Currently it uses malloc(), since the outermost control will always
-  run in a non-Athomux environment. Is it possible to use an
-  explicit :<mem input instead, such that both circular self-control
-  and sub-control of logically subsidiary environments is possible??
-  Preliminary test implementation, bound to a singe-address-space
-  execution environment (e.g. Linux userspace or Linux kernelspace).
-  A lot of stuff is missing.
+A control_* capable of controlling itself, i.e. running the instances
+in the same address space as itself.
+It has no code input, no dynamic linking, no image output.
+Currently it uses malloc(), since the outermost control will always
+run in a non-Athomux environment.
+Future versions will use a :<mem input to store instantiated bricks.
   
-  This control_brick strictly distinguishes between instantiation and initialization:
-  On brick instantiation, (init) all static connectors get instantiated, too (get visible at :>control)
-  On brick initialization ($brick_init), all static connectors get initialized, too.
+Use $trans to read/write to the strategy nest, at addresses that are multiples of DEFAULT_TRANSFER (see common.h)
+When a reading $trans succeeds but returns zero bytes, there is no brick instance here but there are more at higher addresses.
+When a reading $trans fails, there is no brick instance here and there are no more at higher addresses.
+This way you can iterate through all bricks accessible through this strategy nest.
+
+A reading $trans returns something like this:
+
+brick==somebrick {
+	attr big=yes
+	attr age=2years
+	(input)=i_uninit {
+		attr phio=:>o_init
+		attr logio=all
+		connect i_uninit=5000:outlet
+	}
+	input=i_init {
+		attr dyn=none
+		attr lock=all
+		connect i_init=120000:resource
+	}
+	(output)=o_uninit {
+		attr phio=all
+		attr logio=all
+		attr dyn=all
+		attr addr=all
+		attr lock=all
+		connect o_init=3000:plug,4000:inp,8000:use
+	}
+	output=o_init {
+		attr lock=all
+	}
+}
+
+...where i_uninit, i_init, o_uninit and o_init are the connectors of the brick (arbitrary identifiers).
+(input) or (output) denote an uninitialized connector.
+You can:
+- (dis)connect uninizialized inputs to/from both initialized and uninitialized outputs
+- only initialize connected inputs
+- initialize outputs, no matter whether they are connected. Initialization may fail though, if the brick has 
+  uninitialized inputs vital for running the output
 enddesc
 
 static_header {
@@ -634,7 +667,7 @@ loader_control_simple2.init_brick((void*)root_instance2, &args, "");
 gen_info(boot, buf, sizeof buf);
 printf("Strategy brick:\n%s\n", buf);
 struct conn_info root_conn1 = {0, 0, "control" };
-struct args args1 = { .conn1 = &root_conn1, };
+// struct args args1 = { .conn1 = &root_conn1, };
 //root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
 struct conn_info root_conn2 = {boot->addr, 0, "hook" };
 struct args args2 = { .conn1 = &root_conn2, .conn2 = &root_conn1, };
@@ -699,7 +732,8 @@ operation $instbrick
   trace("constr==%d destr==%d\n", @constr, @destr);
   if (@constr | @destr) {
     @success = FALSE;
-    @op_code = opcode_brick_init;
+    @op_code = opcode_brick_init - opcode_input_max - 1;
+    @sect_code = 0;
     brick->loader->init_brick(brick->instance, @args, @param);
   }
 }
@@ -961,7 +995,7 @@ operation $findconn
   }
 }
 
-operation $trans
+operation $trans,$transwait
 {
   @.check ((@log_addr % REPRES_MAX) != 0, "Address 0x%llX is no multiple of 0x%llX!", @log_addr, (addr_t)REPRES_MAX);
   if (@direction == direct_read) {
@@ -972,7 +1006,7 @@ operation $trans
       if (!brick) {
         // No brick at this address. Return "success" + empty string if 
         // there are bricks at higher addresses, failure if not.
-        @.check (@log_addr >= @#.last_addr, "No brick at addresses >= 0x%llX!", @log_addr);
+        @.check (@log_addr >= @#.last_addr, "No bricks at addresses >= 0x%llX!", @log_addr);
         @.msg ("WARNING", "No brick found at address 0x%llX, but there are at higher addresses!", @log_addr);
         @phys_len = 0;
         @success = TRUE;

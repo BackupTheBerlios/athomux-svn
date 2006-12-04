@@ -647,7 +647,7 @@ loader_control_simple.init_brick((void*)root_instance, &args, "");
 gen_info(boot, buf, sizeof buf);
 printf("#control_simple:\n%s\n", buf);
 struct conn_info root_conn1 = {0, 0, "control" };
-struct args args1 = { .conn1 = &root_conn1, };
+//struct args args1 = { .conn1 = &root_conn1, };
 //root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
 struct conn_info root_conn2 = {boot->addr, 0, "hook" };
 struct args args2 = { .conn1 = &root_conn2, .conn2 = &root_conn1, };

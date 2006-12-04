@@ -226,7 +226,7 @@ struct output;
 union connector;
 
 typedef void static_operation(const union connector * on, struct args * args, const char * param);
-typedef static_operation (*operation);
+typedef static_operation (*const operation);
 
 typedef const operation output_operation_set[opcode_output_max];
 typedef const operation input_operation_set[opcode_input_max-opcode_output_max-1];

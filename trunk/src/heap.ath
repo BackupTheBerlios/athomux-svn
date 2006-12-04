@@ -11,21 +11,31 @@ purpose Implement heap functionality on a resource nest
 
 desc
 This brick implements heap functionality ($gadr/$padr) on an existing nest.
+By default, calls to $gadr will return address ranges all over the input nest.
+Use parameters "addr" and "len" to limit the range of returned addresses. Example: "addr=0xFF000 len=0x8000"
 $gadr and $padr don't need to be called pairwise, i.e., $padr does not need to match former $gadr calls exactly.
-Saves a configuration table of size DEFAULT_TRANSFER at address 0 in :<tmp. :<tmp must support pairwise $create, $delete, $get, $put and $transwait.
+Allocates a configuration table of size DEFAULT_TRANSFER in :<tmp at the address specified by the "addr" parameter.
+:<tmp must support pairwise $create, $delete, $get, $put and $transwait.
 If :<tmp has not been connected until brick initialization, state information will be placed in :<in instead.
 Use :<tmp only if you want to keep configuration information in a separate nest (e.g., for performance reasons or insufficient capabilities of :<in).
 enddesc
 
 static_data {
+	#include "param_scanner.h"
+
 	struct rec {
 		addr_t addr;
 		len_t len;
 	};
 }
 
-@.define STATE_SIZE (DEFAULT_TRANSFER)
-@.define N_RECS_MAX ((DEFAULT_TRANSFER - sizeof (index_t)) / sizeof (struct rec))
+@.define STATE_SIZE ((addr_t)DEFAULT_TRANSFER)
+@.define N_RECS_MAX ((STATE_SIZE - sizeof (index_t)) / sizeof (struct rec))
+
+data {
+	addr_t range_addr;
+	len_t range_len;
+}
 
 operation $brick_init {
 	success_t ok;
@@ -43,8 +53,20 @@ operation $brick_init {
 	@=outputcall :>out$output_init (@destr, @constr) => (ok);
 	@.check (!ok, "Could not init :>out!");
 	if (@constr && !@destr) {
+		const char *param_value;
+		int param_value_len;
+		if (param_check (@param, "addr", &param_value, &param_value_len)) {
+			@.check (sscanf(param_value, "%lli", &@#.range_addr) < 1, "Specify a positive integer as parameter \"addr\"!", STATE_SIZE);
+			@.check (!param_check (@param, "len", &param_value, &param_value_len), "No \"len\" parameter specified!");
+			@.check (sscanf(param_value, "%lli", &@#.range_len) < 1 || @#.range_len <= STATE_SIZE, "Specify a positive integer > 0x%llX as parameter \"addr\"!", STATE_SIZE);
+		}
+		else {
+			trace ("No \"addr\" parameter specified, using full nest address range as heap\n");
+			@#.range_addr = 0;
+			@#.range_len = (len_t)-1LL;
+		}
 		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$create (0, STATE_SIZE, TRUE) => (ok); }
-		else { @=outputcall :<in$create (0, STATE_SIZE, TRUE) => (ok); }
+		else { @=outputcall :<in$create (@#.range_addr, STATE_SIZE, TRUE) => (ok); }
 		@.check (!ok, "Could not create state!");
 		@success = TRUE;
 	}
@@ -74,7 +96,7 @@ output :>out
 		success_t ok;
 		paddr_t state_addr;
 		plen_t state_len;
-		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (@#.range_addr, STATE_SIZE) => (ok, state_addr, state_len); }
 		else { @=outputcall :<in$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
 		@.check (!ok || state_len < STATE_SIZE, "Could not get state!");
 		index_t *const n_recs = (index_t *)MAKE_PTR (state_addr);
@@ -86,11 +108,11 @@ output :>out
 			recs[*n_recs].len = @log_len;
 		}
 		else {
-			@log_addr = recs[0].addr = STATE_SIZE;
+			@log_addr = recs[0].addr = @#.range_addr + STATE_SIZE;
 			recs[0].len = @log_len;
 		}
 		(*n_recs)++;
-		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (0, STATE_SIZE) => (ok); }
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (@#.range_addr, STATE_SIZE) => (ok); }
 		else { @=outputcall :<in$put (state_addr, state_len) => (ok); }
 		@.check (!ok, "Could not put state!");
 		@success = TRUE;
@@ -104,7 +126,7 @@ output :>out
 		success_t ok;
 		paddr_t state_addr;
 		plen_t state_len;
-		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$get (@#.range_addr, STATE_SIZE) => (ok, state_addr, state_len); }
 		else { @=outputcall :<in$get (0, STATE_SIZE) => (ok, state_addr, state_len); }
 		@.check (!ok || state_len < STATE_SIZE, "Could not get state!");
 		index_t *const n_recs = (index_t *)MAKE_PTR (state_addr);
@@ -176,7 +198,7 @@ output :>out
 		else {
 			trace ("No records exist at all.\n");
 		}
-		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (state_addr, state_len) => (ok); }
+		if (IS_INPUT_CONNECTED (@:<tmp)) { @=outputcall :<tmp$put (@#.range_addr, state_len) => (ok); }
 		else { @=outputcall :<in$put (0, STATE_SIZE) => (ok); }
 		@.check (!ok, "Could not put state!");
 		@success = TRUE;

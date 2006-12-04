@@ -2028,6 +2028,7 @@ sub parse_subinstances {
 sub parse_1 {
   my ($text,$macros) = @_;
   my $remember = not defined(sp_part($::current,1,1));
+  my $whew = (sp_part($::current,1,0) eq "control_simple");
   $text = parse_subinstances($text, $remember);
   $::current = sp_part($::current,1) . ":<BRICK(:0:)";
   # brick operations
@@ -2069,6 +2070,9 @@ sub parse_1 {
       $::current .= "(:0:)";
       $text = $POSTMATCH;
       my $do_export = ($remember and not defined($local));
+      print("spec=$enhanced_spec type=$type do_export=$do_export remember==$remember") if $whew;
+      print(" local==$local") if $whew and defined($local);
+      print("\n") if $whew;
       my $export_string = $do_export ? "TRUE" : "FALSE";
       add_connector($type, $enhanced_spec, undef, $do_export, $export_string, "TRUE", $export_string);
       make_ops("$::current\$${type}_init", "{\@success = TRUE;}") if $remember;
@@ -2427,6 +2431,9 @@ sub make_pointers {
     my $field = sp_conn_instance($spec);
     $prefix .= "struct brick_${brick} * const _brick = BASE(_on, struct brick_${brick}, $field); (void)_brick; ";
   }
+  
+  # ROLAND WAS HERE!
+  
   $prefix .= $entry_debug if $debug_level >= 1;
   $$code = embrace_code($prefix, $$code, $suffix);
 }

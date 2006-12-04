@@ -48,9 +48,6 @@ static_data {
     abl2_BRICK_0_brick_init((void *)&(brick), &args, pbrick_param);
   }
 
-
-
-
   void _athomux_exit_() {
     struct args args = { .constr = FALSE, .destr = TRUE };
 
@@ -65,6 +62,9 @@ static_data {
 
 
   int main(int argc, char * argv[]) {
+    printf("*** uninitilized_input[0][0]==%p ***\n", uninitialized_input[0][0]);
+    printf("*** uninitilized_output[0][0]==%p ***\n", uninitialized_output[0][0]);
+ 
     // initialize the instance of myself
     init_abl2(&brick, NULL, 0);
 
@@ -106,13 +106,13 @@ operation $brick_init
     // deinstantiate program brick
     cmd (pbrickaddr, "program", "brick/=%s {\n}\n", pbricktype);
     // free memory
-    @=call :<control$delete (pbrickaddr, DEFAULT_TRANSFER) : "" => (@success);
+    @=call :<control$deletepadr (pbrickaddr, DEFAULT_TRANSFER) => (@success);
     @.fatal(@success!=TRUE, "delete failed");
   }
   else if (@constr) {
     // initialize brick loader
-	strncpy(pbricktype, (char *)MAKE_PTR(@args->phys_addr), sizeof pbricktype);
-	pbricktype[sizeof pbricktype - 1] = '\0';
+    strncpy(pbricktype, (char *)MAKE_PTR(@args->phys_addr), sizeof pbricktype);
+    pbricktype[sizeof pbricktype - 1] = '\0';
     // allocate new memory for program brick
     @=call :<control$gadr (DEFAULT_TRANSFER) : "" => (@success, pbrickaddr);
     @.fatal(@success!=TRUE, "gadr failed");

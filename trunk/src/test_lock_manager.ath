@@ -34,8 +34,10 @@ static_data {
 }
 
 instance #device_mem_nest_ulinux as mem;
-instance #adapt_multi as monitor;
+instance #heap as heap;
 wire :<in as ##mem:>out;
+instance #adapt_multi as monitor;
+wire :<in as ##heap:>out;
 instance #map_select as select_a;
 wire :<in as ##monitor:>out;
 instance #map_select as select_b;
@@ -44,6 +46,7 @@ instance #map_select as select_c;
 wire :<in as ##monitor:>out;
 instance #device_console_ulinux as console;
 wire :<buf as ##select_a:>out;
+wire :>read as #:<usrinp;
 wire :>write as #:<log;
 instance #lock_manager as main_lock;
 wire :<tmp as ##select_b:>out;
@@ -57,6 +60,10 @@ operation $brick_init {
 	@success = FALSE;
 	if (@destr) {
 		INIT_ALL_OUTPUTS ();
+		@=inputcall :<async$input_init (@destr, @constr) => ();
+		@=inputcall :<usrinp$input_init (@destr, @constr) => ();
+		@=inputcall :<log$input_init (@destr, @constr) => ();
+		@=inputcall :<manager$input_init (@destr, @constr) => ();
 		INIT_ONE_INSTANCE (main_lock, "");
 		INIT_ONE_INSTANCE (thread, "");
 		INIT_ONE_INSTANCE (console, "");
@@ -64,6 +71,7 @@ operation $brick_init {
 		INIT_ONE_INSTANCE (select_b, "");
 		INIT_ONE_INSTANCE (select_a, "");
 		INIT_ONE_INSTANCE (monitor, "");
+		INIT_ONE_INSTANCE (heap, "");
 		INIT_ONE_INSTANCE (mem, "");
 		@=outputcall :>oper$output_init (@destr, @constr) => ();
 		INIT_ALL_INPUTS ();
@@ -73,21 +81,25 @@ operation $brick_init {
 		INIT_ALL_INPUTS ();
 		@=outputcall :>oper$output_init (@destr, @constr) => ();
 		INIT_ONE_INSTANCE (mem, "");
+		INIT_ONE_INSTANCE (heap, "");
 		INIT_ONE_INSTANCE (monitor, "");
-		INIT_ONE_INSTANCE (select_a, "address=0 length=100000");
-		INIT_ONE_INSTANCE (select_b, "address=100000 length=100000");
-		INIT_ONE_INSTANCE (select_c, "address=200000 length=100000");
+		INIT_ONE_INSTANCE (select_a, "length=100000");
+		INIT_ONE_INSTANCE (select_b, "length=100000");
+		INIT_ONE_INSTANCE (select_c, "length=100000");
 		INIT_ONE_INSTANCE (console, "Lock manager");
-		@.fatal (!@success, "Failed to init console!");
 		INIT_ONE_INSTANCE (thread, "");
 		INIT_ONE_INSTANCE (main_lock, "");
+		@=inputcall :<manager$input_init (@destr, @constr) => ();
+		@=inputcall :<log$input_init (@destr, @constr) => ();
+		@=inputcall :<usrinp$input_init (@destr, @constr) => ();
+		@=inputcall :<async$input_init (@destr, @constr) => ();
 		INIT_ALL_OUTPUTS ();
 		@success = TRUE;
 	}
 }
 
 @.define log (FMT_STR, ...) {
-	athprintf(&@##console:>write, TRUE, 0, TRUE, FMT_STR ...);
+	athpipeprintf(&@##console:>write, TRUE, 0, FMT_STR ...);
 }
 
 // Reads out the meta nest (:1:) at CONNECTOR (e.g., "#some_brick:>out" or ":<that") into *METABUF_PTR (maximum size METABUF_SIZE) and returns the number of bytes read in METABUF_SIZE
@@ -123,8 +135,14 @@ operation $brick_init {
 
 local input :<manager
 	use TYPE lockrec_t "addr_t addr, len_t len, mand_t mand, int4 flags";
+	
+	operation $retract {
+		trace (":<manager$retract (0x%llX..0x%llX) called!\n", @try_addr, @try_len);
+	}
 
 local input :<log
+
+local input :<usrinp
 
 local input :<async
 
@@ -291,6 +309,13 @@ output :>program
 		}
 	}
 
+	@.func wait_for_user_input () {
+		success_t ok;
+		char buf[256];
+		@=outputcall :<usrinp$gadrtranswaitdeletepadr (MAKE_PADDR (buf), (plen_t)sizeof buf) => (ok);
+		@.check (!ok, "Could not read from user!");
+	}
+
 	@.macro calc (X, OP_STR) { @=outputcall :<async$wait [(X) + 102] ((X) * 4 + 0x50, ((X) + 3) * 4) : OP_STR => (); }
 
 	operation $output_init {
@@ -335,6 +360,7 @@ output :>program
 			if (!ok) return;
 			
 			log ("--- Test 3: thread synchronization ---\n");
+			log (":<manager==0x%P .ops==0x%P .ops[0]==0x%P .ops[0][0]==0x%P\n", MAKE_PADDR (&@:<manager), MAKE_PADDR (@:<manager._input_.ops), MAKE_PADDR (@:<manager._input_.ops[0]), MAKE_PADDR (@:<manager._input_.ops[0][0]));
 			// Perform a simple calculation in multiple threads with dependencies between sub-calculations, synchronized by locks.
 			//   ((3*5)*(12+8))/((3*9)-(34/2))
 			// = (15*20)/(27-17)
@@ -378,6 +404,7 @@ output :>program
 				return;
 			}
 			log ("All tests passed.\n");
+			wait_for_user_input ();
 		}
 		@success = TRUE;
 	}

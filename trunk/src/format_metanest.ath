@@ -9,12 +9,19 @@ brick #format_metanest
 
 purpose Reads out a metanest and prints contents human-readable
 
+desc
+Plug :<meta to a brick with an appropriate metanest (with a structure like "meta_rec_t").
+Plug :<text to the writing end of some pipe.
+Call any operation at :>trigger to trigger a reading of the meta data from section (:1:) at :<out
+enddesc
+
 static_data {
 	#include "param_scanner.h"
 	#include "ath_stdio.h"	
 	
-	//WORKAROUND some bug in generics that causes crashes.
-	struct lock_rec_t {
+	// WORKAROUND some bug in generics that causes crashes:
+	// presumed structure of the metanest:
+	struct meta_rec_t {
 		addr_t addr;
 		len_t len;
 		mand_t mand;
@@ -62,7 +69,7 @@ input :<text
 
 output :>trigger
 
-	@.define log (FMT, ...) (athprintf(&@:<text, FALSE, 0, TRUE, "[[%s]] " FMT, @#.name ...))
+	@.define log (FMT, ...) (athpipeprintf(&@:<text, FALSE, 0, "[[%s]] " FMT, @#.name ...))
 
 	// generic trigger operation, ignores arguments
 	operation $op {
@@ -82,7 +89,7 @@ output :>trigger
 //WORKAROUND buggy generics: pointer to generic types is NULL here, causes a memory error
 //		const plen_t rec_size = (plen_t)(@.sizeof (lockrec_t));
 		
-		const plen_t rec_size = sizeof (struct lock_rec_t);
+		const plen_t rec_size = sizeof (struct meta_rec_t);
 		if (metabuflen < rec_size) {
 			athsnprintf(textbuf, sizeof textbuf, "[[%s]] (no locks)\n", @#.name);
 			textbuflen = strlen(textbuf);
@@ -95,17 +102,17 @@ output :>trigger
 			metabufpos = metabuf;
 			while (metabuflen >= rec_size && textbufpos < textbufend) {
 //WORKAROUND buggy generics
-				addr_t addr = ((struct lock_rec_t *)metabufpos)->addr;
-				len_t len = ((struct lock_rec_t *)metabufpos)->len;
-				mand_t mand = ((struct lock_rec_t *)metabufpos)->mand;
-				int4 flags = ((struct lock_rec_t *)metabufpos)->flags;
+				addr_t addr = ((struct meta_rec_t *)metabufpos)->addr;
+				len_t len = ((struct meta_rec_t *)metabufpos)->len;
+				mand_t mand = ((struct meta_rec_t *)metabufpos)->mand;
+				int4 flags = ((struct meta_rec_t *)metabufpos)->flags;
 //				addr_t addr = metabufpos@*lockrec_t->addr;
 //				len_t len = metabufpos@*lockrec_t->len;
 //				mand_t mand = metabufpos@*lockrec_t->mand;
 //				int4 flags = metabufpos@*lockrec_t->flags;
 				textbufpos = athsnprintf(textbufpos, textbufend - textbufpos, "(0x%L..0x%L %k%k %m) ", addr, addr + len, flags & 0x03, (flags >> 2) & 0x03, mand);
 //WORKAROUND buggy generics
-				metabufpos += sizeof (struct lock_rec_t);					
+				metabufpos += sizeof (struct meta_rec_t);					
 //				metabufpos = (char *)&metabufpos@*lockrec_t->LASTFIELD;
 				metabuflen -= rec_size;
 			}

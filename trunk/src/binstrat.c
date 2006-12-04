@@ -3,6 +3,9 @@
  ***** BINARY STRATEGY INTERFACE
  *****/
 
+// uncomment this to enable extreme verbosity
+// #define VERBOSE
+
 #include "binstrat.h"
 #include "strat.h"
 #include "ath_stdio.h"
@@ -13,6 +16,10 @@
 #define MASK_CONN_TYPE (0x08)
 #define MASK_CONN_ACTIVE (0x10)
 #define MASK_CONN_TARGET_ACTION (0x07)
+
+#ifndef VERBOSE
+#define printf(...)
+#endif
 
 // *textbuf points to the first non-blank character from *buf afterwards.
 // Blanks include a newline '\n'.
@@ -125,7 +132,6 @@ success_t convert_word(const char **const textbuf, void **const binbuf, size_t *
 	const char *text = *textbuf;
 	char *bin = (char *)*binbuf;
 	size_t bin_size = *binbuf_size;
-	printf("binbuf==%p *binbuf==%p bin==%p\n", binbuf, *binbuf, bin);
 	printf("converting word \"%.*s\"...", 4, text);
 	fflush(stdout);
 	if (!id_table[(int)*text]) { printf("mismatch: '%c'\n", *text); return FALSE; }
@@ -142,6 +148,26 @@ success_t convert_word(const char **const textbuf, void **const binbuf, size_t *
 	return TRUE;
 }
 
+// Reads any string out of non-whitespaces and non-control characters and writes it to *binbuf
+// On success, the string is copied to **binbuf, *binbuf and *binbuf_size are adjusted accordingly.
+// Only fails of destination buffer overflow.
+success_t convert_string(const char **const textbuf, void **const binbuf, size_t *const binbuf_size) {
+	const char *tmp = *binbuf;
+	while (**textbuf > ' ') {
+		if (*binbuf_size <= 1) { return FALSE; }
+		*(*((char **)binbuf))++ = *(*textbuf)++;
+		(*binbuf_size)--;
+	}
+	*(*((char **)binbuf))++ = '\0';
+	(*binbuf_size)--;
+	printf("converted string \"%s\".\n", tmp);
+	return TRUE;
+}
+
+// Reads a sequence of words, separated by dots.
+// On success, *textbuf points to the first char behind the composed identifier afterwards.
+// On success, only the identifier behind the last dot is written to *bin. All previous identifiers are just skipped.
+// On success, *binbuf points to the first unallocated byte in the buffer, *binbuf_size is reduced accordingly.
 success_t convert_composed_identifier(const char **const textbuf, void **const binbuf, size_t *const binbuf_size) {
 	const char *text = *textbuf;
 	char *bin = (char *)*binbuf;
@@ -196,7 +222,7 @@ success_t convert_attr(const char **const textbuf, void **const binbuf, size_t *
 	if (!convert_composed_identifier(&text, &bin, &bin_size)) return FALSE;
 	if (!convert_op(&text, NULL)) return FALSE;
 	attr->value = (char *)bin;
-	if (!convert_word(&text, &bin, &bin_size)) return FALSE;
+	if (!convert_string(&text, &bin, &bin_size)) return FALSE;
 	if (!skip_end_of_line(&text)) return FALSE;
 	attr->next_attr = (struct attr_rec *)bin;
 	*textbuf = text;
@@ -206,7 +232,7 @@ success_t convert_attr(const char **const textbuf, void **const binbuf, size_t *
 	return TRUE;
 }
 
-// Reads a conn target line.
+// Reads a connection target, ("log_addr:conn_name", e.g., "1000:control")
 // On success, *textbuf points to the first character of the next line.
 // On success, a 'struct conn_target_rec' has been written to *binbuf, *binbuf and the 'next' pointer in the record just created point to the first byte behind it.
 // On success, *binbuf_size is redurec by the number of bytes *binbuf as been increased.
@@ -216,27 +242,16 @@ success_t convert_conn_target(const char **const textbuf, void **const binbuf, s
 	size_t bin_size = *binbuf_size;
 	struct conn_target_rec *const target = (struct conn_target_rec *)*binbuf;
 	void *bin = *binbuf + sizeof *target;
-	enum strat_action_t action;
-	skip_whitespace(&text);
-	if (skip_word(&text, "connect")) {
-		skip_whitespace(&text);
-		if (!skip_word(&text, NULL)) { return FALSE; }
-		if (!convert_op(&text, &action)) { return FALSE; };
-		target->flags = action;
-		if (!convert_logaddr(&text, &target->brick_addr)) { return FALSE; }
-		if (*text != ':') { printf("mismatch! \':\' expected, \'%c\' found!\n", *text); return FALSE; }
-		text++;
-		target->name = (char *)bin;
-		if (!convert_word(&text, &bin, &bin_size)) { return FALSE; }
-		target->next_target = (struct conn_target_rec *)bin;
-		*textbuf = text;
-		*binbuf = bin;
-		*binbuf_size = bin_size;
-		return TRUE;
-	}
-	else {
-		return FALSE;
-	}
+	if (!convert_logaddr(&text, &target->brick_addr)) { return FALSE; }
+	if (*text != ':') { printf("mismatch! \':\' expected, \'%c\' found!\n", *text); return FALSE; }
+	text++;
+	target->name = (char *)bin;
+	if (!convert_word(&text, &bin, &bin_size)) { return FALSE; }
+	target->next_target = (struct conn_target_rec *)bin;
+	*textbuf = text;
+	*binbuf = bin;
+	*binbuf_size = bin_size;
+	return TRUE;
 }
 
 // Reads a "conn" block.
@@ -290,25 +305,32 @@ success_t convert_conn(const char **const textbuf, void **const binbuf, size_t *
 		conn->attr = NULL;
 	}
 	skip_whitespace(&text);
-	conn->target = (struct conn_target_rec *)bin;
-	struct conn_target_rec *target = conn->target;
-	if (convert_conn_target(&text, &bin, &bin_size)) {
+	conn->target = NULL;
+	if (skip_word(&text, "connect")) {
 		skip_whitespace(&text);
-		while (*text == ',') {
-			// Only outputs are allowed multiple connections.
-			if (IS_CONN_OUTPUT (*conn)) { return FALSE; }
-			text++;
-			struct conn_target_rec *new_target = (struct conn_target_rec *)bin;
-			if (!convert_conn_target(&text, &bin, &bin_size)) { return FALSE; }
-			target = new_target;
-			new_target = (struct conn_target_rec *)bin;
+		if (!skip_word(&text, NULL)) { return FALSE; } // skip connector name
+		if (!convert_op(&text, &action)) { return FALSE; };
+		conn->flags |= action << 4;
+		skip_whitespace(&text);
+		conn->target = (struct conn_target_rec *)bin;
+		struct conn_target_rec *target = conn->target;
+		if (convert_conn_target(&text, &bin, &bin_size)) {
+			while (*text == ',') {
+				// Only outputs are allowed to have multiple connections.
+				if (IS_CONN_INPUT (*conn)) { return FALSE; }
+				text++;
+				struct conn_target_rec *new_target = (struct conn_target_rec *)bin;
+				if (!convert_conn_target(&text, &bin, &bin_size)) { return FALSE; }
+				target = new_target;
+				new_target = (struct conn_target_rec *)bin;
+			}
+			// terminate the list of connections.
+			target->next_target = NULL;
 		}
-		// terminate the list of connections.
-		target->next_target = NULL;
-	}
-	else {
-		// Unconnected yet.
-		conn->target = NULL;
+		else {
+			// Empty connection statement "connect conn==\n"
+			conn->target = NULL;
+		}
 	}
 	if (!skip_str(&text, " } ")) return FALSE;
 	conn->next_conn = (struct conn_rec *)bin;
@@ -396,7 +418,7 @@ success_t brick_to_string(char *textbuf, int *textbuf_len, struct brick_rec *bri
 	struct conn_target_rec *target;
 	char *textpos;
 	printf("brick_to_string(textbuf==%p, *text_len==%d, brick==%p)-----------------\n", textbuf, *textbuf_len, brick);
-	textpos = athsnprintf(textbuf, *textbuf_len, "brick=%s {\n", brick->name);
+	textpos = athsnprintf(textbuf, *textbuf_len, "brick==%s {\n", brick->name);
 	*textbuf_len -= (textpos - textbuf);
 	textbuf = textpos;
 	for (attr = brick->attr; attr; attr = attr->next_attr) {

@@ -146,7 +146,9 @@
 // Roland Niese:
 // to gain control over the order of subinstance initialization
 // to be able to initialize parameterized
-@.macro INIT_ONE_INSTANCE (SUBINSTANCE, PARAMS) { rawtrace ("Initializing #BRICK#SUBINSTANCE\n"); init_one_instance (&loader_@@BRICK, _brick, &((struct brick_@@BRICK *)_brick)->_sub_@@SUBINSTANCE, _args, PARAMS) }
+@.macro INIT_ONE_INSTANCE (SUBINSTANCE, PARAMS)  { rawtrace ("Initializing #BRICK#SUBINSTANCE\n"); init_one_instance (&loader_@@BRICK, _brick, &((struct brick_@@BRICK *)_brick)->_sub_@@SUBINSTANCE, _args, PARAMS) }
+
+@.define IS_INPUT_CONNECTED (INPUT) (((struct input *)&(INPUT))->connect != NULL)
 
 @.define _INIT_ALL_CONNS(struct args * _localargs, char * _localparam) { __INIT_ALL(-1, _localargs, _localparam); }
 @.define _INIT_ALL_INPUTS(struct args * _localargs, char * _localparam) { __INIT_ALL(0, _localargs, _localparam); }

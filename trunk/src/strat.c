@@ -56,10 +56,10 @@ int scan_multi(const char ** str, const char * search[], const int lens[], int n
     }
     for(i = 0; i < nr; i++) {
       if(!strncmp(tmp, search[i], lens[i])) {
-  tmp += lens[i];
-  _skip_blanks(tmp);
-  *str = tmp;
-  return i;
+        tmp += lens[i];
+        _skip_blanks(tmp);
+        *str = tmp;
+        return i;
       }
     }
     _skip_line(tmp);

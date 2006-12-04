@@ -36,9 +36,10 @@ char *athvsnprintf(char *buf, int bufsize, const char *fmt, va_list args) {
 	const char *s;
 	mand_t m;
 	addr_t addr_len;
-	paddr_t paddr_plen;
+	paddr_t paddr_plen = 0;
 	int n;
 
+	// space for the trailing NUL
 	bufsize--;
 	while (*fmtiter && bufsize > 0) {
 		while (*fmtiter && *fmtiter != '%' && bufsize > 0) {
@@ -53,11 +54,16 @@ char *athvsnprintf(char *buf, int bufsize, const char *fmt, va_list args) {
 				bufsize--;
 				fmtiter++;
 				break;
+			case 'S':
+				paddr_plen = va_arg(args, paddr_t);
+				// 'break' left out intentionally
 			case 's':
 				s = va_arg(args, const char *);
-				while (*s && bufsize > 0) {
+				if (*fmtiter == 's') {
+					paddr_plen = (paddr_t)-1;
+				}
+				while (*s && paddr_plen-- > 0 && bufsize-- > 1) {
 					*wtbuf++ = *s++;
-					bufsize--;
 				}
 				fmtiter++;
 				break;
@@ -207,10 +213,38 @@ char *athvsnprintf(char *buf, int bufsize, const char *fmt, va_list args) {
 		}
 	}
 	*wtbuf = '\0';
-	return wtbuf++;
+	return wtbuf;
 }
 
-extern plen_t athprintf(void *connector, bool is_output, mand_t mand, bool wait, const char *fmt, ...) {
+extern plen_t athnestprintf(void *connector, bool is_output, addr_t addr, mand_t mand, const char *fmt, ...) {
+	static const char *const paramstr = "";
+	char strbuf[0x400];
+	char *strbuf_end;
+	struct output *out = is_output ? (struct output *)connector : ((struct input *)connector)->connect;
+	struct args args;
+	va_list arglist;
+	
+	va_start(arglist, fmt);
+	strbuf_end = athvsnprintf(strbuf, sizeof strbuf, fmt, arglist);
+	args.success = FALSE;
+	args.log_addr = addr;
+	args.log_len = (len_t)(strbuf_end - strbuf);
+	args.phys_addr = MAKE_PADDR (strbuf);
+	args.mandate = mand;
+	args.direction = direct_write;
+	args.prio = prio_normal;
+	args.op_code = opcode_transwait;
+	args.sect_code = 0;
+	out->ops[0][opcode_transwait]((union connector *)out, &args, paramstr);
+	if (args.success) {
+		return args.phys_len;
+	}
+	else {
+		return 0;
+	}
+}
+
+extern plen_t athpipeprintf(void *connector, bool is_output, mand_t mand, const char *fmt, ...) {
 	static const char *const paramstr = "";
 	char strbuf[0x400];
 	char *strbuf_end;
@@ -224,7 +258,7 @@ extern plen_t athprintf(void *connector, bool is_output, mand_t mand, bool wait,
 	args.phys_addr = MAKE_PADDR (strbuf);
 	args.phys_len = (plen_t)(strbuf_end - strbuf);
 	args.mandate = mand;
-	args.action = wait ? action_wait : action_try;
+	args.action = action_wait;
 	args.melt = TRUE;
 	args.op_code = opcode_gadrcreatetranswaitpadr;
 	args.sect_code = 0;
