@@ -2,7 +2,7 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
+context pconf: !klinux, !x86
 
 brick #device_dummy_linux
 purpose Dummy device driver for testing under Linux

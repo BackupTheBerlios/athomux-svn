@@ -1,0 +1,136 @@
+  Author: Marcel Kilgus
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !.*, x86
+
+brick #device_ide
+purpose Simple test IDE PIO mode device driver
+desc
+  Simple test IDE brick. Uses PIO mode.
+enddesc
+
+static_data {
+#include <x86_lib.h>
+
+#define IDE_SECT_SIZE	512
+
+#define IDE_PORT_BASE	0x1f0			// Port address of IDE controller
+
+// IDE register addreses (relative to BASE)
+#define IDE_DATA		0
+#define IDE_ERROR		1
+#define IDE_FEATURES	1
+#define IDE_SEC_COUNT	2
+#define IDE_LBA0		3
+#define IDE_LBA1		4
+#define IDE_LBA2		5
+#define IDE_LBA3		6
+#define IDE_STATUS		7
+#define IDE_COMMAND		7
+#define IDE_ALT_STATUS	0x206
+#define IDE_DEV_CTRL	0x206
+
+// IDE_LBA3 bits
+#define IDE_LBA3_MASK	0x0f
+#define IDE_LBA3_DRV	0x10
+#define IDE_LBA3_ENABLE	0xe0
+
+// IDE status bits
+#define IDE_STAT_ERR	0x01
+#define IDE_STAT_DRQ	0x08
+#define IDE_STAT_DRDY	0x40
+#define IDE_STAT_BUSY	0x80
+
+// Command bytes
+#define IDE_READ_SEC_RTRY	0x20
+}
+
+// has no input
+
+output :>out
+
+@.func ide_read_sector(int drive, long lba, char *buffer) {
+	int base = IDE_PORT_BASE;
+	int	i;
+
+//	printf("waiting for busy\n");
+	while (inportb(base + IDE_STATUS) & IDE_STAT_BUSY);		// Wait for drive not busy
+	printf("%x\n", inportb(base + IDE_STATUS));
+
+//	printf("programming data\n");
+	outportb(base + IDE_DEV_CTRL, 0x0A);					// Disable drive interrupt
+	outportb(base + IDE_LBA0, lba & 0xff);
+	outportb(base + IDE_LBA1, lba >> 8 & 0xff);
+	outportb(base + IDE_LBA2, lba >> 16 & 0xff);
+	outportb(base + IDE_LBA3, (lba >> 24 & IDE_LBA3_MASK) | (drive * IDE_LBA3_DRV) | IDE_LBA3_ENABLE);
+	outportb(base + IDE_SEC_COUNT, 1);
+
+//	printf("waiting for ready\n");
+	while ((inportb(base + IDE_STATUS) & IDE_STAT_DRDY) == 0);	// Wait for drive ready
+	printf("%x\n", inportb(base + IDE_STATUS));
+
+//	printf("sending command\n");
+	outportb(base + IDE_COMMAND, IDE_READ_SEC_RTRY);
+
+//	printf("waiting for DRQ\n");
+	while ((inportb(base + IDE_STATUS) & IDE_STAT_DRQ) == 0);	// Wait for data available	
+//	printf("%x\n", inportb(base + IDE_STATUS));
+
+//	printf("transfering data\n");
+	for (i = 0; i < 256; i++) {
+		int data = inportw(base + IDE_DATA);
+//		buffer[i << 1] = data >> 8;
+//		buffer[(i << 1) + 1] = data & 0xff;
+		((unsigned short*)buffer)[i] = data;
+	}
+}
+
+
+operation $trans
+{
+	char buffer[IDE_SECT_SIZE];
+	size_t size = @log_len;
+	size_t part_size;
+	addr_t addr = @log_addr;
+	char *ptr = MAKE_PTR(@phys_addr);
+
+	switch(@direction) {
+		case direct_read:
+			while (size > 0) {
+				ide_read_sector(0, addr >> 9, buffer);
+				if (size < IDE_SECT_SIZE)
+					part_size = size;
+				else
+					part_size = IDE_SECT_SIZE;
+
+				memcpy(buffer + (addr & 0x1ff), ptr, part_size);
+
+				ptr += part_size;
+				addr += part_size;
+				size -= part_size;
+			}
+			break;
+
+		case direct_write:
+			@.err("trans: direct_write not implemented");
+			break;
+
+		case direct_stop:
+		default:
+			@.err("trans: direct_stop not implemented");
+	}
+	@success = TRUE;
+}
+
+
+operation $wait
+{
+	@success = TRUE;
+}
+
+
+operation $create,$delete
+{
+	@success = TRUE;
+}

@@ -2,6 +2,8 @@
   Copyright: Florian Niebling
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !.*, ulinux*
+
 /*
  * TODO:
  *    merge: create_process exec_process fork_process

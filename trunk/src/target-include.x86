@@ -1,0 +1,2 @@
+$(pconf)/$(cconf)/extra_$(target)/%.o : $(pconf)/%.c common.h strat.h Makefile
+	$(CC) -c -I. -I$(pconf)/$(cconf) -I$(pconf)/$(cconf)/extra_$(target) $($(cconf)_CFLAGS) $< -o $@

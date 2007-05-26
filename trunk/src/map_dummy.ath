@@ -17,7 +17,7 @@ static_header {
 #define UNIFY
 
 // WARNING: set this number (# KB) lower on machines without huge amounts of (virtual) memory!
-#define MAX_ELEMS (1024*200)
+#define MAX_ELEMS (1024)
 
 typedef char block_t[DEFAULT_TRANSFER];
 typedef block_t table_t[MAX_ELEMS];
@@ -81,8 +81,10 @@ init {
     fputs("Not enough memory available! Reduce MAX_ELEMS in map_dummy.ath!\n", stderr);
 	exit(254);
   }
+  memset(@#.all, 0, sizeof(struct all));
 #endif
   @#.loc = malloc(sizeof(struct local));
+  memset(@#.loc, 0, sizeof(struct local));
   if(!@#.all->max_index) {
     int i;
     for(i = 0; i < MAX_ELEMS; i++) {

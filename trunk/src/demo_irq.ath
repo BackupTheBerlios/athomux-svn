@@ -1,0 +1,42 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context target: !.*, athomux_x86
+
+brick #demo_irq
+purpose Send string to screen output
+desc
+enddesc
+
+static_header
+{
+	#include <x86_lib.h>
+	#include <x86_irq.h>
+}
+
+init 
+{
+	// Enable keyboard interrupt
+	outportb(0x21, inportb(0x21) & ~(1 << IRQ_KEYBOARD));
+}
+
+input :<key
+
+operation $retract
+{
+	int key = inportb(0x60);
+//	printf("irq (%i)!\n", (int)@log_addr);
+	printf("key scan code 0x%02x\n", key);
+	@success = TRUE;
+}
+
+
+input :<timer
+
+operation $retract
+{
+	printf("irq (%i)!\n", ((exc_status_t*)(long)@log_addr)->number);
+	@success = TRUE;
+}
+

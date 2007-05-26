@@ -230,6 +230,10 @@ operation $output_init
 {
   trace("init fs_simple\n");
   if(@constr && !@#.fs_logaddr) {
+	// initialise memory
+	memset(@#.path_hash, 0, sizeof(@#.path_hash));
+	memset(@#.index_hash, 0, sizeof(@#.index_hash));
+	memset(@#.vconn_hash, 0, sizeof(@#.vconn_hash));
     // get root address
     struct conn_info in_info = { .conn_addr = 0, .conn_index = 0, .conn_name = "_root", };
     if(@param[0]) {

@@ -1,0 +1,233 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !.*, x86
+
+brick #mmu_x86
+purpose Provide virtual address space and task infrastructure
+desc
+enddesc
+
+static_header { 
+#include "x86_lib.h"
+#include "x86_mem.h"
+#include "x86_kernel.h"
+#include "types.h"
+}
+
+static_data {
+	paddr_t stack_put_string(paddr_t *stack, char **ptr, char *s) {
+		int slen = (strlen(s) + 4) & ~3;	// DWORD aligned
+		*ptr -= slen;
+		*stack -= slen;
+		strcpy(*ptr, s);
+		return *stack;
+	}
+
+	paddr_t stack_put_long(paddr_t *stack, char **ptr, unsigned int v) {
+		*ptr -= 4;
+		*stack -= 4;
+		*(unsigned int *)(*ptr) = v;
+		return *stack;
+	}
+}
+
+data {
+	struct task_struct *task;
+	addr_t	task_addr;
+}
+
+// Connection to strategy block task
+input :<task
+use PC task;
+
+// Connection to CPU task list
+input :<tlist
+
+input :<image(:2:)
+
+output :>img_out(:2:)
+
+section (:ALL:)
+
+operation $gettranswait,$transwait,$put
+{  
+	//printf("mmu_ulinux operation [%s]\n", op_names[@op_code]);
+	@=call :<image(:@sect_code:)$op @args : @param;
+}
+
+
+output :>dummy
+
+// fork a process, mmap the image into the address space, goto start
+operation $output_init
+{
+	int		task_index;
+	addr_t	addr;
+	len_t	len;
+	paddr_t	phys_addr;
+	plen_t	phys_len;
+	task_t 	*tasks;
+	sched_t	*sched;
+
+	if (@destr) {
+		kprintf("MMU: killing job addr 0x%x\n", (unsigned int)@#.task_addr);
+		@=call :<tlist(:0:)$padr(@#.task_addr, 0) => (@success);
+	}
+
+	if (!@constr) return;
+
+//	kprintf("mmu: 1\n");
+  	@#.task = PC_GET(task, atoi(@param), sizeof(task_struct));
+  	@.rawtrace(strategy, "mmu_x86: exec [%s], entry: [0x%lx]\n", @#.task->name, @#.task->entry);
+
+//	kprintf("mmu: 2\n");
+	// Initialise new Athomux task structure for new task
+	@=call :<tlist(:0:)$gadr(0) => (@success, addr, len);
+	@.check(!@success, "Cannot create new task!");
+	@#.task_addr = addr;
+	task_index = addr / len;
+	kprintf("mmu: new task structure at 0x%llx (index %d), len %lld\n", addr, task_index, len);
+
+	// Get access to task data
+	@=call :<tlist(:1:)$get(0, 0, 0) => (@success, phys_addr, phys_len);
+	@.fatal(!@success, "Fatal, cannot get scheduler status!");
+	sched = MAKE_PTR(phys_addr);
+//	kprintf("mmu: 3\n");
+
+	@=call :<tlist(:0:)$get(0, 0, 0) => (@success, phys_addr, phys_len);
+	@.fatal(!@success, "Fatal, cannot get task table!");
+	tasks = MAKE_PTR(phys_addr);
+//	kprintf("mmu: 4\n");
+
+	// Remember pointer to this brick so we get called on a page fault
+	tasks[task_index].mmu_brick = (void*)_brick;
+	// Also remember the POSIX task struct (syscall handler needs it)
+	tasks[task_index].posix_task = (void*)@#.task;	// HACK
+
+	if (@#.task->type == PROCESS_EXEC) {
+		// EXEC: Make copy of a clean page tree
+		tasks[task_index].tss.eip = @#.task->entry;
+		tasks[task_index].tss.cr3 = copy_page_tree(kernel_pdir, NORMAL);
+
+		// Create stack environment for task (argc, argv, envp)
+		paddr_t stack = IMAGE_START + IMAGE_SIZE;
+		paddr_t page = get_page();
+		show_page(tasks[task_index].tss.cr3, page, (stack - 4) & PAGE_MASK, PAGE_SHARED);
+
+		int index;
+		int argc = 1 + @#.task->argc;
+	   	paddr_t argv[argc + 1];
+		paddr_t envp;
+
+		char *ptr = (char *)VIRT_MEM(page) + PAGE_SIZE;	
+		envp = stack_put_string(&stack, &ptr, "PATH=/usr/bin");
+		argv[0] = stack_put_string(&stack, &ptr, @#.task->name);	// argv[0]
+	    for (index = 1; index < argc; index++) {
+			argv[index] = stack_put_string(&stack, &ptr, PC_GET(task, @#.task->argv[index - 1], 256));
+		}
+
+		stack_put_long(&stack, &ptr, 0);				// end of envp
+		stack_put_long(&stack, &ptr, envp);				// envp
+		stack_put_long(&stack, &ptr, 0);				// end of argv
+	    for (index = argc - 1; index >= 0; index--)	{
+			stack_put_long(&stack, &ptr, argv[index]);	// argv
+		}
+		stack_put_long(&stack, &ptr, argc);				// argc
+
+		tasks[task_index].tss.esp2 = stack;
+		tasks[task_index].tss.esp = stack;
+	} else {
+		// Copy FPU state
+		__asm__("clts ; fnsave %0":"=m" (tasks[task_index].i387));
+
+		// Remember parent->child relationship (FIXME for several childs, use sibling_task)
+		tasks[sched->current_task].child_task = task_index;
+
+		// FORK: make copy of page tree (with COW)
+		tasks[task_index].tss.eax = 0; 					// This is the child process!
+		tasks[task_index].tss.eip = @#.task->entry;
+		tasks[task_index].tss.esp = @#.task->sp;
+		tasks[task_index].tss.esp2 = @#.task->sp;
+		tasks[task_index].tss.ebp = @#.task->bp;
+		tasks[task_index].tss.cr3 = copy_page_tree(tasks[sched->current_task].tss.cr3, COPY_ON_WRITE);
+	}
+
+//	kprintf("mmu: 5\n");
+	// Allocate kernel stack space for this job
+	// Famous last words: 4k of stack should be enough for anyone!
+	// FIXME: memory leak, the stack won't be returned to the free space list
+	// (which OTOH is good as it will still be in use during task termination!)
+/*	paddr_t page = get_page();
+	tasks[task_index].tss.ss0 = KERNEL_DS;
+	tasks[task_index].tss.esp0 = (paddr_t)VIRT_MEM(page) + PAGE_SIZE;*/
+
+	// Version with stack in virtual memory of task. Can be used to get a bigger stack,
+	// but has its own problems, mostly during task destruction.
+	paddr_t page = MAKE_PADDR(get_page());
+	mem_map[MAP_NR(page)] = MAP_PAGE_RESERVED;
+	show_page(tasks[task_index].tss.cr3, page, KERNEL_VIRT_BASE-2*PAGE_SIZE, PAGE_SHARED);
+	page = MAKE_PADDR(get_page());
+	mem_map[MAP_NR(page)] = MAP_PAGE_RESERVED;
+	show_page(tasks[task_index].tss.cr3, page, KERNEL_VIRT_BASE-3*PAGE_SIZE, PAGE_SHARED);
+	tasks[task_index].tss.ss0 = KERNEL_DS;
+	tasks[task_index].tss.esp0 = KERNEL_VIRT_BASE-PAGE_SIZE;
+
+	tasks[task_index].state = TASK_RUNNABLE;
+//	kprintf("mmu: 6\n");
+
+  	@success = TRUE;
+}
+
+// phys_addr = address of page fault
+// phys_len = error code
+operation $trans
+{
+//	kprintf("Page fault (addr 0x%lx)!\n", @phys_addr);
+	paddr_t page;
+	paddr_t virt = @phys_addr & PAGE_MASK;
+	int error = @phys_len;
+
+	if ((error & PFAULT_USERMODE) == 0 && virt >= KERNEL_VIRT_BASE) {
+		errprintf("Page fault in kernel mode. PANIC!\n");
+		abort();
+	}
+
+	if (error & PFAULT_PROTVIOL) {
+		// Copy on write?
+		paddr_t entry = get_table_entry(0, virt);
+		if ((entry & PAGE_COW) == 0) {
+			kprintf("Write access violation at address 0x%x!\n", (int)virt);
+			return;
+		}
+		if (mem_map[MAP_NR(entry & PAGE_MASK)] == 1) {
+			// We're the only user of this COW page left, so we can just make it writable
+			kprintf("Only user left, making page 0x%x (phys 0x%x) writable\n", 
+				(unsigned int)virt, (unsigned int)entry);
+			set_table_entry(0, virt, (entry & ~PAGE_COW) | PAGE_RW);
+			tlb_invalidate();
+		} else {
+			// More users of this page, make a private copy
+			page = get_page();
+			show_page(0, page, virt, PAGE_SHARED);
+			tlb_invalidate();
+			memcpy(MAKE_PTR(virt), MAKE_PTR(VIRT_MEM(entry & PAGE_MASK)), PAGE_SIZE);
+			mem_map[MAP_NR(entry & PAGE_MASK)]--;			// One less user of the physical page
+			kprintf("Copy on write: virt 0x%x, oldphys 0x%x, newphys 0x%x\n", 
+				(unsigned int)virt, (unsigned int)entry, (unsigned int)page);
+		}
+	} else {
+		// Page not present, load it from input next
+		paddr_t phys_addr;
+		paddr_t phys_len;
+		page = get_page();
+		show_page(0, page, virt, PAGE_SHARED);
+		tlb_invalidate();
+
+		@=call :<image(:0:)$gettranswait (virt, PAGE_SIZE, direct_read) => (@success, phys_addr, phys_len);
+		printf("Got page 0x%x\n", phys_addr);
+		memcpy(MAKE_PTR(virt), MAKE_PTR(phys_addr), phys_len);
+	}
+	@success = TRUE;
+}

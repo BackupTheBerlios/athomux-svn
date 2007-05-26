@@ -1,0 +1,49 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context target: !.*, athomux_x86
+
+brick #sched_x86
+purpose Simple round robin scheduler
+desc
+enddesc
+
+static_header 
+{
+	#include <x86_lib.h>
+}
+
+input :<tasks
+
+output :>sched
+
+// Return ID of next job to activate
+operation $gadr
+{
+	paddr_t phys_addr;
+	plen_t  phys_len;
+	task_t 	*tasks;
+	sched_t *sched;
+	int 	task_count;
+	static int last_task = 0;
+
+	@=call :<tasks(:1:)$get(0, 0, 0) => (@success, phys_addr, phys_len);
+	@.fatal(!@success, "Fatal, cannot get scheduler status!");
+	sched = MAKE_PTR(phys_addr);
+
+	@=call :<tasks(:0:)$get(0, 0, 0) => (@success, phys_addr, phys_len);
+	@.fatal(!@success, "Fatal, cannot get task table!");
+
+	tasks = MAKE_PTR(phys_addr);
+	task_count = sched->task_count;
+
+//	printf("\n%i task(s) running\n", task_count);
+	do {
+		last_task = tasks[last_task].next_task;
+	} while (tasks[last_task].state != TASK_RUNNABLE);
+	@log_addr = last_task;
+	@success = TRUE;
+}
+
+

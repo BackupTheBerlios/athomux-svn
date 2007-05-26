@@ -1,0 +1,112 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !.*, x86
+
+brick #char_device_kbd
+purpose Simple keyboard device for posix filedescriptors
+desc
+enddesc
+
+static_header { 
+	#include "x86_irq.h"
+	#include "x86_lib.h"
+
+	#define KBD_DATA_PORT	0x60
+	#define KBD_STATUS_PORT 0x64
+
+	#define QUEUE_SIZE		16
+}
+
+data {
+	unsigned char buffer[DEFAULT_TRANSFER];
+	unsigned char queue[QUEUE_SIZE];
+	int start;
+	int end;
+}
+
+init {
+	@#.start = 0;
+	@#.end = 0;	
+}
+
+input :<irq
+
+@.func send_cmd(unsigned char c)
+{
+	outportb(c, KBD_STATUS_PORT);
+}
+
+
+operation $retract
+{
+	unsigned char scancode;
+	int tmp;
+	
+	send_cmd(0xAD);			// Disable keyboard
+	if ((inportb(KBD_STATUS_PORT) & 0x01) != 0x01)
+		goto end_kbd_intr;
+
+	scancode = inportb(KBD_DATA_PORT);
+//	printf("kbd (%i)!\n", scancode);
+
+	tmp = @#.end + 1;
+	if (tmp >= QUEUE_SIZE) tmp = 0;
+	if (tmp == @#.start) {
+		printf("Keyboard buffer overflow!\n");
+		goto end_kbd_intr;
+	}
+	@#.queue[@#.end] = scancode;
+	@#.end = tmp;
+		
+end_kbd_intr:  
+	send_cmd(0xAE);         // enable keyboard
+}
+
+
+output :>data
+
+operation $output_init
+{
+	@#.end = 0;
+	@success = TRUE;
+}
+
+operation $get
+{
+	if (@log_len > DEFAULT_TRANSFER)
+		@log_len = DEFAULT_TRANSFER;
+
+	@phys_addr = (paddr_t) @#.buffer;
+  
+	if (@forwrite) {
+    	@success = FALSE;
+  	}
+}
+
+operation $gettranswait
+{
+	if (@log_len > DEFAULT_TRANSFER)
+    	@log_len = DEFAULT_TRANSFER;
+
+	int count = @log_len;
+
+	@phys_addr = (paddr_t) @#.buffer;
+  	if (!@forwrite) {
+		@phys_len = 0;
+		int tmp = @#.start;
+		while (tmp != @#.end && count > 0) {
+			@#.buffer[@phys_len++] = @#.queue[tmp++];
+			if (tmp == QUEUE_SIZE) tmp = 0;
+			count--;
+		}
+		@#.start = tmp;
+    	@success = @phys_len > 0;
+	}
+}
+
+operation $put
+{
+	@success = TRUE;
+}

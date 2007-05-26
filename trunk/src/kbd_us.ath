@@ -1,0 +1,72 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #kbd_us
+purpose Translates the scancodes (US layout) into ASCII characters
+desc
+enddesc
+
+static_data { 
+	#include "kbdus.h"
+}
+
+data {
+	unsigned char buffer[DEFAULT_TRANSFER];
+}
+
+input :<kbd
+
+output :>fd
+
+operation $output_init
+{
+	@success = TRUE;
+}
+
+operation $get
+{
+	if (@log_len > DEFAULT_TRANSFER)
+		@log_len = DEFAULT_TRANSFER;
+
+	@phys_addr = (paddr_t) @#.buffer;
+  
+	if (@forwrite) {
+    	@success = FALSE;
+  	}
+}
+
+operation $gettranswait
+{
+	paddr_t kbd_addr;
+	plen_t kbd_len;
+	unsigned char *tmp;
+
+	if (@log_len > DEFAULT_TRANSFER)
+    	@log_len = DEFAULT_TRANSFER;
+
+	@phys_addr = (paddr_t) @#.buffer;
+	@phys_len = 0;
+
+  	if (!@forwrite) {
+		int count = @log_len;
+
+    	@=call :<kbd(:0:)$gettranswait(0, DEFAULT_TRANSFER, FALSE) => (@success, kbd_addr, kbd_len);
+
+		tmp = MAKE_PTR(kbd_addr);
+		while (kbd_len > 0 && count > 0) {
+			unsigned char scancode = *(tmp++);
+			kbd_len--;
+
+			if (scancode & 0x80) continue;
+			@#.buffer[@phys_len++] = kbdus[scancode];
+			count--;
+		}
+    	@success = @phys_len > 0;
+	}
+}
+
+operation $put
+{
+	@success = TRUE;
+}

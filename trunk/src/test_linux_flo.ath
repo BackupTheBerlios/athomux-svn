@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !x86
+
 brick #test_linux_flo
 purpose Some basic testing of filesystem operations - Flo's own version
 desc

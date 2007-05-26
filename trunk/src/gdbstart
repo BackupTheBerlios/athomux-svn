@@ -1,0 +1,5 @@
+#!/bin/bash
+# Let QEMU start remote session
+sleep 1s
+gdb -symbols=x86/x86/athomux_x86 -x gdb.remote
+#gdb -x gdb.remote

@@ -5,7 +5,7 @@
 /* TODO: increase stack segment at pagefault
  * increase data segment at "brk" syscall
  */
-context pconf: !.*, ulinux
+context pconf: !.*, ulinux, x86
 
 brick #process_image
 purpose provide the address space of a process

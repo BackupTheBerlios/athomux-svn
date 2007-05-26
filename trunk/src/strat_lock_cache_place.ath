@@ -3,8 +3,8 @@ Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
 // replace device_timer_ulinux to make this brick fit for other environments
-context pconf: ulinux*
-context cconf: ulinux*
+context pconf: !.*, ulinux*
+context cconf: !.*, ulinux*
 
 strategy brick #strat_lock_cache_place
 

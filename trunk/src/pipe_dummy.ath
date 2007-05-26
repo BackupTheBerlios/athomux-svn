@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !.*, ulinux*
+
 brick #pipe_dummy
 purpose Stateful pipe Implementation
 desc

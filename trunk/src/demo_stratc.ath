@@ -2,8 +2,8 @@ Author: Hardy Kahl
 Copyright: Hardy Kahl
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !klinux
-context cconf: !klinux
+context pconf: !klinux, !x86
+context cconf: !klinux, !x86
 
 brick #demo_stratc
 

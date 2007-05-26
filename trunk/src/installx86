@@ -1,0 +1,10 @@
+#!/bin/bash
+if [ ! -e image/boot ] 
+then
+	echo -n "Trying to mount floppy image... "
+	mkdir image
+	sudo modprobe loop
+	sudo mount -t ext2 -o sync,loop=/dev/loop0 floppy.img image
+	echo "done"
+fi
+cp x86/x86/athomux_x86_stripped image/kernel

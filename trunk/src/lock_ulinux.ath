@@ -2,6 +2,8 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !.*, ulinux.*
+
 brick #lock_ulinux
 purpose Locks
 desc

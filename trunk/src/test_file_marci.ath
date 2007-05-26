@@ -1,0 +1,76 @@
+  Author: Thomas Schoebel-Theuer, Marcel Kilgus
+  Copyright: University of Stuttgart
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !.*, x86
+
+brick #test_file_marci
+purpose Put a file with fixed contents into the file system
+desc
+enddesc
+
+static_data 
+{
+#include "types.h"
+static
+#include "test_file_marci.inc"
+#include <sys/stat.h>
+}
+
+data 
+{
+ 	char file_name[256];
+}
+
+init 
+{
+  	snprintf(@#.file_name, 256, @param);
+}
+
+input :<in(:3:)
+
+output :>out
+
+
+operation $output_init
+{
+	if(!@constr) {
+    	return;
+	}
+
+	addr_t log_addr = 0;
+	int len = sizeof(bin_data);
+
+	while (log_addr < len) {
+    	void * ptr;
+	    paddr_t phys_addr;
+	    plen_t phys_len;
+	    success_t success;
+
+    	@=call :<in$createget (log_addr, DEFAULT_TRANSFER, FALSE) => (success, phys_addr, phys_len);
+		@.fatal(!success, "createget failed\n");
+    	ptr = MAKE_PTR(phys_addr);
+	    memcpy(ptr, &bin_data[log_addr], DEFAULT_TRANSFER);
+	    @=call :<in$put (log_addr, DEFAULT_TRANSFER, prio_background) => (success);
+		@.fatal(!success, "putwait failed\n");
+	    log_addr += DEFAULT_TRANSFER;
+	}
+
+  	ath_stat_t ath_buf = { { .desc_attrlen = 256 + sizeof(struct entry_desc) } , { .type = FILE_FILE, .mode = 0666 | S_IFREG, .size = len } };
+
+  	int slen = strlen(@#.file_name);
+  	for (; @#.file_name[slen] != '/'; slen --);
+
+  	snprintf(ath_buf.stat.name, 64, &@#.file_name[slen + 1]);
+  	plen_t phys_len;
+  	@=call :<in(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(&ath_buf), direct_write) => (@success, phys_len);
+  	@.check(!@success, " could not write stat of file [%s]\n", @#.file_name);
+
+  	char sbuf[DEFAULT_TRANSFER] = {};
+  	@=call :<in(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_read) => (@success, phys_len);
+  	@.check(!@success, " could not read stat of file [%s]\n", @#.file_name);
+  	//printf(" file [%s] size [%08lx]\n", ((struct ath_stat *) sbuf)->stat.name, ((struct ath_stat *) sbuf)->stat.size);
+
+  	@success = TRUE;
+}
+

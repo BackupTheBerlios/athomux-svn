@@ -2,6 +2,8 @@
   Copyright: Jens-Christian Korth
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !.*, ulinux*
+
 brick #io_demo_file
 purpose IO Demo
 desc

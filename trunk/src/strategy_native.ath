@@ -1,0 +1,1501 @@
+  Author: Florian Niebling, Marcel Kilgus
+  Copyright: Florian Niebling, Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context target: !.*, athomux_x86
+
+/*
+ * TODO:
+ *    merge: create_process exec_process fork_process
+ *           get_stat get_stat_dir
+ */
+
+brick #strategy_native
+purpose Connect various bricks to form a network that provides unix-like functionality
+desc
+    When an instance of this brick is created at startup, the athomux filesystem is
+    initialized and the first athomux ulinux process, a shell, is created.
+
+    This brick handles system calls such as fork, exec, wait, open, close that
+    have to instantiate and connect bricks to the network.
+enddesc
+
+static_header {
+#include <sys/stat.h>
+#include "sysnum.h"
+#include "types.h"
+#include <fcntl.h>
+
+#include <errno.h>
+#include "x86_irq.h"
+#include "x86_lib.h"
+#include "x86_kernel.h"
+#include "x86_mem.h"
+}
+
+data {
+    addr_t this;
+	addr_t cpu;
+	addr_t kbd;
+//    addr_t lock;
+    addr_t fs_addr;
+    addr_t task[ULINUX_MAX_PROCESSES];
+
+    addr_t mem;
+    int getdents_index;
+}
+
+init {
+    int index;
+    for (index = 0; index < ULINUX_MAX_PROCESSES; index ++)
+   		@#.task[index] = 0;
+
+ 	@#.getdents_index = 0;
+}
+
+//instance #lock_x86 as pipelock;
+instance #device_mem_ulinux as mem;
+
+input :<strat
+input :<fs
+input :<lock
+input :<meta
+input :<dir(:3:)
+input :<file(:3:)
+input :<mem
+use PC mem;
+
+
+output :>dummy
+
+@.func inst_brick(char *name, char *p) => (addr_t addr) {
+    @=call :<strat$gadr (DEFAULT_TRANSFER) => (@success, addr);
+    if (!@success) return;
+    @=call :<strat$instbrick (addr, name) : p => (@success);
+}
+
+@.func create_process(char *name) => (int process_id) {
+    /****************************************************************************
+     * +-----------+                              +-------+
+     * |           |                              |       |
+     * |           |code    +-------------+   task|mmu_x86|
+     * |           |--------|             |   ----|       |
+     * |elf_decoder|data    |process_image| image |       |
+     * |           |--------|             |-------|       |
+     * +-----------+    heap|             |       +-------+
+     *                  ----|             |                
+     *                 stack|             |                
+     *                 -----|             |                
+     *                      +-------------+                
+     *                                                     
+     *                                                     
+     *
+     *                                         +----------------------------+
+     *                                         | posix_x86                  |
+     *                                    strat| +--------------------+     |
+     *                                    -----|-+     syscall_x86    |     |
+     *                                    state| |                    |     |
+     *                                    -----|-|         &          |     |
+     * +--------+fd                        fd[]| |                    |     |
+     * |char_dev|------------stdin-------------|-|file_syscalls_ulinux|		|
+     * +--------+   +--------stdout------------|-|                    |     |
+     * +--------+fd | +------stderr------------|-|                    |     |
+     * |char_dev|---+ |                      . | +--------------------+     |
+     * +--------+     |                      . |                            |
+     * +--------+fd   |                      . |                            |
+     * |char_dev|-----+                        |                            |
+     * +--------+                              |                            |
+     *                                         +----------------------------+
+     ***************************************************************************/
+  
+//	printf("1\n");
+
+    struct conn_info file_conn = { .conn_addr = @#.fs_addr, .conn_name = "", .conn_index = -1 };
+    @=call :<fs$findconn (&file_conn, 0) : name => (@success);
+    if (!@success) {
+        errprintf("file [%s] not found\n", name);
+        return;
+    }
+
+    for (process_id = 0; process_id < ULINUX_MAX_PROCESSES; process_id ++)
+    	if (!@#.task[process_id])
+      		break;
+  
+  	if (process_id == ULINUX_MAX_PROCESSES)
+    	@.rawtrace(strategy, "=== could not create process [%s]: process table full\n", name);
+
+  	@.rawtrace(strategy, "=== create process [%s], posix pid %d\n", name, process_id);
+
+  	addr_t log_addr;
+  	task_struct *task = PC_ALLOC(mem, sizeof(task_struct)) => (log_addr);
+  	memset(task, 0, sizeof(task_struct));
+  	snprintf(task->cwd, 256, "/");
+  	@#.task[process_id] = log_addr;
+
+//		printf("create_process locking %d\n", process_id);
+//  	@=call :<lock(:0:)$lock [process_id] (process_id, 1) => (@success);
+//  	if (!@success) goto error;
+
+//  	printf("2\n");
+
+//  	addr_t cow;
+//  	inst_brick("copy_on_write", "") => (cow);
+//  	if (!@success) goto error;
+//  	struct conn_info cow_in = { .conn_addr = cow, .conn_name = "in" };
+//  	struct conn_info cow_out1 = { .conn_addr = cow, .conn_name = "out1" };
+//  	struct conn_info cow_out2 = { .conn_addr = cow, .conn_name = "out2" };
+//  	@=call :<strat$instconn (&cow_out1) => (@success);
+//  	if (!@success) goto error;
+//  	@=call :<strat$instconn (&cow_out2) => (@success);
+//  	if (!@success) goto error;
+
+  	inst_brick("static_elf_decoder", "") => (task->elf);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "static_elf_decoder instantiated\n");
+  	inst_brick("process_image", "") => (task->image);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "process_image instantiated\n");
+  	inst_brick("mmu_x86", "") => (task->mmu);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "mmu_x86 instantiated\n");
+  	inst_brick("posix_x86", "") => (task->posix);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "posix_x86 instantiated\n");
+  	inst_brick("char_device_kbd", "") => (@#.kbd);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "char_device_kbd instantiated\n");
+  	inst_brick("kbd_us", "") => (task->fd[0].addr);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "kbd_us stdin instantiated\n");
+  	inst_brick("char_device_screen", "") => (task->fd[1].addr);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "char_device_screen stdout instantiated\n");
+  	inst_brick("char_device_screen", "") => (task->fd[2].addr);
+  	if (!@success) goto error;
+  	@.rawtrace(strategy, "char_device_screen stderr instantiated\n");
+
+    task->fd[0].type = FILE_CHAR;
+    task->fd[1].type = FILE_CHAR;
+    task->fd[2].type = FILE_CHAR;
+
+    struct conn_info cpu_tasks = { .conn_addr = @#.cpu, .conn_name = "tasks" };
+	struct conn_info cpu_int80 = { .conn_addr = @#.cpu, .conn_name = "int80" };
+	struct conn_info cpu_irq1 = { .conn_addr = @#.cpu, .conn_name = "irq", .conn_index = 1};
+
+    struct conn_info elf_file = { .conn_addr = task->elf, .conn_name = "file" };
+    struct conn_info elf_code = { .conn_addr = task->elf, .conn_name = "code" };
+    struct conn_info elf_data = { .conn_addr = task->elf, .conn_name = "data" };
+    struct conn_info elf_dummy = { .conn_addr = task->elf, .conn_name = "dummy" };
+    struct conn_info elf_meta = { .conn_addr = task->elf, .conn_name = "meta" };
+
+    struct conn_info image_state = { .conn_addr = task->image, .conn_name = "state" };
+    struct conn_info image_code = { .conn_addr = task->image, .conn_name = "code" };
+    struct conn_info image_data = { .conn_addr = task->image, .conn_name = "data" };
+    struct conn_info image_image = { .conn_addr = task->image, .conn_name = "image" };
+
+    struct conn_info mmu_image = { .conn_addr = task->mmu, .conn_name = "image" };
+    struct conn_info mmu_img_out = { .conn_addr = task->mmu, .conn_name = "img_out" };
+    struct conn_info mmu_dummy = { .conn_addr = task->mmu, .conn_name = "dummy" };
+    struct conn_info mmu_task = { .conn_addr = task->mmu, .conn_name = "task" };
+    struct conn_info mmu_tlist = { .conn_addr = task->mmu, .conn_name = "tlist" };
+//	struct conn_info mmu_lock = { .conn_addr = task->mmu, .conn_name = "lock" };
+
+    struct conn_info posix_dummy = { .conn_addr = task->posix, .conn_name = "dummy" };
+    struct conn_info posix_stdin = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = 0 };
+    struct conn_info posix_stdout = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = 1 };
+    struct conn_info posix_stderr = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = 2 };
+    struct conn_info posix_fs = { .conn_addr = task->posix, .conn_name = "fs" };
+    struct conn_info posix_process = { .conn_addr = task->posix, .conn_name = "process" };
+    struct conn_info posix_state = { .conn_addr = task->posix, .conn_name = "state" };
+    struct conn_info posix_syscall = { .conn_addr = task->posix, .conn_name = "syscall" };
+//	struct conn_info posix_lock = { .conn_addr = task->posix, .conn_name = "lock" };
+
+//	printf("3\n");
+
+    struct conn_info kbd_irq = { .conn_addr = @#.kbd, .conn_name = "irq" };
+    struct conn_info kbd_data = { .conn_addr = @#.kbd, .conn_name = "data" };
+    struct conn_info stdin_kbd = { .conn_addr = task->fd[0].addr, .conn_name = "kbd" };
+    struct conn_info stdin_fd = { .conn_addr = task->fd[0].addr, .conn_name = "fd" };
+    struct conn_info stdout_fd = { .conn_addr = task->fd[1].addr, .conn_name = "fd" };
+    struct conn_info stderr_fd = { .conn_addr = task->fd[2].addr, .conn_name = "fd" };
+  
+//	struct conn_info lock = { .conn_addr = @#.lock, .conn_name = "lock" };
+
+    struct conn_info this_posix = { .conn_addr = @#.this, .conn_name = "posix" };
+    struct conn_info this_meta = { .conn_addr = @#.this, .conn_name = "meta" };
+
+    struct conn_info mem_out = { .conn_addr = @#.mem, .conn_name = "out" };
+
+//	@=call :<fs$connect (&cow_in, &file_conn) => (@success);
+//	if (!@success) goto error;
+//	@=call :<strat$connect (&elf_file, &cow_out1) => (@success);
+//	if (!@success) goto error;
+    @=call :<fs$connect (&elf_file, &file_conn) => (@success);
+    if (!@success) goto error;
+
+    @=call :<strat$instconn (&cpu_tasks) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&elf_code) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&elf_data) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&elf_dummy) : name => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&elf_meta) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&image_state, &mem_out) => (@success);
+    if (!@success) goto error;  
+    @=call :<strat$connect (&image_code, &elf_code) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&image_data, &elf_data) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&mmu_img_out) => (@success);
+    if (!@success) goto error;
+    
+//	printf("4\n");
+
+    addr_t a;
+    process_struct *p = PC_ALLOC(mem, sizeof(process_struct)) => (a);
+    memset(p, 0, sizeof(process_struct));
+    char process_state_addr[16];
+    snprintf(process_state_addr, 15, "%lld", a);
+    @=call :<strat$instconn (&image_image) : process_state_addr => (@success);
+    if (!@success) goto error;
+
+    task->process_state = a;
+    @=call :<strat$connect (&mmu_image, &image_image) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&this_meta, &elf_meta) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&mmu_task, &mem_out) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&mmu_tlist, &cpu_tasks) => (@success);
+    if (!@success) goto error;
+//	@=call :<strat$connect (&mmu_lock, &lock) => (@success);
+//	if (!@success) goto error;
+
+//	printf("5\n");
+
+    plen_t phys_len;
+    elf_header header;
+    @=call :<meta$trans (0, sizeof(elf_header), MAKE_PADDR(&header), direct_read) => (phys_len);
+    @=call :<strat$disconnect (&this_meta) => (@success);
+
+    // setup task_struct
+    task->pid = process_id;
+    task->uid = 0;
+	task->exit_code = 0xAAAA; //HACK
+
+    char state_addr[16];
+    snprintf(state_addr, 15, "%lld", log_addr);
+
+    // setup process environment
+    int index;
+	int argc = 0;
+	char *argv[1] = { 0 };
+
+	// HACK: snip "/ROOT" without checking it's there
+    snprintf(task->name, 256, name + 5);
+    task->entry = header.entry;
+    task->type = PROCESS_EXEC;
+    task->argc = argc;
+
+    for (index = 0; index < argc; index ++) {
+    	char *a = PC_ALLOC(mem, 256) => (log_addr);
+    	snprintf(a, 256, argv[index]);
+    	task->argv[index] = log_addr;
+    }
+
+//	printf("6\n");
+
+    task->argv[argc] = 0;
+    @=call :<strat$connect (&posix_state, &mem_out) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&kbd_irq) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&kbd_data) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&stdin_kbd) : "0" => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&stdin_fd) : "0" => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&stdout_fd) : "1" => (@success);
+    if (!@success) goto error;
+    @=call :<strat$instconn (&stderr_fd) : "2" => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&kbd_irq, &cpu_irq1) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&stdin_kbd, &kbd_data) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_stdin, &stdin_fd) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_stdout, &stdout_fd) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_stderr, &stderr_fd) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_fs, &this_posix) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_process, &this_posix) => (@success);
+    if (!@success) goto error;
+    @=call :<strat$connect (&posix_syscall, &cpu_int80) => (@success);
+    if (!@success) goto error;
+//	@=call :<strat$connect (&posix_lock, &lock) => (@success);
+//	if (!@success) goto error;
+    
+//	@=call :<strat$connect (&posix_syscall, &mem_out) => (@success);
+//	if (!@success) goto error;
+//	task->lock = (paddr_t) state_addr;
+
+    @=call :<strat$instconn (&posix_dummy) : state_addr => (@success);
+    if (!@success) goto error;
+//	printf("7\n");
+
+/*	char buffer[8192];
+	addr_t addr;
+	addr = 0x4000;
+	do {
+		@success = FALSE;
+		@=call :<strat$trans(addr, 8192, MAKE_PADDR(buffer), direct_read) => (@success, phys_len);
+		if (@success) printf(buffer);
+		addr += 0x1000;
+	} while (addr < 0x120000);*/
+
+    @=call :<strat$instconn (&mmu_dummy) : state_addr => (@success);
+    if (!@success) goto error;
+//	printf("8\n");
+
+    return;
+
+error: //FIXME
+    // deinstantiate everything
+    @.rawtrace(strategy, "instantiation error\n");
+    @#.task[process_id] = 0;
+    return;
+}
+
+@.func exec_process(task_struct * task, addr_t addr, char *name, addr_t argv) {
+	addr_t old_mmu = task->mmu;
+	struct conn_info file_conn = { .conn_addr = @#.fs_addr, .conn_name = "", .conn_index = -1 };
+	@=call :<fs$findconn (&file_conn, 0) : name => (@success);
+	if (!@success) {
+		errprintf("file [%s] not found\n", name);
+		goto exec_error;
+	}
+
+	@.rawtrace(strategy, "=== exec process [%s], posix pid %d\n", name, task->pid);
+
+	snprintf(task->name, 256, name);
+
+	char mmu_state_addr[16];
+	snprintf(mmu_state_addr, 15, "%lld", addr);
+
+//	addr_t log_addr;
+	// disconnect bricks
+	// file, elf, image, mmu, -> userfs
+//	struct conn_info dir_image_old = { .conn_addr = @#.userfs, .conn_name = "image", .conn_index = task->userfs_index };
+//	struct conn_info dir_image_new = { .conn_addr = @#.userfs, .conn_name = "image", .conn_index = userfs_id };
+	//printf("exec: disconnecting userfs: %d\n", dir_image_old.conn_index);
+//	@=call :<strat$disconnect (&dir_image_old) => (@success);
+	//printf("exec: userfs_id: %d\n", userfs_id);
+//	@#.userfs_data->image[userfs_id] = 1; // FIXME
+//	task->userfs_index = userfs_id;
+
+	addr_t null_brick;
+	inst_brick("null", "") => (null_brick);
+	if (!@success) goto exec_error;
+	struct conn_info null_out = { .conn_addr = null_brick, .conn_name = "out" };
+	@=call :<strat$instconn (&null_out) => (@success);
+	if (!@success) goto exec_error;
+	//printf("exec: connecting null -> userfs: %d\n", dir_image_old.conn_index);
+//	@=call :<strat$connect (&dir_image_old, &null_out) => (@success);
+//	if (!@success) goto exec_error;
+
+	//printf("connected null -> userfs %d\n", dir_image_old.conn_index);
+	addr_t cow;
+	inst_brick("copy_on_write", "") => (cow);
+	if (!@success) goto exec_error;
+	struct conn_info cow_in = { .conn_addr = cow, .conn_name = "in" };
+	struct conn_info cow_out1 = { .conn_addr = cow, .conn_name = "out1" };
+	struct conn_info cow_out2 = { .conn_addr = cow, .conn_name = "out2" };
+	@=call :<strat$instconn (&cow_out1) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&cow_out2) => (@success);
+	if (!@success) goto exec_error;
+
+	inst_brick("static_elf_decoder", "") => (task->elf);
+	if (!@success) goto exec_error;
+	//@.rawtrace(strategy, "static_elf_decoder instantiated\n");
+	inst_brick("process_image", "") => (task->image);
+	if (!@success) goto exec_error;
+	//@.rawtrace(strategy, "process_image instantiated\n");
+	inst_brick("mmu_x86", "") => (task->mmu);
+	if (!@success) goto exec_error;
+	//@.rawtrace(strategy, "mmu_ulinux instantiated\n");
+
+    struct conn_info cpu_tasks = { .conn_addr = @#.cpu, .conn_name = "tasks" };
+
+	struct conn_info elf_file = { .conn_addr = task->elf, .conn_name = "file" };
+	struct conn_info elf_code = { .conn_addr = task->elf, .conn_name = "code" };
+	struct conn_info elf_data = { .conn_addr = task->elf, .conn_name = "data" };
+	struct conn_info elf_dummy = { .conn_addr = task->elf, .conn_name = "dummy" };
+	struct conn_info elf_meta = { .conn_addr = task->elf, .conn_name = "meta" };
+
+	struct conn_info image_code = { .conn_addr = task->image, .conn_name = "code" };
+	struct conn_info image_data = { .conn_addr = task->image, .conn_name = "data" };
+	struct conn_info image_image = { .conn_addr = task->image, .conn_name = "image" };
+	struct conn_info image_state = { .conn_addr = task->image, .conn_name = "state" };
+	struct conn_info mmu_image = { .conn_addr = task->mmu, .conn_name = "image" };
+	struct conn_info mmu_img_out = { .conn_addr = task->mmu, .conn_name = "img_out" };
+	struct conn_info mmu_dummy = { .conn_addr = task->mmu, .conn_name = "dummy" };
+//	struct conn_info mmu_lock = { .conn_addr = task->mmu, .conn_name = "lock" };
+	struct conn_info this_meta = { .conn_addr = @#.this, .conn_name = "meta" };
+	struct conn_info mmu_task = { .conn_addr = task->mmu, .conn_name = "task" };
+    struct conn_info mmu_tlist = { .conn_addr = task->mmu, .conn_name = "tlist" };
+
+	struct conn_info mem_out = { .conn_addr = @#.mem, .conn_name = "out" };
+//	struct conn_info lock = { .conn_addr = @#.lock, .conn_name = "lock" };
+
+	@=call :<fs$connect (&cow_in, &file_conn) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$connect (&elf_file, &cow_out1) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&elf_code) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&elf_data) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&elf_dummy) : name => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&elf_meta) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$instconn (&mmu_img_out) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$connect (&image_code, &elf_code) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$connect (&image_data, &elf_data) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$connect (&image_state, &mem_out) => (@success);
+	if (!@success) goto exec_error;  
+	addr_t a;
+	process_struct *p = PC_ALLOC(mem, sizeof(process_struct)) => (a);
+	memset(p, 0, sizeof(process_struct));
+	char process_state_addr[16];
+	snprintf(process_state_addr, 15, "%lld", a);
+	@=call :<strat$instconn (&image_image) : process_state_addr => (@success);
+	if (!@success) goto exec_error;
+	task->process_state = a;
+
+	@=call :<strat$connect (&mmu_image, &image_image) => (@success);
+	if (!@success) goto exec_error;
+//	@=call :<strat$connect (&dir_image_new, &mmu_img_out) => (@success);
+//	if (!@success) goto exec_error;
+	@=call :<strat$connect (&this_meta, &elf_meta) => (@success);
+	if (!@success) goto exec_error;
+	@=call :<strat$connect (&mmu_task, &mem_out) => (@success);
+	if (!@success) goto exec_error;
+    @=call :<strat$connect (&mmu_tlist, &cpu_tasks) => (@success);
+    if (!@success) goto exec_error;
+//	@=call :<strat$connect (&mmu_lock, &lock) => (@success);
+//	if (!@success) goto exec_error;
+
+	plen_t phys_len;
+//	elf_header header;	// NOT ON STACK! This thing is too big for the kernel stack!
+	elf_header *header = malloc(sizeof(elf_header));
+	@=call :<meta$trans (0, sizeof(elf_header), MAKE_PADDR(header), direct_read) => (phys_len);
+	@=call :<strat$disconnect (&this_meta) => (@success);
+
+	// setup process environment, strip argv[0], the name of the process from
+	// the argument list
+	addr_t *ptr = PC_GET(mem, argv, DEFAULT_TRANSFER);
+	int index;
+	int argc = 0;
+	for (argc = 0; ptr[argc]; argc++);
+
+	// HACK: snip "/ROOT" without checking it's there
+    snprintf(task->name, 256, name + 5);
+	task->entry = header->entry;
+	task->type = PROCESS_EXEC;
+	task->argc = argc - 1;
+	task->exit_code = 0xAAAA; //HACK
+	free(header);
+
+	for (index = 0; index < argc - 1; index ++) {
+		task->argv[index] = ptr[index + 1];
+	}
+	task->argv[argc - 1] = 0;
+
+	@=call :<strat$instconn (&mmu_dummy) : mmu_state_addr => (@success);
+	if (!@success) goto exec_error;
+
+	// now delete old mmu brick
+	// do this AFTER establishing the new brick because the TSS of this
+	// task structure is still active and will be written to when
+	// the next task switch occures
+	@=call :<strat(:0:)$deinstbrick(old_mmu) => (@success);
+	return;
+
+exec_error: //FIXME
+	// deinstantiate everything
+	@.rawtrace(strategy, "instantiation error\n");
+	//printf("exec_process unlocking %d\n", task->pid);
+//	@=call :<lock(:0:)$unlock [task->pid] (task->pid, 1) => (@success);
+//	if (!@success)
+//		@.rawtrace(strategy, "pid %d: could not unlock\n", task->pid);
+  
+	@#.task[task->pid] = 0;
+	return;
+}
+
+
+@.func fork_process(task_struct * task, paddr_t bp, paddr_t sp, paddr_t ip) => (int process_id) {
+	for (process_id = 0; process_id < ULINUX_MAX_PROCESSES; process_id ++)
+    	if (!@#.task[process_id])
+      		break;
+  
+  	if (process_id == ULINUX_MAX_PROCESSES) 
+    	@.rawtrace(strategy, "=== could not fork process %d: process table full\n", task->pid);
+  
+  	@.rawtrace(strategy, "=== fork process %d, athomux pid %d\n", task->pid, process_id);
+
+  	addr_t log_addr;
+  	task_struct *newtask = PC_ALLOC(mem, sizeof(task_struct)) => (log_addr);
+  	@#.task[process_id] = log_addr;
+  	//printf("fork_process locking %d\n", process_id);
+//	@=call :<lock(:0:)$lock [process_id] (process_id, 1) => (@success);
+//	if (!@success) goto error;
+
+  	char state_addr[16];
+  	snprintf(state_addr, 15, "%lld", log_addr);
+
+  	// setup task struct
+  	memcpy(newtask, task, sizeof(task_struct));
+  	newtask->pid = process_id;
+//	newtask->lock = (paddr_t) state_addr;	
+
+  	//printf("cow: %llx\n", task->cow);
+
+  	struct conn_info image_image = { .conn_addr = newtask->image, .conn_name = "image" };
+
+  	if (task->cow) {
+    	image_image.conn_addr = task->cow;
+    	sprintf(image_image.conn_name, "out1");
+  	}
+
+  	inst_brick("mmu_x86", "") => (newtask->mmu);
+  	if (!@success) goto error;
+
+    struct conn_info cpu_tasks = { .conn_addr = @#.cpu, .conn_name = "tasks" };
+
+  	struct conn_info mmu_image = { .conn_addr = newtask->mmu, .conn_name = "image" };
+  	struct conn_info mmu_img_out = { .conn_addr = newtask->mmu, .conn_name = "img_out" };
+  	struct conn_info mmu_dummy = { .conn_addr = newtask->mmu, .conn_name = "dummy" };
+  	struct conn_info mmu_task = { .conn_addr = newtask->mmu, .conn_name = "task" };
+    struct conn_info mmu_tlist = { .conn_addr = newtask->mmu, .conn_name = "tlist" };
+//	struct conn_info mmu_lock = { .conn_addr = newtask->mmu, .conn_name = "lock" };
+  	struct conn_info mem_out = { .conn_addr = @#.mem, .conn_name = "out" };
+//	struct conn_info dir_image = { .conn_addr = @#.userfs, .conn_name = "image", .conn_index = newtask->userfs_index };
+
+//	struct conn_info dir_image_old = { .conn_addr = @#.userfs, .conn_name = "image", .conn_index = task->userfs_index };
+  	struct conn_info mmu_image_old = { .conn_addr = task->mmu, .conn_name = "image" };
+//	struct conn_info lock = { .conn_addr = @#.lock, .conn_name = "lock" };
+
+  	// disconnect old task's mmu
+  	//printf("fork: disconnecting userfs: %d\n", dir_image_old.conn_index);
+  	@=call :<strat$disconnect (&mmu_image_old) => (@success);
+  	if (!@success) goto error;
+
+  	inst_brick("copy_on_write", "") => (task->cow);
+  	if (!@success) goto error;
+  	struct conn_info cow_out1 = { .conn_addr = task->cow, .conn_name = "out1" };
+  	struct conn_info cow_out2 = { .conn_addr = task->cow, .conn_name = "out2" };
+  	struct conn_info cow_in = { .conn_addr = task->cow, .conn_name = "in" };
+
+  	// reconnect through cow->out1
+  	@=call :<strat$instconn (&cow_out1) => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$instconn (&cow_out2) => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$connect (&cow_in, &image_image) => (@success);
+  	if (!@success) goto error;
+  	//printf("fork: connecting userfs: %d\n", dir_image_old.conn_index);
+  	@=call :<strat$connect (&mmu_image_old, &cow_out1) => (@success);
+  	if (!@success) goto error;
+
+  	// connect new task
+  	@=call :<strat$instconn (&mmu_img_out) => (@success);
+  	if (!@success) goto error;  
+//	@=call :<strat$connect (&dir_image, &mmu_img_out) => (@success);
+//	if (!@success) goto error;
+  	@=call :<strat$connect (&mmu_image, &cow_out2) => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$connect (&mmu_task, &mem_out) => (@success);
+  	if (!@success) goto error;
+    @=call :<strat$connect (&mmu_tlist, &cpu_tasks) => (@success);
+    if (!@success) goto error;
+//	@=call :<strat$connect (&mmu_lock, &lock) => (@success);
+//	if (!@success) goto error;
+
+	// setup process environment
+	// FIXME
+	snprintf(newtask->name, 256, "fork");
+  	newtask->entry = ip;
+  	newtask->bp = bp;
+  	newtask->sp = sp;
+  	newtask->type = PROCESS_FORK;
+  	newtask->pid = process_id;
+	newtask->exit_code = 0xAAAA; //HACK
+	newtask->parent = task;
+	int i;
+	for (i = 0; i < 8; i++) {
+		if (task->children[i] == 0) {
+			task->children[i] = process_id;
+			break;
+		}
+	}
+	if (i == 8) {
+		errprintf("Warning, max childs reached!\n");
+	}
+
+  	// FIXME: task_struct update, posix_syscalls + fd conns
+  	inst_brick("posix_x86", "") => (newtask->posix);
+  	if (!@success) goto error;
+
+  	struct conn_info posix_dummy = { .conn_addr = newtask->posix, .conn_name = "dummy" };
+  	struct conn_info posix_fs = { .conn_addr = newtask->posix, .conn_name = "fs" };
+  	struct conn_info posix_process = { .conn_addr = newtask->posix, .conn_name = "process" };
+  	struct conn_info posix_state = { .conn_addr = newtask->posix, .conn_name = "state" };
+//	struct conn_info posix_syscall = { .conn_addr = newtask->posix, .conn_name = "syscall" };
+//	struct conn_info posix_lock = { .conn_addr = newtask->posix, .conn_name = "lock" };
+
+  	// connect filedescriptors
+  	int fd;
+  	for (fd = 0; fd < FD_MAX; fd ++) {
+    
+    	if (newtask->fd[fd].addr) {
+      		if (newtask->fd[fd].type == FILE_CHAR) {
+				struct conn_info f = { .conn_addr = newtask->fd[fd].addr, .conn_name = "fd" };
+				struct conn_info d = { .conn_addr = newtask->posix, .conn_name = "fd", .conn_index = fd };
+				@=call :<strat$connect (&d, &f) => (@success);
+				if (!@success)
+	  				@.rawtrace(strategy, "=== exec pid %d: could not connect fd %d\n", task->pid, fd);
+      		} else if (newtask->fd[fd].type == FILE_FILE) {
+				struct conn_info f = { .conn_addr = newtask->fd[fd].addr, .conn_name = "out", .conn_index = newtask->fd[fd].fs_index };
+				struct conn_info d = { .conn_addr = newtask->posix, .conn_name = "fd", .conn_index = fd };
+				@=call :<fs$connect (&d, &f) => (@success);
+				if (!@success)
+	  				@.rawtrace(strategy, "=== exec pid %d: could not connect fd %d\n", task->pid, fd);
+      		}
+    	}
+	    // FIXME: connect FILE_PIPE
+  	}
+
+  	struct conn_info this_posix = { .conn_addr = @#.this, .conn_name = "posix" };
+
+  	@=call :<strat$connect (&posix_state, &mem_out) => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$connect (&posix_fs, &this_posix) => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$connect (&posix_process, &this_posix) => (@success);
+  	if (!@success) goto error;
+//	@=call :<strat$connect (&posix_lock, &lock) => (@success);
+//	if (!@success) goto error;
+  	@=call :<strat$instconn (&posix_dummy) : state_addr => (@success);
+  	if (!@success) goto error;
+  	@=call :<strat$instconn (&mmu_dummy) : state_addr => (@success);
+  	if (!@success) goto error;
+
+  	return;
+
+error: //FIXME
+  	// deinstantiate everything
+  	@.rawtrace(strategy, "fork instantiation error\n");
+  	@#.task[newtask->pid] = 0;
+  	return;
+}
+
+@.func put_file(char *athomux_name, char *filebrick) {
+	kprintf("put file [%s]\n", athomux_name);
+
+  	// instantiate file in fs
+  	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+  	@=call :<fs$instconn (&conn, TRUE) : athomux_name => (@success);
+  	@.fatal(!@success, "file '%s' instantiation failed", athomux_name);
+
+  	// connect device to fs out
+  	addr_t test_addr = 0;
+  	@=call :<fs$gadr (DEFAULT_TRANSFER) => (@success, test_addr);
+  	@.fatal(!@success, "test_file_marci address generation failed");
+  	@=call :<strat$instbrick (test_addr, filebrick) : athomux_name => (@success);
+  	@.fatal(!@success, "test_file_marci instantiation failed");
+
+  	struct conn_info conn2 = { .conn_addr = test_addr, .conn_name = "in" };
+  	@=call :<fs$connect (&conn2, &conn) => (@success);
+  	@.fatal(!@success, "test_file_marci connect failed");
+
+  	struct conn_info conn3 = { .conn_addr = test_addr, .conn_name = "out" };
+  	@=call :<fs$instconn (&conn3) : "0" => (@success);
+  	@.fatal(!@success, "test_file_marci init failed");
+
+  	// disconnect device
+  	@=call :<fs$disconnect (&conn2) => (@success);
+  	@.fatal(!@success, "test_file_marci disconnect failed");
+
+  	// deinstantiate device
+  	@=call :<fs$deinstbrick (test_addr) => (@success);
+  	@.fatal(!@success, "test_file_marci deinstantiation failed");
+}
+
+@.func mk_dir(char *path) 
+{
+  	kprintf("mkdir [%s]\n", path);
+
+  	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+  	@=call :<fs$instconn (&conn, TRUE) : path => (@success);
+  	@.fatal(!@success, "dir '%s' instantiation failed", path);
+
+  	//kprintf("=== connection: %llx, [%s], %d\n", conn.conn_addr, conn.conn_name, conn.conn_index);
+
+  	//kprintf("found addr %llx, name [%s], index %d\n", conn.conn_addr, conn.conn_name, conn.conn_index);
+  	struct conn_info conn_dir = { .conn_addr = @#.this, .conn_name = "dir" };
+
+  	@=call :<fs(:0:)$connect (&conn_dir, &conn) => (@success);
+  	@.fatal(!@success, "dir connect failed");
+
+  	ath_stat_t ath_buf = { { .desc_attrlen = 256 + sizeof(struct entry_desc) } , { .type = FILE_FILE, .mode = 0755 | S_IFDIR, .size = 0 } };
+
+  	snprintf(ath_buf.stat.name, 64, path);
+  	//kprintf("-> file: [%s]\n", ath_buf.stat.name);
+  	plen_t phys_len;
+  	@=call :<dir(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(&ath_buf), direct_write) => (@success, phys_len);
+  	@.check (!@success, " could not write stat of dir [%s]\n", path);
+
+  	char sbuf[DEFAULT_TRANSFER] = {};
+  	@=call :<dir(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(sbuf), direct_read) => (@success, phys_len);
+  	@.check(!@success, " could not read stat of dir [%s]\n", path);
+  	kprintf(" mkdir [%s] mode [%d] size [%d]\n", ((ath_stat_t *) sbuf)->stat.name, ((ath_stat_t *) sbuf)->stat.mode, ((ath_stat_t *) sbuf)->stat.size);
+
+  	@=call :<fs(:0:)$disconnect (&conn_dir) => (@success);
+}
+
+@.func create_file_system() 
+{
+    char athomux_dirname[256];
+    snprintf(athomux_dirname, 256, "/ROOT/");
+//	mk_dir("/ROOT/etc/");
+//	mk_dir("/ROOT/bin/");
+
+	char athomux_filename[256];
+	snprintf(athomux_filename, 256, "%s%s", athomux_dirname, "bin/busybox");
+	put_file(athomux_filename, "test_file_marci2");
+	snprintf(athomux_filename, 256, "%s%s", athomux_dirname, "bin/lash");
+	put_file(athomux_filename, "test_file_marci2");
+	snprintf(athomux_filename, 256, "%s%s", athomux_dirname, "bin/hush");
+	put_file(athomux_filename, "test_file_marci2");
+	snprintf(athomux_filename, 256, "%s%s", athomux_dirname, "bin/hello");
+	put_file(athomux_filename, "test_file_marci");
+}
+
+
+@.func get_stat(char *p, stat_t *filestat) 
+{
+  	@success = FALSE;
+  	memset(filestat, 0, sizeof(stat_t));
+
+  	char path[256];
+  	snprintf(path, 256, "/ROOT%s", p);
+
+  	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+
+  	@=call :<fs(:0:)$instconn (&conn, 0) : path => (@success);
+  	if (!@success) return;
+
+  	struct conn_info conn_file = { .conn_addr = @#.this, .conn_name = "file" };
+  
+  	@=call :<fs(:0:)$connect (&conn_file, &conn) => (@success);
+  	@.fatal(!@success, "dir connect failed");
+  	plen_t phys_len;
+
+  	char buf[DEFAULT_TRANSFER] = {};
+  
+  	@=call :<file(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(buf), direct_read) => (@success, phys_len);
+  	if (@success) {
+    	filestat->type = 0;
+    	filestat->mode = ((ath_stat_t *) buf)->stat.mode;
+    	filestat->size = ((ath_stat_t *) buf)->stat.size;
+    	//kprintf("stat: [%s] mode [%d] size [%d]\n", p, filestat->mode, filestat->size);
+  	}
+
+  	@=call :<fs(:0:)$disconnect (&conn_file) => (@success);
+}
+
+
+@.func get_stat_dir(char *path, stat_t *stat) 
+{
+  	@success = FALSE;
+  	kprintf("get_stat_dir [%s]\n", path);
+  	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+
+  	@=call :<fs(:0:)$instconn (&conn, 0) : path => (@success);
+  	if (!@success) {
+    	errprintf("could not instconn [%s]\n", path);
+    	return;
+  	}	
+
+  	struct conn_info conn_dir = { .conn_addr = @#.this, .conn_name = "dir" };
+  
+  	@=call :<fs(:0:)$connect (&conn_dir, &conn) => (@success);
+  	@.fatal(!@success, "dir connect failed");
+  	plen_t phys_len;
+
+  	addr_t index = 0;
+  	success_t success = TRUE;
+
+  	while (success) {
+
+    	char buf[DEFAULT_TRANSFER] = {};
+    
+    	@=call :<dir(:2:)$trans (index, DEFAULT_TRANSFER, MAKE_PADDR(buf), direct_read) => (@success, phys_len);
+    	if (@success) {
+      		stat->type = 0;
+      		stat->mode = S_IFREG | S_IRUSR | S_IWUSR;
+      		stat->size = ((ath_stat_t *) buf)->stat.size;
+      		snprintf(stat->name, 128, ((ath_stat_t *) buf)->stat.name);
+      		kprintf("  %02x [%s]\n", stat->size, stat->name);
+      		index += DEFAULT_TRANSFER;
+    	} else {
+      		success = FALSE;
+    	}
+  	}
+
+  	@=call :<fs(:0:)$disconnect (&conn_dir) => (@success);
+  	@success = FALSE;
+}
+
+
+@.func get_dents(filedes file, stat_t *stat) 
+{
+  	@success = FALSE;
+  	memset(stat, 0, sizeof(stat_t));
+
+  	char path[256];
+  	sprintf(path, "/ROOT%s/", file.filename);
+
+  	kprintf("=== get_dents [%s]\n", path);
+  	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+
+  	@=call :<fs(:0:)$instconn (&conn, 0) : path => (@success);
+  	if (!@success) {
+    	errprintf("could not instconn [%s]\n", path);
+    	return;
+  	}
+  	struct conn_info conn_dir = { .conn_addr = @#.this, .conn_name = "dir" };
+
+  	@=call :<fs(:0:)$connect (&conn_dir, &conn) => (@success);
+  	@.fatal(!@success, "dir connect failed");
+  	plen_t phys_len;
+
+  	success_t success;
+
+  	char buf[DEFAULT_TRANSFER] = {};
+    
+  	@=call :<dir(:2:)$trans ((addr_t) (file.dirpos * DEFAULT_TRANSFER), DEFAULT_TRANSFER, MAKE_PADDR(buf), direct_read) => (@success, phys_len);
+
+  	@=call :<fs(:0:)$disconnect (&conn_dir) => (success);
+  
+  	kprintf("=== get_dents: [%s]\n", ((ath_stat_t *) buf)->stat.name);
+
+  	if (@success) {
+    	stat->type = 0;
+    	stat->mode = S_IFREG | S_IRUSR | S_IWUSR;
+    	stat->size = ((ath_stat_t *) buf)->stat.size;
+    	snprintf(stat->name, 128, ((ath_stat_t *) buf)->stat.name);
+    	kprintf("  %02x [%s], pos %d\n", stat->size, stat->name, file.dirpos);
+    	file.dirpos++;
+  	}
+}
+
+
+// set filesize of file to 0
+@.func truncate(char * path) 
+{
+	@.rawtrace(strategy, "     truncate [%s]\n", path);
+	struct conn_info conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+	@=call :<fs(:0:)$instconn (&conn, FALSE) : path => (@success);
+	if (!@success)
+		@.rawtrace(strategy, "     file [%s] does not exist\n", path);
+
+	struct conn_info conn_dir = { .conn_addr = @#.this, .conn_name = "dir" };
+	@=call :<fs(:0:)$connect (&conn_dir, &conn) => (@success);
+	if (!@success)
+		@.rawtrace(strategy, "     could not connect to file [%s]\n", path);
+	// read stat
+	plen_t phys_len;
+	char buf[DEFAULT_TRANSFER] = {};
+	@=call :<dir(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(buf), direct_read) => (@success, phys_len);
+	if (!@success)
+		@.rawtrace(strategy, "     could not read stat of file [%s]\n", path);
+
+	// set filesize to 0 and write stat back
+	((ath_stat_t *) buf)->stat.size = 0;
+	((ath_stat_t *) buf)->desc.desc_attrlen = 32 + sizeof(struct entry_desc);
+	@=call :<dir(:2:)$trans (0, DEFAULT_TRANSFER, MAKE_PADDR(buf), direct_write) => (@success, phys_len);
+	if (!@success)
+		@.rawtrace(strategy, "     could not read write of file [%s]\n", path);
+
+	@=call :<strat(:0:)$disconnect (&conn_dir) => (@success);
+	if (!@success)
+		@.rawtrace(strategy, "     could not connect to file [%s]\n", path);
+	@success = TRUE;
+}
+
+
+/*@.func test_it() 
+{
+    struct conn_info conn_path1 = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+    struct conn_info conn_path2 = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1, };
+
+    struct conn_info conn_dir = { .conn_addr = @#.this, .conn_name = "dir" };
+    struct conn_info conn_file = { .conn_addr = @#.this, .conn_name = "file" };
+
+    kprintf("----------- 1\n");
+    @success = FALSE;
+
+    @=call :<fs(:0:)$instconn (&conn_path1, 0) : "/ROOT/etc" => (@success);
+    @.fatal(!@success, "=== could not instconn [/etc]\n");
+
+    kprintf("----------- 2: conn_index %d\n", conn_path1.conn_index);
+    @success = FALSE;
+
+    @=call :<fs(:0:)$connect (&conn_file, &conn_path1) => (@success);
+    @.fatal(!@success, "file connect failed");
+
+    kprintf("----------- 3\n");
+    @success = FALSE;
+
+    @=call :<fs(:0:)$instconn (&conn_path2, 0) : "/ROOT/etc/" => (@success);
+    @.fatal(!@success, "=== could not instconn [/etc/]\n");
+  
+    kprintf("----------- 4: conn_index %d\n", conn_path2.conn_index);
+    @success = FALSE;
+
+    @=call :<fs(:0:)$connect (&conn_dir, &conn_path2) => (@success);
+    @.fatal(!@success, "=== dir connect failed");
+
+    kprintf("----------- 5\n");
+    @success = FALSE;
+
+    @=call :<fs(:0:)$disconnect (&conn_file) => (@success);  
+    @=call :<fs(:0:)$disconnect (&conn_dir) => (@success);
+
+    kprintf("----------- 6\n");
+    
+}*/
+
+operation $output_init
+{
+	char *c;
+	@#.this = (addr_t) strtoll(@param, &c, 16);
+	@#.cpu = (addr_t) strtoll(c, NULL, 16);
+
+	kprintf("Strategy brick starting up...\n");
+	struct conn_info in_info = { .conn_addr = 0, .conn_name = "_fs" };
+	struct conn_info out_info;
+	@=call :<fs$getconn (&in_info, &out_info, sizeof(out_info)) => (@success);
+	@.fatal(!@success, "cannot find fs instance");
+	@#.fs_addr = out_info.conn_addr;
+
+	@success = FALSE;
+	inst_brick("device_mem_ulinux", "") => (@#.mem);
+	@.fatal(!@success, "could not create device_mem_ulinux");
+	struct conn_info mem_out = { .conn_addr = @#.mem, .conn_name = "out" };
+	struct conn_info this_mem = { .conn_addr = @#.this, .conn_name = "mem" };
+	@=call :<strat$instconn (&mem_out) => (@success);
+	@.fatal(!@success, "could not instantiate device_mem_ulinux:>out");
+	@=call :<strat$connect (&this_mem, &mem_out) => (@success);
+	@.fatal(!@success, "could not connect device_mem_ulinux:>out");
+
+	// Create the basic file system and add a fake file
+	@success = FALSE;
+	create_file_system();
+
+    // create brick lock
+//	@=call :<strat$gadr (DEFAULT_TRANSFER) => (@success, @#.lock);
+//	if (!@success) return;
+//	@=call :<strat$instbrick (@#.lock, "lock_x86") : "" => (@success);
+//	@.check(!@success, "lock_x86	 instantiation failed");
+//	if (!@success) return;
+//	struct conn_info lock = { .conn_addr = @#.lock, .conn_name = "lock" };
+//	@=call :<strat$instconn (&lock) => (@success);
+//	struct conn_info this_lock = { .conn_addr = @#.this, .conn_name = "lock" };
+  
+//	@=call :<strat$connect (&this_lock, &lock) => (@success);
+//	@.fatal(!@success, "could not connect strategy_ulinux:<lock\n");
+//	@=call :<lock(:0:)$lock [0] ((paddr_t) @#.userfs_data, 1) => (@success);
+
+    char path[256];
+    int id;
+
+//	sprintf(path, "%s", "/ROOT/bin/hello");
+//	sprintf(path, "%s", "/ROOT/bin/lash");
+	sprintf(path, "%s", "/ROOT/bin/hush");
+    kprintf("+-----------------------------------+\n");
+    kprintf("| athomux: creating init process... |\n");
+    kprintf("+-----------------------------------+\n");
+
+	@success = FALSE;
+    create_process(path) => (id);
+
+    @success = TRUE;
+}
+
+
+output :>posix(:3:)
+
+define export TYPE syscall_t "int pid, int syscall, int result, int error";
+define export TYPE open_t from syscall_t "addr_t path, int flags, mode_t mode";
+define export TYPE close_t from syscall_t "int fd";
+define export TYPE execve_t from syscall_t "addr_t filename, addr_t argv";
+define export TYPE fork_t from syscall_t "unsigned bp, unsigned sp, unsigned ip";
+define export TYPE exit_t from syscall_t "int status";
+define export TYPE dup_t from syscall_t "int oldfd";
+define export TYPE dup2_t from syscall_t "int oldfd, int newfd";
+define export TYPE wait4_t from syscall_t "pid_t waitpid, addr_t status, int options";
+define export TYPE pipe_t from syscall_t "int * filedes";
+define export TYPE stat_t from syscall_t "addr_t filename, addr_t stat";
+define export TYPE getdents_t from syscall_t "unsigned int fd, stat_t * stat";
+
+section (:1:)
+
+// generic operations nest
+section (:2:)
+
+operation $trans
+{
+	void *ptr = PC_GET(mem, @log_addr, @log_len);
+	int pid = ptr@*syscall_t->pid;
+
+	// get the task_struct
+	task_struct *task = PC_GET(mem, @#.task[pid], sizeof(task_struct));
+	@success = TRUE;
+
+	switch (ptr@*syscall_t->syscall) {
+	case __NR_exit:
+		@.rawtrace(strategy, "pid %d: exit\n", pid);
+	    ptr@*exit_t->result = 0;
+    	ptr@*exit_t->error = 0;
+
+		task->exit_code = ptr@*exit_t->status;
+
+		// FIXME: Much more deinitialiastion should be done here, really
+		// Kill MMU brick, which will in turn kill the Athomux process
+		@=call :<strat(:0:)$deinstbrick (task->mmu) => (@success);
+		return;
+
+	// open ignores mode_t mode. for now everything is 0666
+	// missing: O_TRUNC, O_APPEND
+	case __NR_open: {
+    	addr_t path_addr = ptr@*open_t->path;
+	    char *p = PC_GET(mem, path_addr, 0);
+	
+	    if (p[0] != '/') { // FIXME, only absolute paths allowed atm
+	    	ptr@*open_t->result = -1;
+      		ptr@*open_t->error = ENOENT;
+      		return;
+    	}
+
+    	char path[256];
+    	snprintf(path, 256, "/ROOT%s", p);
+
+    	int flags = ptr@*open_t->flags;
+    	struct conn_info file_conn = { .conn_addr = @#.fs_addr, .conn_name = "out", .conn_index = -1 };
+
+    	success_t success;
+    	// test if the file already exists
+    	@=call :<fs(:0:)$instconn (&file_conn, 0) : path => (success);
+
+    	if (!success && !(flags & O_CREAT)) {
+      		// file does not exist and we don't want to create it
+      		@.rawtrace(strategy, "pid %d: error opening [%s]: file not found\n", pid, path);
+      		ptr@*open_t->result = -1;
+      		ptr@*open_t->error = ENOENT;
+      		return;
+    	}
+    
+    	if (success && (flags & O_CREAT) & (flags & O_EXCL)) {
+      		// file exists and we want to create it exclusivly
+      		@.rawtrace(strategy, "pid %d: error creating [%s]: file already exists\n", pid, path);
+      		ptr@*open_t->result = -1;
+      		ptr@*open_t->error = EEXIST;
+      		return;
+    	}
+
+    	if (!success && (flags & O_CREAT)) {
+      		// file does not exist and we want to create it
+      		@=call :<fs(:0:)$instconn (&file_conn, TRUE) : path => (@success);
+      		if (!@success) {
+				@.rawtrace(strategy, "pid %d: could not create [%s]\n", pid, path);
+				ptr@*open_t->result = -1;
+				ptr@*open_t->error = EACCES; // FIXME, this might not be the real reason
+				return;
+			}
+		}
+		if (success && (flags & O_CREAT))
+      		truncate(path);
+
+		// find a free filedescriptor
+		int fd;
+		for (fd = 0; fd < FD_MAX; fd ++)
+			if (!task->fd[fd].addr)
+				break;    
+    
+		if (fd == FD_MAX) {
+			@.rawtrace(strategy, "pid %d: error opening [%s], process holds too many filedescriptors\n", pid, path);
+			ptr@*open_t->result = -1;
+			ptr@*open_t->error = EMFILE;
+      		return;
+		}
+    
+		@.rawtrace(strategy, "pid %d: open [%s] -> fd %d\n", pid, path, fd);
+    
+		struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = fd };
+		@=call :<fs(:0:)$connect (&posix_file, &file_conn) => (@success);
+		if (!@success) {
+			@.rawtrace(strategy, "pid %d: error opening [%s]\n", pid, path);
+			ptr@*open_t->result = -1;
+			ptr@*open_t->error = ENOENT;
+			return;
+		}
+
+		task->fd[fd].addr = @#.fs_addr;
+		task->fd[fd].fs_index = file_conn.conn_index;
+		task->fd[fd].flags = flags;
+		task->fd[fd].filepos = 0;
+		task->fd[fd].type = FILE_FILE;
+		sprintf(task->fd[fd].filename, p);
+
+		PC_DIRTY(mem, @#.task[pid]);
+
+		ptr@*open_t->result = fd;
+		ptr@*open_t->error = 0;
+		return;
+	} 
+
+	case __NR_close: {
+    	int fd = ptr@*close_t->fd;
+    	if (fd >= 0) {
+      		if (!task->fd[fd].addr) goto close_error;
+
+      		if (task->fd[fd].type == FILE_FILE) {
+				struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = fd };
+				@=call :<strat(:0:)$disconnect (&posix_file) => (@success);
+				if (!@success) goto close_error;
+				@.rawtrace(strategy, "pid %d: close fd %d\n", pid, fd);
+				memset(&task->fd[fd], 0, sizeof(filedes));
+				PC_DIRTY(mem, @#.task[pid]);
+      		} else { // FIXME
+      		}
+    	}
+
+    	ptr@*close_t->result = 0;
+    	ptr@*close_t->error = 0;
+   	 	return;
+
+close_error:
+    	@.rawtrace(strategy, "pid %d: error closing fd %d\n", pid, fd);
+    	ptr@*close_t->result = -1;
+    	ptr@*close_t->error = EBADF;    
+    	return;
+  	}
+
+	case __NR_fork: {
+    	unsigned bp, sp, ip;
+	    int newpid;
+	    bp = ptr@*fork_t->bp;
+	    sp = ptr@*fork_t->sp;
+	    ip = ptr@*fork_t->ip;
+	    @.rawtrace(strategy, "pid %d: fork ebp 0x%x esp 0x%x eip 0x%x\n", pid, bp, sp, ip);
+	    // ip till ip + 9 is ok ?
+	    fork_process(task, bp, sp, ip) => (newpid);
+	    ptr@*fork_t->result = newpid;
+	    ptr@*fork_t->error = 0;
+    	return;
+	}
+
+	case __NR_execve: {
+	    @.rawtrace(strategy, "signaling pid [%d]\n", task->linux_pid);
+    	//kill(task->elinux_pid, SIGUSR1);
+	    addr_t filename = ptr@*execve_t->filename;
+    	char *file = PC_GET(mem, filename, 0);
+	    char athomux_file[256];
+    	snprintf(athomux_file, 256, "/ROOT%s", file);
+	    addr_t argv = ptr@*execve_t->argv;
+    	@.rawtrace(strategy, "pid %d: execve [%s]\n", pid, athomux_file);
+	    exec_process(task, @#.task[pid], athomux_file, argv);
+    	ptr@*execve_t->result = 0;
+	    ptr@*execve_t->error = 0;
+    	return;
+  	}
+
+	case __NR_pipe: {
+    	@.rawtrace(strategy, "pid %d: pipe\n", pid);
+	    int * filedes;
+	    filedes = ptr@*pipe_t->filedes;
+
+	    for (filedes[0] = 0; filedes[0] < FD_MAX; filedes[0] ++)
+      		if (!task->fd[filedes[0]].addr)
+				break;
+
+    	for (filedes[1] = filedes[0] + 1; filedes[1] < FD_MAX; filedes[1] ++)
+      		if (!task->fd[filedes[1]].addr)
+				break;
+    
+    	if ((filedes[0] == FD_MAX) || (filedes[1] == FD_MAX)) goto pipe_error;
+
+    	task->fd[filedes[0]].addr = 42; // FIXME
+	    task->fd[filedes[0]].type = FILE_PIPE;
+	    task->fd[filedes[1]].addr = 43;
+	    task->fd[filedes[1]].type = FILE_PIPE;
+
+	    kprintf("--------pipe %d %d\n", filedes[0], filedes[1]);
+
+	    // instantiate a new pipe brick and connect the processes
+	    // FIXME
+	    ptr@*pipe_t->result = 0;
+	    ptr@*pipe_t->error = 0;
+
+	    return;
+pipe_error:    
+	    ptr@*pipe_t->result = -1;
+	    ptr@*pipe_t->error = EMFILE;
+	    return;
+    
+  	}
+
+  	case __NR_stat: {    
+	    addr_t fileaddr = ptr@*stat_t->filename; 
+    	char *filename = PC_GET(mem, fileaddr, 0);
+    
+	    //kprintf("stat: [%s]\n", filename);
+
+    	if (filename[0] == '.')
+	    	goto stat_error;
+
+    	if (filename[strlen(filename) - 1] == '/')
+      		goto stat_error;
+
+    	addr_t stataddr = ptr@*stat_t->stat;
+	    stat_t * stat = PC_GET(mem, stataddr, 0);
+
+	    //kprintf("stat: get_stat\n");
+    	get_stat(filename, stat);
+
+	    if (!@success)
+      		goto stat_error;
+    
+	    ptr@*dup_t->result = 0;
+    	ptr@*dup_t->error = 0;
+	    return;
+
+stat_error:
+	    ptr@*dup_t->result = -1;
+    	ptr@*dup_t->error = ENOENT;
+	    return;
+
+  	}
+
+  	case __NR_getdents: {
+	    unsigned fd;
+    	fd = ptr@*getdents_t->fd;
+	    stat_t *stat;
+    	stat = ptr@*getdents_t->stat;
+
+	    @.rawtrace(strategy, "pid %d: getdents %d\n", pid, fd);
+
+    	if (@#.getdents_index > 1)
+	      	goto getdents_error;
+    
+    	if (!task->fd[fd].addr) {
+      		@.rawtrace(strategy, "pid %d: fd %d is not open\n", pid, fd);
+			ptr@*getdents_t->result = -1;
+      		ptr@*getdents_t->error = EBADF;
+      		return;
+    	}
+
+	    get_stat_dir("/ROOT/", stat);
+	    get_dents(task->fd[fd], stat);
+
+    	if (!@success)
+      		goto getdents_error;
+
+    	ptr@*getdents_t->result = 1;
+    	ptr@*getdents_t->error = 0;
+	    @#.getdents_index++;
+	    return;
+
+getdents_error:
+    	ptr@*getdents_t->result = -1;
+    	ptr@*getdents_t->error = ENOENT;
+    	return;
+  	}
+
+  	case __NR_dup: {
+    	unsigned oldfd;
+	    oldfd = ptr@*dup_t->oldfd;
+    	@.rawtrace(strategy, "pid %d: dup %d\n", pid, oldfd);
+    
+	    if (!task->fd[oldfd].addr) {
+      		@.rawtrace(strategy, "pid %d: fd %d is not open\n", pid, oldfd);
+      		ptr@*dup2_t->result = -1;
+      		ptr@*dup2_t->error = EBADF;
+    	  	return;
+	    }
+
+    	// find a free filedescriptor
+	    int fd;
+    	for (fd = 0; fd < FD_MAX; fd ++)
+      		if (!task->fd[fd].addr)
+		break;    
+    
+    	if (fd == FD_MAX) {
+			@.rawtrace(strategy, "pid %d: process holds too many filedescriptors\n", pid);
+      		ptr@*dup_t->result = -1;
+      		ptr@*dup_t->error = EMFILE;
+      		return;
+    	}
+
+    	// copy filedes oldfd
+    	memcpy(&task->fd[fd], &task->fd[oldfd], sizeof(filedes));
+
+    	if ((task->fd[fd].type == FILE_FILE) || (task->fd[fd].type == FILE_CHAR)) {
+      		struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = fd };
+//      		struct conn_info file_conn = { .conn_addr = task->fd[fd].addr, .conn_name = "out", .conn_index = task->fd[fd].fs_index };
+      		struct conn_info file_conn = { .conn_addr = task->fd[fd].addr, .conn_name = "fd", .conn_index = task->fd[fd].fs_index };
+
+      		@=call :<fs(:0:)$connect (&posix_file, &file_conn) => (@success);
+      		if (!@success) {
+				@.rawtrace(strategy, "pid %d: could not copy fd %d\n", pid, oldfd);
+				ptr@*dup2_t->result = -1;
+				ptr@*dup2_t->error = EBADF;
+				return;
+      		}
+    	}
+
+    	PC_DIRTY(mem, @#.task[pid]);
+
+    	ptr@*dup_t->result = fd;
+    	ptr@*dup_t->error = 0;
+    	return;
+  	}
+
+  	case __NR_dup2: {
+    	unsigned oldfd, newfd;
+	    oldfd = ptr@*dup2_t->oldfd;
+    	newfd = ptr@*dup2_t->newfd;
+	    @.rawtrace(strategy, "pid %d: dup2 %d %d\n", pid, oldfd, newfd);
+    
+    	if (!task->fd[oldfd].addr) {
+      		@.rawtrace(strategy, "pid %d: fd %d is not open\n", pid, oldfd);
+      		ptr@*dup2_t->result = -1;
+      		ptr@*dup2_t->error = EBADF;
+      		return;
+    	}
+
+    	// close newfd
+    	if (task->fd[newfd].addr) {
+      		if (task->fd[newfd].type == FILE_FILE) {
+				struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = newfd };
+				@=call :<strat(:0:)$disconnect (&posix_file) => (@success);
+				if (!@success) {
+	  				@.rawtrace(strategy, "pid %d: could not close fd %d\n", pid, newfd);
+				} else {
+	  				@.rawtrace(strategy, "pid %d: closed fd %d\n", pid, newfd);
+	  				task->fd[newfd].addr = 0;
+				}
+      		} else {
+				struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = newfd };
+				@=call :<strat(:0:)$disconnect (&posix_file) => (@success);
+				if (!@success) {
+	  				@.rawtrace(strategy, "pid %d: could not close fd %d\n", pid, newfd);
+				} else {
+	  				@.rawtrace(strategy, "pid %d: closed fd %d\n", pid, newfd);
+	  				task->fd[newfd].addr = 0;
+				}
+				// FIXME: deinstantiate brick 
+      		}
+    	}
+    	// copy filedes oldfd
+    	memcpy(&task->fd[newfd], &task->fd[oldfd], sizeof(filedes));
+
+    	if ((task->fd[newfd].type == FILE_FILE) || (task->fd[newfd].type == FILE_CHAR)) {
+      		struct conn_info posix_file = { .conn_addr = task->posix, .conn_name = "fd", .conn_index = newfd };
+//      		struct conn_info file_conn = { .conn_addr = task->fd[newfd].addr, .conn_name = "out", .conn_index = task->fd[newfd].fs_index };
+      		struct conn_info file_conn = { .conn_addr = task->fd[newfd].addr, .conn_name = "fd", .conn_index = task->fd[newfd].fs_index };
+
+      		@=call :<fs(:0:)$connect (&posix_file, &file_conn) => (@success);
+      		if (!@success) {
+				@.rawtrace(strategy, "pid %d: could not copy fd %d\n", pid, oldfd);
+				ptr@*dup2_t->result = -1;
+				ptr@*dup2_t->error = EBADF;
+				return;
+      		}
+    	}
+
+    	PC_DIRTY(mem, @#.task[pid]);
+
+    	ptr@*dup2_t->result = newfd;
+    	ptr@*dup2_t->error = 0;
+    	return;
+  	}
+
+  	case __NR_wait4: {
+	    pid_t waitpid = ptr@*wait4_t->waitpid;
+    	int options = ptr@*wait4_t->options;
+	    addr_t statusaddr = ptr@*wait4_t->status; 
+    	int *status = PC_GET(mem, statusaddr, sizeof(int));
+
+	    @.rawtrace(strategy, "pid %d: wait4 %d %d\n", pid, waitpid, options);
+
+		if (waitpid == -1) {
+			// HACK: only waits for first child
+			task_struct *othertask = PC_GET(mem, @#.task[pid], sizeof(task_struct));
+			waitpid = othertask->children[0];
+			if (waitpid == 0) {
+	   	  		ptr@*dup2_t->result = -1;
+	      		ptr@*dup2_t->error = ECHILD;
+				return;
+			}
+			othertask->children[0] = 0;
+		}
+//	    if (options == 3) {
+//      		ptr@*dup2_t->result = -1;
+//      		ptr@*dup2_t->error = ECHILD;
+//    	} else {
+		{
+			// HACK using busy waiting (and special exit code...)
+			volatile task_struct *othertask = PC_GET(mem, @#.task[waitpid], sizeof(task_struct));
+			sti();
+			while (othertask->exit_code == 0xAAAA) {}
+			cli();
+			*status = othertask->exit_code * 256;
+
+      		//printf("wait4 locking %d\n", waitpid);
+//			@=call :<lock(:0:)$lock [pid] (waitpid, 1) => (@success);
+//      		if (!@success)
+//				@.rawtrace(strategy, "pid %d: could not get lock\n", pid);
+      		//printf("wait4 unlocking %d\n", waitpid);
+//			@=call :<lock(:0:)$unlock [pid] (waitpid, 1) => (@success);
+//      		if (!@success)
+//				@.rawtrace(strategy, "pid %d: could not unlock\n", pid);
+      		ptr@*dup2_t->result = waitpid;
+      		ptr@*dup2_t->error = 0;
+    	}
+    	return;
+  	}
+
+  	default: {
+    	int s = ptr@*syscall_t->syscall;
+	    @.rawtrace(strategy, "pid %d: unknown syscall %d\n", pid, s);
+    	break;
+  	}
+  	}
+	@success = TRUE;
+}

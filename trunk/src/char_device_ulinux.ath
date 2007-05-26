@@ -2,6 +2,8 @@
   Copyright: Florian Niebling
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
+context pconf: !.*, ulinux*
+
 brick #char_device_ulinux
 purpose dummy character device for posix filedescriptors
 desc

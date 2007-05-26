@@ -1,0 +1,12 @@
+#!/bin/bash
+if [ $TERM != screen ];
+then
+	echo "This script needs to be run in a virtual SCREEN session"
+	exit
+fi
+
+./installx86
+screen ./gdbstart
+#qemu -fda floppy.img -serial stdio -vnc :2 -m 20 -s -S
+qemu -fda floppy.img -serial stdio -vnc :2 -m 20 -s -S
+#/tmptmp/qemu-0.8.2/i386-softmmu/qemu -fda floppy.img -serial stdio -vnc :2 -m 20 -s -S

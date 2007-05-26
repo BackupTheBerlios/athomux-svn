@@ -1,0 +1,158 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context pconf: !.*, x86
+
+brick #char_device_screen
+purpose character device for the text screen
+desc
+  Uses normal VGA text screen at address 0xb8000
+enddesc
+
+static_header {
+#include <string.h>
+#include <x86_lib.h>
+#include <x86_kernel.h>
+}
+
+static_data {
+#define COLUMNS                 80
+#define LINES                   25
+#define ATTRIBUTE               7
+#define VIDEO                   0xB8000
+
+#define VGAI_CURSTART			0x0A
+#define VGAI_CUREND				0x0B
+#define VGAI_CURHIGH			0x0E
+#define VGAI_CURLOW				0x0F
+
+// Brick can be instantiated several times (sdtout, stderr), but both
+// should probably work with the same coordinates, therefore static
+	int xpos;
+	int ypos;
+	volatile unsigned char *video;
+}
+
+data {
+	char buffer[DEFAULT_TRANSFER];
+	bool dowrite;
+	int vga_index;
+	int vga_data;
+}
+
+output :>fd
+
+@.func vga_writedata(int index, int data)
+{
+	int flags;
+	save_flags(flags);
+	cli();
+	outportb(@#.vga_index, index);
+	outportb(@#.vga_data, data);
+	restore_flags(flags);	
+}
+
+@.func scr_putchar(int c)
+{
+	static int nl_pending = 0;
+	static int nl_wrap = 0;
+
+	if (xpos >= COLUMNS) {
+		nl_pending = 1;
+		nl_wrap = 1;
+	}
+
+	if (c == '\r') return;
+
+	if (nl_pending) {
+		xpos = 0;
+		ypos++;
+		if (ypos >= LINES) {
+			// Scroll screen
+			memmove((void*)video, (void*)video + COLUMNS * 2, (LINES - 1) * COLUMNS * 2);
+			memset((void*)video + (LINES - 1) * COLUMNS * 2, 0, COLUMNS * 2);
+			ypos = LINES - 1;
+		}
+		nl_pending = 0;
+		if (c == '\n' && nl_wrap) return;
+	}
+
+	// Only execute newline when the next character is supposed to be written
+	if (c == '\n') {
+		nl_pending = 1;
+		nl_wrap = 0;
+		return;
+	}
+
+	// TAB: adjust xpos to next position dividable by 8
+	if (c == '\t') {
+		xpos = (xpos + 8) & ~7;
+		return;
+	}
+
+	int pos = (xpos + ypos * COLUMNS);
+
+	*(video + pos * 2) = c & 0xFF;
+	*(video + pos * 2 + 1) = ATTRIBUTE;
+
+	vga_writedata(VGAI_CURHIGH, ((pos + 1) >> 8) & 0xff);
+	vga_writedata(VGAI_CURLOW, (pos + 1) & 0xff);
+
+	xpos++;
+}
+
+operation $output_init
+{
+	video = (unsigned char*)VIRT_MEM(VIDEO);
+
+	// Actual port depends on whether the card is in B/W or in colour mode
+	if (inportb(0x3cc) & 0x01) {
+		@#.vga_index = 0x3b4;
+		@#.vga_data = 0x3b5;
+	} else {
+		@#.vga_index = 0x3d4;
+		@#.vga_data = 0x3d5;
+	}
+
+	vga_writedata(VGAI_CURSTART, 0);
+	vga_writedata(VGAI_CUREND, 7);
+	@success = TRUE;
+}
+
+operation $get
+{
+	if (@log_len > DEFAULT_TRANSFER)
+		@log_len = DEFAULT_TRANSFER;
+
+	@phys_addr = (paddr_t) @#.buffer;
+	@#.dowrite = @forwrite;
+  
+	if (@forwrite) {
+    	@phys_len = @log_len;
+		@success = TRUE;
+  }
+}
+
+operation $gettranswait
+{
+	if (@log_len > DEFAULT_TRANSFER)
+		@log_len = DEFAULT_TRANSFER;
+
+	@phys_addr = (paddr_t) @#.buffer;
+	if (!@forwrite) {		
+		@phys_len = 0;
+		@success = TRUE;
+	}
+}
+
+operation $put
+{
+	if (@#.dowrite) {
+		int i;
+		for (i = 0; i < @log_len; i++) {
+			scr_putchar(@#.buffer[i]);
+		}
+	}
+	@success = TRUE;
+}

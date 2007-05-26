@@ -1,0 +1,5 @@
+#!/bin/bash
+./installx86
+#bochs -q
+qemu -fda floppy.img -serial stdio -vnc :2 -m 32 -boot a
+

@@ -1,0 +1,311 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+context target: !.*, athomux_x86
+
+brick #cpu_x86
+purpose CPU "driver" for intel compatible 32-bit processors
+desc
+enddesc
+
+static_header 
+{
+	#include <x86_irq.h>
+	#include <x86_lib.h>
+	#include <x86_kernel.h>
+	#include <x86_mem.h>
+	#include "mmu_x86.h"
+}
+
+static_data 
+{
+	struct brick_cpu_x86 *thisbrick;
+
+	volatile unsigned int ticker;
+	sched_t	sched;
+	task_t 	tasks[MAX_TASKS];
+
+	int	irq_handler(exc_status_t *status)
+	{
+		struct args _tmp_;
+		const char *_param = "";
+		_tmp_.success = FALSE;
+		_tmp_.log_addr = (uns4)status;
+		(&_tmp_)->op_code = opcode_retract;
+		(&_tmp_)->sect_code = 0;
+//		(&_tmp_)->mandate = (_args->mandate);
+		const struct input * _other_; 
+		success_t __success = TRUE;
+		for (_other_ = thisbrick->_conn_irq[status->number - IRQ_BASE]._output_.rev_chain; _other_; _other_ = _other_->rev_next) {
+			(&_tmp_)->success = FALSE;
+			_other_->ops[0][opcode_retract - opcode_output_max - 1]((void*)_other_, &_tmp_, _param);
+			__success &= (&_tmp_)->success;
+		}
+		return __success;
+	}
+
+	int schedule(exc_status_t *status)
+	{
+		const char *_param = "";
+        struct args _tmp_; 
+        _tmp_.success = FALSE;
+		int  new_index;
+
+		// Call scheduler block to decide what job to activate next
+		const union connector * _other_ = (void*)thisbrick->_conn_sched._input_.connect; 
+		_other_->output.ops[0][opcode_gadr](_other_, &_tmp_, _param); 
+
+		// Don't schedule anything else!?
+		if (!_tmp_.success) return EXC_OK;
+		
+		new_index = (int)_tmp_.log_addr;
+
+		// Same!? Don't task switch
+		if (new_index == sched.current_task) return EXC_OK;
+
+		// Task must be runnable (
+		if (tasks[new_index].state != TASK_RUNNABLE) {
+			errprintf("SERIOUS: Scheduler brick returned not runnable task!\n");
+			return EXC_OK;
+		}
+		kprintf("Scheduler selected task %d/%x (eip 0x%x, oldeip 0x%x)\n", new_index, 
+			tasks[new_index].pid, tasks[new_index].tss.eip, status->eip);
+
+		// Switch FPU states (should later be optimized using TS flag)	
+		__asm__("clts");
+		__asm__("fnsave %0":"=m" (tasks[sched.current_task].i387));
+		__asm__("frstor %0": :"m" (tasks[new_index].i387));
+
+		// Okay, do task switch
+		sched.current_task = new_index;
+		task_switch_segment = tasks[new_index].tss_seg;
+		return EXC_TASK_SWITCH;
+	}
+
+	int timer_handler(exc_status_t *status)
+	{
+		ticker++;
+
+		// Pass event to connected bricks
+		irq_handler(status);
+
+		// Do scheduling stuff
+		return schedule(status);
+	}
+
+	int	int80_handler(exc_status_t *status)
+	{
+		struct args _tmp_;
+		const char *_param = "";
+		_tmp_.success = FALSE;
+		_tmp_.log_addr = (uns4)status;
+		(&_tmp_)->op_code = opcode_retract;
+		(&_tmp_)->phys_addr = MAKE_PADDR(tasks[sched.current_task].posix_task);	// HACK!
+		(&_tmp_)->sect_code = 0;
+//		(&_tmp_)->mandate = (_args->mandate);
+		const struct input * _other_; 
+		success_t __success = TRUE;
+		for (_other_ = thisbrick->_conn_int80._output_.rev_chain; _other_; _other_ = _other_->rev_next) {
+			(&_tmp_)->success = FALSE;
+			_other_->ops[0][opcode_retract - opcode_output_max - 1]((void*)_other_, &_tmp_, _param);
+			__success &= (&_tmp_)->success;
+		}
+		kprintf("exit to 0x%x, eax=0x%x\n", status->eip, status->eax);
+		if (!__success)
+			return schedule(status);		// Reschedule requested from syscall
+		return EXC_OK;
+	}
+
+	int page_fault(exc_status_t *status)
+	{
+		kprintf("Page fault! Error code 0x%x, address 0x%x, eip 0x%x\n", status->err_code, get_cr2(), status->eip);
+
+		const char *_param = "";
+	 	struct args _tmp_; 
+	 	_tmp_.success = FALSE;  
+	 	_tmp_.phys_addr = get_cr2();
+		_tmp_.phys_len = status->err_code;
+	 	(&_tmp_)->op_code = opcode_trans; 
+	 	(&_tmp_)->sect_code = 0; 
+		const struct brick_mmu_x86 * _brick = (struct brick_mmu_x86*)tasks[sched.current_task].mmu_brick;
+		const union connector * _other_ = (void*)&(_brick->_conn_dummy); 
+	 	_other_->output.ops[0][opcode_trans](_other_, &_tmp_, _param); 
+	 	return _tmp_.success; 
+	}
+}
+
+
+init
+{
+	int	irq;
+	int i;
+
+	// We must keep a pointer to the brick so the IRQ handlers can use it
+	thisbrick = _brick;
+
+	// Initialise all IRQs with the handler that passes the exceptions on to
+	// the wired inputs
+	for (irq = 0; irq < IRQ_COUNT; irq++) {
+		trap_handlers[IRQ_BASE + irq] = irq_handler;
+	}
+
+	// Exception: page fault handler
+	trap_handlers[EXC_PAGE_FAULT] = page_fault;
+
+	// Exception: INT 0x80 (linux system entry)
+	trap_handlers[EXC_SYSCALL] = int80_handler;
+
+	// Timer is a special handler, as we need it ourselves
+	trap_handlers[IRQ_BASE + IRQ_TIMER] = timer_handler;
+
+	// Clear task table
+	memset(tasks, 0, sizeof(tasks));
+
+	// Allocate GDT entries for all tasks (TSSs)
+	for (i = 0; i < MAX_TASKS; i++) {
+		tasks[i].tss_seg = add_descriptor((uns4)(&tasks[i].tss - KERNEL_VIRT_BASE), sizeof(tss_t) - 1, TSS_F1_DEFAULT, TSS_F2_DEFAULT);
+	}
+
+	// Fill the first task entry with our main task
+	tasks[0].pid = INIT_TASK_PID;
+	tasks[0].state = TASK_RUNNABLE;
+	tasks[0].tss.ss0 = KERNEL_DS;
+	tasks[0].tss.esp0 = get_esp(); // only temporary
+	tasks[0].tss.cr3 = (uns4)kernel_pdir;
+	sched.task_count = 1;
+	sched.next_tag = 1;
+	sched.current_task = 0;
+
+	// Now enable the TSS
+	ltr(tasks[0].tss_seg);
+}
+
+
+// Scheduler strategy block
+instance #sched_x86 as sched;
+wire :<tasks as #:>tasks;
+wire :>sched as #:<sched;
+
+
+@.func create_task() => (athpid_t process_id)
+{
+	int	i;
+	tss_t *ptr;
+
+	// Search free slot in task list
+	for (i = 0; i < MAX_TASKS; i++) {
+		if (tasks[i].state == TASK_NOT_RUNNABLE) break;
+	}
+	@.check(i == MAX_TASKS, "Max tasks reached");
+
+	ptr = &tasks[i].tss;
+	memset(ptr, 0, sizeof(tss_t));
+	ptr->ss0 = KERNEL_DS;
+	ptr->ss2 = USER_DS | SEG_RPL3;
+	ptr->cs = USER_CS | SEG_RPL3;
+	ptr->ds = USER_DS | SEG_RPL3;
+	ptr->ss = USER_DS | SEG_RPL3;
+	ptr->es = USER_DS | SEG_RPL3;
+	ptr->gs = USER_DS | SEG_RPL3;
+	ptr->fs = USER_DS | SEG_RPL3;
+	ptr->eflags = FLAG_INT;
+	ptr->cr3 = (uns4)kernel_pdir;
+
+	// Link into task list
+	tasks[i].next_task = tasks[0].next_task;
+	tasks[i].prev_task = 0;
+	tasks[0].next_task = i;
+	tasks[tasks[i].next_task].prev_task = i;
+
+	tasks[i].state = TASK_NOT_RUNNABLE;
+	tasks[i].pid = (i << 16) | (sched.next_tag++);
+	if (sched.next_tag > 0xFFFF) sched.next_tag = 1;
+
+	// Yeah, one more task in the house!
+	sched.task_count++;
+
+	process_id = tasks[i].pid;
+}
+
+
+@.func delete_task(int i)
+{
+	// Unlink job
+	tasks[tasks[i].prev_task].next_task = tasks[i].next_task;
+	tasks[tasks[i].next_task].prev_task = tasks[i].prev_task;
+	// Job not runable anymore
+	sched.task_count--;
+	tasks[i].state = TASK_NOT_RUNNABLE;
+	// Switch to kernel page tree
+//	set_cr3(kernel_pdir);
+	// And free the page tree of the task
+//	free_page_tree(tasks[i].tss.cr3);
+
+	if (sched.task_count == 1) {
+		athomux_shutdown();			// Last regular (non-idle) task killed
+	}
+}
+
+
+operation $brick_init
+{
+	INIT_ALL_INPUTS();
+	INIT_ALL_INSTANCES();
+	INIT_ALL_OUTPUTS();
+
+	// Finally enable interrupts now
+	sti();
+}
+
+
+// This input is only used to activate the scheduler brick
+local input :<sched
+
+// Interrupts
+output :>irq[16]
+output :>int80
+
+// Task state
+output :>tasks(:2:)
+
+section (:0:)
+
+// Give access to the task state table to the scheduler brick
+operation $get
+{
+	@phys_addr = MAKE_PADDR(&tasks);
+	@phys_len = sizeof(tasks);
+	@success = TRUE;	
+}
+
+
+// Create new task entry
+operation $gadr
+{
+	athpid_t	pid;
+
+	create_task() => (pid);
+	@log_len = sizeof(task_t);
+	@log_addr = PID_TASK_INDEX(pid) * @log_len;
+	@success = TRUE;
+}
+
+
+// Delete task entry
+operation $padr
+{
+	delete_task(@log_addr / sizeof(task_t));
+	@success = TRUE;
+}
+
+section (:1:)
+
+// Give access to the scheduler status to the scheduler brick
+operation $get
+{
+	@phys_addr = MAKE_PADDR(&sched);
+	@phys_len = sizeof(sched_t);
+	@success = TRUE;	
+}
+

@@ -11,9 +11,11 @@
 
 // debugging
 
+int call_level = 0;
+
 #ifdef DEBUG
 #include <stdio.h>
-int call_level = 0;
+//int call_level = 0;
 char blanks[32] = "                               ";
 #endif
 
@@ -101,7 +103,8 @@ void init_all_instances(const struct loader * loader, void * brick, struct args 
   for(load_inst = loader->instances; i > 0; load_inst++, i--) {
     void * subbrick = brick + load_inst->offset;
     const struct loader * subloader = load_inst->loader;
-    args->success = TRUE;
+//  args->success = TRUE;
+    args->success = FALSE;
     subloader->init_brick(subbrick, args, param);
     if(!args->success) {
       return;

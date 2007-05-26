@@ -1,0 +1,28 @@
+#context pconf: !.*, x86
+
+include target-include.x86
+
+#LDFLAGS=-T linker.ld -nostdlib -nostartfiles -nodefaultlibs
+
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/x86_kernel.o $(pconf)/$(cconf)/x86_irqhandler.o $(pconf)/$(cconf)/x86_irq.o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/x86_lib.o $(pconf)/$(cconf)/x86_mem.o $(pconf)/$(cconf)/x86_malloc.o $(pconf)/$(cconf)/x86_math64.o $(pconf)/$(cconf)/strat.o
+#$(pconf)/$(cconf)/static_loader.o $(pconf)/$(cconf)/go_to_start.o $(pconf)/$(cconf)/param_scanner.o $(pconf)/$(cconf)/graph_console $(pconf)/$(cconf)/snformath.o $(LIB_FUSE)
+
+libc:
+	$(MAKE) -C libc
+
+$(pconf)/$(cconf)/$(target): $(pconf)/$(cconf)/x86_boot.o $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a linker.ld
+#	$(LD) -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ -Ttext 100000
+	$(LD) -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ linker.ld -T linker.ld
+	strip $(pconf)/$(cconf)/$(target) -o $(pconf)/$(cconf)/$(target)_stripped
+
+$(pconf)/$(cconf)/%.o: %.S
+	$(CC) -ggdb -I. -c $< -o $@
+
+$(pconf)/$(cconf)/%.o: %.c
+	$(CC) $($(cconf)_CFLAGS)) -I. -c $< -o $@	
+
+$(pconf)/$(cconf)/x86_boot.o: x86_boot.S multiboot.h
+
+$(pconf)/$(cconf)/x86_kernel.o: $(pconf)/x86_kernel.c $(pconf)/x86_kernel.h multiboot.h
+
+$(pconf)/$(cconf)/x86_mem.o: $(pconf)/x86_kernel.h $(pconf)/x86_mem.h $(pconf)/x86_malloc.h $(pconf)/x86_lib.h

@@ -1,0 +1,32 @@
+  Author: Marcel Kilgus
+  Copyright: Marcel Kilgus
+  License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+brick #demo_screen
+purpose Send string to screen output
+desc
+enddesc
+
+input :<test
+
+output :>dummy
+
+
+operation $output_init
+{
+	success_t success;
+	plen_t phys_len;
+	paddr_t phys_addr;
+
+	char *teststr = "This is just a test\nYes, this too!\nBlah.\n";
+
+	@=call :<test$get (0, strlen(teststr) + 1, TRUE) => (success, phys_addr, phys_len);
+    @.check(!success, "test:get ERROR");
+	strcpy(MAKE_PTR(phys_addr), teststr);
+
+	@=call :<test$put (0, strlen(teststr) + 1, prio_none) => (success);
+    @.check(!success, "test:put ERROR");
+
+	@success = TRUE;
+}
+
