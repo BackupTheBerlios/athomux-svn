@@ -309,67 +309,11 @@ DEF_SINGLE_OP(sect##_retract)                                                 \
                                                                               \
 DEF_SINGLE_OP(sect##_brick_init)                                              \
 
-DEF_OPERATIONS(0)
-DEF_OPERATIONS(1)
-DEF_OPERATIONS(2)
-DEF_OPERATIONS(3)
-
-#define MAKE_ALIAS(prefix,name,sect)                                          \
-  static_operation prefix##_##sect##_##name __attribute__((alias(#prefix"_"#name)));
-
-#define MAKE_ALIASES(name,sect)                                               \
-  MAKE_ALIAS(missing,name,sect)                                               \
-  MAKE_ALIAS(unitialized,name,sect)
-
-#define MAKE_ALL_ALIAS(name)                                                  \
-  MAKE_ALIASES(name,0)                                                        \
-  MAKE_ALIASES(name,1)                                                        \
-  MAKE_ALIASES(name,2)                                                        \
-  MAKE_ALIASES(name,3)                                                        \
-
-MAKE_ALL_ALIAS(output_init)
-// static ops
-MAKE_ALL_ALIAS(trans)
-MAKE_ALL_ALIAS(wait)
-MAKE_ALL_ALIAS(get)
-MAKE_ALL_ALIAS(put)
-MAKE_ALL_ALIAS(lock)
-MAKE_ALL_ALIAS(unlock)
-MAKE_ALL_ALIAS(gadr)
-MAKE_ALL_ALIAS(padr)
-// strategy ops
-MAKE_ALL_ALIAS(instbrick)
-MAKE_ALL_ALIAS(deinstbrick)
-MAKE_ALL_ALIAS(instconn)
-MAKE_ALL_ALIAS(deinstconn)
-MAKE_ALL_ALIAS(connect)
-MAKE_ALL_ALIAS(disconnect)
-MAKE_ALL_ALIAS(getconn)
-MAKE_ALL_ALIAS(findconn)
-// dynamic ops
-MAKE_ALL_ALIAS(create)
-MAKE_ALL_ALIAS(delete)
-MAKE_ALL_ALIAS(move)
-// combinations
-MAKE_ALL_ALIAS(transwait)
-MAKE_ALL_ALIAS(gettranswait)
-MAKE_ALL_ALIAS(transwaitput)
-MAKE_ALL_ALIAS(putwait)
-MAKE_ALL_ALIAS(createget)
-MAKE_ALL_ALIAS(gadrcreate)
-MAKE_ALL_ALIAS(gadrcreateget)
-MAKE_ALL_ALIAS(gadrgettranswait)
-MAKE_ALL_ALIAS(putpadr)
-MAKE_ALL_ALIAS(putdelete)
-MAKE_ALL_ALIAS(deletepadr)
-MAKE_ALL_ALIAS(putdeletepadr)
-MAKE_ALL_ALIAS(gadrtranswaitdeletepadr)
-MAKE_ALL_ALIAS(gadrcreatetranswaitpadr)
-
-MAKE_ALL_ALIAS(input_init)
-MAKE_ALL_ALIAS(retract)
-
-MAKE_ALL_ALIAS(brick_init)
+DEF_OPERATIONS()
+//DEF_OPERATIONS(0)
+//DEF_OPERATIONS(1)
+//DEF_OPERATIONS(2)
+//DEF_OPERATIONS(3)
 
 /////////////////////////////////////////////////////////////////////////
 

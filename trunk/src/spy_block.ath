@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !.*, ulinux*
-context cconf: !.*, ulinux*
+context pconf: !.*, ulinux.*
+context cconf: !.*, ulinux.*
 
 brick #spy_block
 

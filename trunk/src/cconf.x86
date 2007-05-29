@@ -1,6 +1,6 @@
 #context pconf: !ulinux, !klinux, !.*debug.*
 
-#$(cconf)_CFLAGS=-Wall -O2 $(OPTFLAGS) -march=pentium3
-$(cconf)_CFLAGS=-I. -Wall -ggdb $(OPTFLAGS) -march=pentium3
+#$(cconf)_CFLAGS=-Wall -O2 $(OPTFLAGS) -march=pentium3 -m32
+$(cconf)_CFLAGS=-I. -Wall -ggdb $(OPTFLAGS) -march=pentium3 -m32
 
 include cconf-include.x86

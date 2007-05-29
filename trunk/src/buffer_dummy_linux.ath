@@ -2,7 +2,7 @@
   Copyright: University of Stuttgart
   License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context pconf: !.*, ulinux*
+context pconf: !.*, ulinux.*
 
 // stateful dummy implementation
 brick #buffer_dummy_linux

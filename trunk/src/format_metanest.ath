@@ -3,8 +3,7 @@ Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
 context pconf: !x86
-//context pconf: *
-//context cconf: *
+//context cconf: .*
 
 brick #format_metanest
 

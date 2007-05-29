@@ -13,7 +13,7 @@ $(pconf)/$(cconf)/athomux-ulinux: $(pconf)/athomux_ulinux.c $($(pconf)_bricks) $
 	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<
 
 $(pconf)/$(cconf)/%.o: %.S
-	$(CC) -c $< -o $@
+	$(CC) m32 -c $< -o $@
 
 $(pconf)/$(cconf)/loader_%.o: $(pconf)/loader_%.c types.h
 	$(CC) $(CFLAGS) -c $< -o $@

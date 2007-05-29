@@ -1,4 +1,4 @@
-#context pconf: !klinux, !.*debug.*
+#context pconf: !.*, ulinux, !.*debug.*
 
 $(cconf)_CFLAGS=-Wall -O3 $(OPTFLAGS)
 

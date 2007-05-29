@@ -2405,8 +2405,9 @@ sub gen_header {
           print OUT "static_operation $dst_name;\n";
           next;
         }
-        my $src_name = "missing_$bare";
-        print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
+        my $src_name = "missing__$bare";
+        #print OUT "static_operation $dst_name __attribute__((alias(\"$src_name\")));\n";
+        print OUT "#define $dst_name $src_name\n";
       }
       print OUT "\n";
     }
@@ -2610,7 +2611,8 @@ sub gen_init {
       print OUT "    // unimplemented ops\n";
       foreach my $bare (keys %copy_ops) {
         my $dst_name = sp_name($secspec . "\$" . $bare);
-        my $src_name = defined($op_defined) ? $op_defined : "missing_${sect}_$bare";
+        #my $src_name = defined($op_defined) ? $op_defined : "missing_${sect}_$bare";
+        my $src_name = defined($op_defined) ? $op_defined : "missing__$bare";
         print OUT "    [opcode_$bare$index_shift] = &$src_name,\n";
       }
       print OUT "  },\n";

@@ -11,12 +11,12 @@ libc:
 	$(MAKE) -C libc
 
 $(pconf)/$(cconf)/$(target): $(pconf)/$(cconf)/x86_boot.o $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a linker.ld
-#	$(LD) -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ -Ttext 100000
-	$(LD) -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ linker.ld -T linker.ld
+#	$(LD) -mi386linux -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ -Ttext 100000
+	$(LD) -mi386linux -Map x86.map $(pconf)/$(cconf)/x86_boot.o $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) libc/libc.a -o $@ linker.ld -T linker.ld
 	strip $(pconf)/$(cconf)/$(target) -o $(pconf)/$(cconf)/$(target)_stripped
 
 $(pconf)/$(cconf)/%.o: %.S
-	$(CC) -ggdb -I. -c $< -o $@
+	$(CC) -m32 -ggdb -I. -c $< -o $@
 
 $(pconf)/$(cconf)/%.o: %.c
 	$(CC) $($(cconf)_CFLAGS)) -I. -c $< -o $@	

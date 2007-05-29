@@ -2,8 +2,8 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-//context pconf: *
-//context cconf: *
+//context pconf: .*
+//context cconf: .*
 
 brick #lock_protect
 

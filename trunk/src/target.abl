@@ -1,12 +1,12 @@
-#context pconf: ulinux*
-#context cconf: ulinux*
+#context pconf: !.*, ulinux.*
+#context cconf: !.*, ulinux.*
 
 include target-include.ulinux
 
-$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/param_scanner.o  $(pconf)/$(cconf)/ath_stdio.o
+$(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/$(target).o $(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/binstrat.o $(pconf)/$(cconf)/param_scanner.o  $(pconf)/$(cconf)/ath_stdio.o
 
 $(pconf)/$(target).c : $(target).athl common.ath pre.pl Makefile
 	./pre.pl $< $@
 
-$(pconf)/$(cconf)/$(target): $(target).athl $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras)
+$(pconf)/$(cconf)/$(target): $(target).athl $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_extras) $($(pconf)_$(cconf)_$(target)_extras)
 	$(CC) $(LDFLAGS) $(filter %.o,$^) -o $@

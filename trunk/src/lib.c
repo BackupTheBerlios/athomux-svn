@@ -134,7 +134,7 @@ void uninitialized_##name(const union connector * on, struct args * args, const 
 }
 
 #define MISSING(name)                                                         \
-void missing_##name(const union connector * on, struct args * args, const char * param)\
+void missing__##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \
   printf("operation " #name " not implemented\n");                            \
   DEBUG_EXIT;                                                                 \
@@ -143,7 +143,7 @@ UNINITIALIZED(name)
 
 
 #define OPTIONAL(name)                                                        \
-void missing_##name(const union connector * on, struct args * args, const char * param)\
+void missing__##name(const union connector * on, struct args * args, const char * param)\
 {                                                                             \
   args->success = FALSE;                                                      \
 }                                                                             \
@@ -154,7 +154,7 @@ UNINITIALIZED(name)
  * besides the success.
  */
 #define UNUSED(name)                                                          \
-void missing_##name(const union connector * on, struct args * args, const char * param)\
+void missing__##name(const union connector * on, struct args * args, const char * param)\
 { /* Do nothing */                                                            \
   args->success = TRUE;                                                       \
 }                                                                             \
@@ -233,7 +233,7 @@ UNUSED(brick_init)
  * we get no drop-in replacement and/or bad semantics!
  */
 
-void missing_transwait(const union connector * on, struct args * args, const char * param)
+void missing__transwait(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_trans;
   on->output.ops[args->sect_code][opcode_trans](on, args, param);
@@ -246,7 +246,7 @@ void missing_transwait(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_wait](on, args, param);
 }
 
-void missing_gettranswait(const union connector * on, struct args * args, const char * param)
+void missing__gettranswait(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_get;
   on->output.ops[args->sect_code][opcode_get](on, args, param);
@@ -266,7 +266,7 @@ void missing_gettranswait(const union connector * on, struct args * args, const 
   }
 }
 
-void missing_transwaitput(const union connector * on, struct args * args, const char * param)
+void missing__transwaitput(const union connector * on, struct args * args, const char * param)
 {
   success_t res;
   args->direction = direct_write;
@@ -280,7 +280,7 @@ void missing_transwaitput(const union connector * on, struct args * args, const 
   args->success &= res; /* both must have succeeded */
 }
 
-void missing_putwait(const union connector * on, struct args * args, const char * param)
+void missing__putwait(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_put;
   on->output.ops[args->sect_code][opcode_put](on, args, param);
@@ -291,7 +291,7 @@ void missing_putwait(const union connector * on, struct args * args, const char 
   on->output.ops[args->sect_code][opcode_wait](on, args, param);
 }
 
-void missing_createget(const union connector * on, struct args * args, const char * param)
+void missing__createget(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_create;
   on->output.ops[args->sect_code][opcode_create](on, args, param);
@@ -304,7 +304,7 @@ void missing_createget(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_get](on, args, param);
 }
 
-void missing_gadrcreate(const union connector * on, struct args * args, const char * param)
+void missing__gadrcreate(const union connector * on, struct args * args, const char * param)
 {
   args->reader = FALSE;
   args->op_code = opcode_gadr;
@@ -317,7 +317,7 @@ void missing_gadrcreate(const union connector * on, struct args * args, const ch
   on->output.ops[args->sect_code][opcode_create](on, args, param);
 }
 
-void missing_gadrcreateget(const union connector * on, struct args * args, const char * param)
+void missing__gadrcreateget(const union connector * on, struct args * args, const char * param)
 {
   args->reader = FALSE;
   args->op_code = opcode_gadr;
@@ -330,7 +330,7 @@ void missing_gadrcreateget(const union connector * on, struct args * args, const
   on->output.ops[args->sect_code][opcode_createget](on, args, param);
 }
 
-void missing_gadrgettranswait(const union connector * on, struct args * args, const char * param)
+void missing__gadrgettranswait(const union connector * on, struct args * args, const char * param)
 {
   args->reader = TRUE;
   args->op_code = opcode_gadr;
@@ -343,7 +343,7 @@ void missing_gadrgettranswait(const union connector * on, struct args * args, co
   on->output.ops[args->sect_code][opcode_gettranswait](on, args, param);
 }
 
-void missing_putpadr(const union connector * on, struct args * args, const char * param)
+void missing__putpadr(const union connector * on, struct args * args, const char * param)
 {
   args->prio = prio_background;
   args->op_code = opcode_put;
@@ -357,7 +357,7 @@ void missing_putpadr(const union connector * on, struct args * args, const char 
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_putdelete(const union connector * on, struct args * args, const char * param)
+void missing__putdelete(const union connector * on, struct args * args, const char * param)
 {
   args->prio = prio_none;
   args->op_code = opcode_put;
@@ -370,7 +370,7 @@ void missing_putdelete(const union connector * on, struct args * args, const cha
   on->output.ops[args->sect_code][opcode_delete](on, args, param);
 }
 
-void missing_deletepadr(const union connector * on, struct args * args, const char * param)
+void missing__deletepadr(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_delete;
   on->output.ops[args->sect_code][opcode_delete](on, args, param);
@@ -382,7 +382,7 @@ void missing_deletepadr(const union connector * on, struct args * args, const ch
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_putdeletepadr(const union connector * on, struct args * args, const char * param)
+void missing__putdeletepadr(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_putdelete;
   on->output.ops[args->sect_code][opcode_putdelete](on, args, param);
@@ -394,7 +394,7 @@ void missing_putdeletepadr(const union connector * on, struct args * args, const
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_gadrtranswaitdeletepadr(const union connector * on, struct args * args, const char * param)
+void missing__gadrtranswaitdeletepadr(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
@@ -423,7 +423,7 @@ void missing_gadrtranswaitdeletepadr(const union connector * on, struct args * a
   on->output.ops[args->sect_code][opcode_padr](on, args, param);
 }
 
-void missing_gadrcreatetranswaitpadr(const union connector * on, struct args * args, const char * param)
+void missing__gadrcreatetranswaitpadr(const union connector * on, struct args * args, const char * param)
 {
   args->op_code = opcode_gadr;
   args->log_len = args->try_len = args->phys_len;
