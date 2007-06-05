@@ -1,2 +1,2 @@
 $(pconf)/%.c : %.ath
-	./pre.pl -i PCONF=$(pconf) $< $@
+	./pre.pl -d -i PCONF=$(pconf) $< $@
