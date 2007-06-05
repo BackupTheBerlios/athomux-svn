@@ -1,4 +1,4 @@
-CFLAGS=-Wall -ggdb -march=pentium3
+CFLAGS=-Wall -ggdb -march=pentium3 -m32
 
 OFILES=atoi.o \
 atol.o \
@@ -6,9 +6,11 @@ ctype.o \
 doprnt.o \
 doscan.o \
 fprintf.o \
+fstubs.o \
 memchr.o \
 memcmp.o \
 memset.o \
+putchar.o \
 printf.o \
 random.o \
 sprintf.o \
