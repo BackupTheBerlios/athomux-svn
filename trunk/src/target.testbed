@@ -1,8 +1,8 @@
-#context pconf: !.*, ulinux*
+#context pconf: !.*, ulinux.*
 
 include target-include.ulinux
 
 $(pconf)_$(cconf)_$(target)_extras:=$(pconf)/$(cconf)/lib.o $(pconf)/$(cconf)/strat.o $(pconf)/$(cconf)/binstrat.o $(pconf)/$(cconf)/param_scanner.o $(pconf)/$(cconf)/ath_stdio.o
 
-$(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_extras)
+$(pconf)/$(cconf)/testbed: $(pconf)/testbed.c $($(pconf)_bricks) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_extras) $($(pconf)_$(cconf)_$(target)_extras)
 	$(CC) $($(cconf)_CFLAGS) $(LDFLAGS) $($(pconf)_$(cconf)_$(target)_objs) $($(pconf)_$(cconf)_$(target)_extras) -o $@ $<

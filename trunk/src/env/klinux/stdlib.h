@@ -1,3 +1,4 @@
+#include <linux/autoconf.h>
 #include <linux/kernel.h>
 #include <linux/vmalloc.h>
 #define printf(args...) athomux_printf(args)
