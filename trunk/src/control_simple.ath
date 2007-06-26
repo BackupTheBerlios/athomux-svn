@@ -285,7 +285,7 @@ static struct connector_header * find_param(struct brick_header * brick,
 static void create_conn(struct brick_header * brick, struct connector_header * conn, const struct load_conn * load_conn, index_t index)
 {
   //if (brick->connectors) printf("brick->connectors is brick '%s' ", brick->connectors->load_conn->name);
-  printf("now creating conn '%s'@%lX\n", load_conn->name, (long)conn);
+  rawtrace("now creating conn '%s'@%lX\n", load_conn->name, (long)conn);
   conn->belonging = brick;
   conn->load_conn = load_conn;
   conn->c_index = index;
@@ -297,14 +297,14 @@ static void create_conn(struct brick_header * brick, struct connector_header * c
   } else {
     conn->instance = brick->instance + load_conn->offset + load_conn->size * index;
   }
-  //if (brick->connectors) printf("brick->connectors is now brick '%s'\n", brick->connectors->load_conn->name);
+  //if (brick->connectors) rawtrace("brick->connectors is now brick '%s'\n", brick->connectors->load_conn->name);
 }
 
 static void insert_conn(struct brick_header * brick, struct connector_header * conn)
 {
 #ifdef DEBUG
   struct connector_header * tmp;
-  printf("connectors==0x%lX list of brick '%s':\n", (long)brick->connectors, brick->loader->name);
+  rawtrace("connectors==0x%lX list of brick '%s':\n", (long)brick->connectors, brick->loader->name);
   for (tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
     printf("    '%s'@0x%lX export==%d\n", tmp->load_conn->name, (long)tmp, tmp->load_conn->export);
     if (tmp == conn) {
@@ -314,23 +314,23 @@ static void insert_conn(struct brick_header * brick, struct connector_header * c
   puts("end of list");
 #endif
   if (!brick->last) {
-    printf("Setting first connector to '%s'@0x%lX\n", conn->load_conn->name, (long)conn);
+    rawtrace("Setting first connector to '%s'@0x%lX\n", conn->load_conn->name, (long)conn);
     brick->connectors = conn;
   } else {
-    printf("Appending connector '%s'@0x%lX to list\n", conn->load_conn->name, (long)conn);
+    rawtrace("Appending connector '%s'@0x%lX to list\n", conn->load_conn->name, (long)conn);
     brick->last->conn_next = conn;
   }
   brick->last = conn;
 #ifdef DEBUG
   int flag = 0;
-  printf("connectors==0x%lX list of brick '%s':\n", (long)brick->connectors, brick->loader->name);
+  rawtrace("connectors==0x%lX list of brick '%s':\n", (long)brick->connectors, brick->loader->name);
   for(tmp = brick->connectors; tmp; tmp = tmp->conn_next) {
-    printf("    '%s'@0x%lX export==%d\n", tmp->load_conn->name, (long)tmp, tmp->load_conn->export);
+    rawtrace("    '%s'@0x%lX export==%d\n", tmp->load_conn->name, (long)tmp, tmp->load_conn->export);
     if (tmp == conn) {
        flag++;
     }
   }
-  puts("end of list");
+  rawtrace("end of list");
   if (flag != 1) {
     @.rawabort("connector '%s' occurred %d times", conn->load_conn->name, flag);
   }
@@ -348,17 +348,23 @@ static mand_t create_brick(struct brick_header * brick, const struct loader * lo
     const struct load_conn * load_conn = &loader->conn[i];
     
     // instantiate all static connectors
+#ifdef ROLAND_NIESE
     if (load_conn->export) { // only init external connectors
-    //if (!load_conn->type && load_conn->export) { // only init inputs
+#else
+    if (!load_conn->type && load_conn->export) { // only init inputs
+#endif
       index_t start_index = load_conn->start_index;
       int k;
       for(k = 0; k < load_conn->count; k++) {
-        printf("index=%d start_index=%d creating connector==%s@0x%lX brick %s->connectors==0x%lX\n", k, start_index, load_conn->name, (long)&brick->connector[start_index + k], brick->loader->name, (long)brick->connectors);
+        rawtrace("index=%d start_index=%d creating connector==%s@0x%lX brick %s->connectors==0x%lX\n", k, start_index, load_conn->name, (long)&brick->connector[start_index + k], brick->loader->name, (long)brick->connectors);
         create_conn(brick, &brick->connector[start_index + k], load_conn, k);
         insert_conn(brick, &brick->connector[start_index + k]);
       }
     }
   }
+#if 0
+} // fake preprocessor parentheses nesting
+#endif
   return mand;
 }
 
@@ -463,6 +469,11 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
   // produce input info
   for(conn = brick->connectors; conn; conn = conn->conn_next) {
     if (conn->load_conn->type) continue;
+#ifndef ROLAND_NIESE
+    // only show the _first_ uninitialized connector
+    if(!conn->c_param)
+      continue;
+#endif
     PR("  input=%s {\n", conn->load_conn->name);
     if (conn->c_param && *conn->c_param) {
       PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
@@ -485,9 +496,18 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
     PR("  }\n");
   }
   // produce output info
+#ifndef ROLAND_NIESE
+    int add_count = 0;
+#endif
   for(conn = brick->connectors; conn; conn = conn->conn_next) {
     if (!conn->load_conn->type) continue;
+#ifndef ROLAND_NIESE
+    // only show the _first_ uninitialized connector
+    if(!conn->c_param && add_count++)
+      continue;
+#endif
     PR("  output=%s {\n", conn->load_conn->name);
+#ifdef ROLAND_NIESE
     if (conn->c_param && *conn->c_param)
       PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
     if (conn->link.first) {
@@ -498,6 +518,26 @@ static int gen_info(struct brick_header * brick, char * buf, int len)
           PR("%s%llx:%s", chain == conn->link.first ? "" : ",", tmp->belonging->addr,  tmp->load_conn->name);
         }
     }
+#else
+    if(conn->c_param) {
+      PR("  output=%s {\n", conn->load_conn->name);
+      if(conn->c_param[0]) {
+        PR("    c_param %s=%s\n", conn->load_conn->name, conn->c_param);
+      }
+      PR("%s    connect %s=", 
+         conn->load_conn->static_info, conn->load_conn->name);
+      struct connector_link * chain;
+      for(chain = conn->link.first; chain; chain = chain->chain) {
+        struct connector_header * tmp = LINK_TO_CONN(chain);
+        PR("%s%llx:%s",
+           chain == conn->link.first ? "" : ",",
+           tmp->belonging->addr,  tmp->load_conn->name);
+      }
+      PR("\n");
+    } else {
+      PR("  output==%s {\n", conn->load_conn->name);
+    }
+#endif
     PR("  }\n");
   }
   PR("}\n");
@@ -629,15 +669,22 @@ index_t conn_ix = find_load_conn(boot, "control");
 rawtrace("conn_ix=%d\n", conn_ix);
 index_t ix2 = conns_control_simple[conn_ix].start_index;
 rawtrace("ix2=%d\n", ix2);
-//create_conn(boot, &boot->connector[ix2], &conns_control_simple[conn_ix], 0);
-//boot->connector[ix2].c_param = "default-control";
-//insert_conn(boot, &boot->connector[ix2]);
-//boot->connector[1].c_param = boot->b_param;
+#ifndef ROLAND_NIESE
+create_conn(boot, &boot->connector[ix2], &conns_control_simple[conn_ix], 0);
+boot->connector[ix2].c_param = "default-control";
+insert_conn(boot, &boot->connector[ix2]);
+boot->connector[1].c_param = boot->b_param;
+#endif
 boot->addr = REPRES_MAX; // one behind MainDir
 root_instance = GET_BRICK(boot);
 root_instance->last_addr = boot->addr + REPRES_MAX;
+#ifndef ROLAND_NIESE
+struct args args = { .constr = TRUE, };
+loader_control_simple.init_brick((void*)root_instance, &args, "");
+#endif
 root_strategy = &root_instance->_conn_control._output_;
 insert_brick_hash(root_instance->brick_hash, boot);
+#ifdef ROLAND_NIESE
 char buf[DEFAULT_TRANSFER];
 gen_info(boot, buf, sizeof buf);
 printf("Strategy brick:\n%s\n", buf);
@@ -646,9 +693,12 @@ loader_control_simple.init_brick((void*)root_instance, &args, "");
 @.rawfatal (!args.success, "Initialization of root control brick failed!");
 gen_info(boot, buf, sizeof buf);
 printf("#control_simple:\n%s\n", buf);
+#endif
 struct conn_info root_conn1 = {0, 0, "control" };
-//struct args args1 = { .conn1 = &root_conn1, };
-//root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
+#ifndef ROLAND_NIESE
+struct args args1 = { .conn1 = &root_conn1, };
+root_strategy->ops[0][opcode_instconn]((void*)root_strategy, &args1, "");
+#endif
 struct conn_info root_conn2 = {boot->addr, 0, "hook" };
 struct args args2 = { .conn1 = &root_conn2, .conn2 = &root_conn1, };
 root_strategy->ops[0][opcode_connect]((void*)root_strategy, &args2, "");
