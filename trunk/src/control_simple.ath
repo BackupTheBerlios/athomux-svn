@@ -376,7 +376,7 @@ static struct brick_header * new_brick(char * name, const char * b_param, mand_t
   char * space;
   index_t index = find_loader(name);
   if (index < 0) {
-    rawtrace("find_loader(\"%d\") failed\n", name);
+    rawtrace("find_loader(\"%s\") failed\n", name);
     return NULL;
   }
   const struct loader * loader = loaders[index];
@@ -386,7 +386,7 @@ static struct brick_header * new_brick(char * name, const char * b_param, mand_t
   rawtrace("calculated total_size of new brick=%ld\n", total_size);
   space = malloc(total_size);
   if (!space) {
-    rawtrace("malloc() for brick "%d\" failed\n", name);
+    rawtrace("malloc() for brick \"%s\" failed\n", name);
     return NULL;
   }
   memset(space, 0, total_size);
