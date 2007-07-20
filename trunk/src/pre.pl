@@ -186,6 +186,8 @@ sub embrace_code {
 
 sub doc_element {
   my ($tag, $key, $value) = @_;
+  $tag = "" unless defined($tag);
+  $key = "" unless defined($key);
   # provisionary!!
   printf("$::doc_current ------> $tag : $key => $value\n");
 }
@@ -1849,7 +1851,7 @@ sub parse_lit {
 sub parse_attr {
   my ($text,$macros,$do_export) = @_;
   for(;;) {
-    if($text =~ m/\A${ws}(attr|tag)(?:ib)?([0-9])?\s+($idmatch)\s*=\s*([^\s]*)\s*\n/) {
+    if($text =~ m/\A${ws}(attr|tag|category)(?:ib)?([0-9])?\s+($idmatch)\s*=\s*([^\s]*)\s*\n/) {
       $text = $POSTMATCH;
       my ($type, $nr, $key, $val) = ($1, $2, $3, $4);
       add_attr($key, $nr, $val) if $do_export;
@@ -1899,6 +1901,7 @@ sub parse_2 {
       my $sect = $1;
       die "incorrect section specifier '$sect'" unless sp_type($sect) == 3;
       $::current = sp_complete($sect);
+      $::doc_current = sp_shorten($::current, 3);
       next;
     }
     if($text =~ m/\A(${ws}(static[^(]+$parenmatch)$ws$bracematch)/m) {
@@ -1914,6 +1917,9 @@ sub parse_2 {
       my $body = $2;
       $text = $POSTMATCH;
       $names =~ s/\$init/\$output_init/ and warn "operation \$init is deprecated, please replace by \$output_init!";
+      if($::parse_level == 1) {
+	doc_element("operation", "", $names);
+      }
       if($remember) {
         if($names eq "\$op") {
           $::current = sp_complete($names);
@@ -1963,6 +1969,8 @@ sub parse_2 {
 
 sub parse_subinstances {
   my ($text, $remember) = @_;
+  my $oldcurrent = $::current;
+  my $old_doc_current = $::doc_current;
   for(;;) {
     if($text =~ m/\A${ws}instance$ws($specmatch)${ws}as${ws}(\w+)$ws;/) {
       my $type = $1;
@@ -1970,7 +1978,10 @@ sub parse_subinstances {
       $text = $POSTMATCH;
       sp_syntax($type);
       die "bad instance brick type '$type'" unless sp_type($type) == 1;
-      my $oldcurrent = $::current;
+      if($::parse_level == 1) {
+	$::doc_current = $old_doc_current;
+	doc_element("instance", $type, $name);
+      }
       my $filename = sp_part($type, 1, 0) . ".ath";
       my %dummy_macros = %::base_macros;
       my ($rest,) = parse_file($filename, sp_part($::current, 1), $name, \%dummy_macros);
@@ -1981,6 +1992,7 @@ sub parse_subinstances {
         $::instances{$name} = $type;
       }
       $::current = $oldcurrent;
+      $::doc_current = sp_shorten($::current, 1);
       while($text =~ m/\A${ws}(wire|alias)${ws}($specmatch)${ws}as${ws}($specmatch)$ws;/) {
         my $cmd = $1;
         my $sub_conn = $2;
@@ -1999,6 +2011,9 @@ sub parse_subinstances {
         $sub_core =~ s/\[\]//;
         $loc_core =~ s/\[\]//;
         #print "SUB: $sub_complete LOC: $loc_complete\n";
+	if($::parse_level == 1) {
+	  doc_element($cmd, $loc_core, $sub_core);
+	}
         if(($sub_complete =~ m/:</) xor ($loc_complete =~ m/:</)) {
           warn "WARNING: in future releases keyword 'wire' will be REQUIRED instead of '$cmd' for specifiers $sub_conn $loc_conn. Please update your sourcecode!" unless $cmd eq "wire";
           # create internal wire
@@ -2064,6 +2079,11 @@ sub parse_1 {
       my $name = $1;
       my $body = $2;
       $text = $POSTMATCH;
+      if($::parse_level == 1) {
+	$::doc_current = $old_doc_current;
+	doc_element("operation", "", $name);
+	$::doc_current = sp_shorten($::current, 3);
+      }
       if($remember) {
         $::current = sp_complete($name, $::current);
         make_ops($::current, $body);
@@ -2075,7 +2095,7 @@ sub parse_1 {
   }
   # inputs and outputs
   for(;;) {
-    if($text =~ m/\A${ws}(?:(local)$ws)?(input|output)$ws($specmatch)/m) {
+    if($text =~ m/\A${ws}(local)?$ws(input|output)$ws($specmatch)/m) {
       my $local = $1;
       my $type = $2;
       my $level1 = $3;
@@ -2091,7 +2111,7 @@ sub parse_1 {
       if($::parse_level == 1) {
 	$::doc_current = $old_doc_current;
 	doc_element($type, $local, $level1);
-	$::doc_current = sp_part($::current, 2);
+	$::doc_current = sp_shorten($::current, 3);
       }
       my $do_export = ($remember and not defined($local));
       print("spec=$enhanced_spec type=$type do_export=$do_export remember==$remember") if $whew;
