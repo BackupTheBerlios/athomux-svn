@@ -1918,7 +1918,9 @@ sub parse_2 {
       $text = $POSTMATCH;
       $names =~ s/\$init/\$output_init/ and warn "operation \$init is deprecated, please replace by \$output_init!";
       if($::parse_level == 1) {
-	doc_element("operation", "", $names);
+	foreach my $name (split ',', $names) {
+	  doc_element("operation", "", $name);
+	}
       }
       if($remember) {
         if($names eq "\$op") {
@@ -2241,7 +2243,7 @@ sub parse_all {
   $text = $POSTMATCH;
   $::doc_current = "";
   if($::parse_level == 1) {
-    doc_element("brick", "", $brick);
+    doc_element("brick", $::strat, $brick);
     $::doc_current = $brick;
     doc_element("tag", "author", $author);
     doc_element("tag", "copyright", $cright);
