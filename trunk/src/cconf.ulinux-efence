@@ -1,0 +1,7 @@
+#context pconf: !.*, ulinux-debug
+
+$(cconf)_CFLAGS=-Wall -O -ggdb3 -pg -DDEBUG
+
+LDFLAGS += -lefence
+
+include cconf-include.ulinux

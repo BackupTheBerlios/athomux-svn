@@ -182,6 +182,16 @@ sub embrace_code {
 
 ##########################################################################
 
+# documentation output generation
+
+sub doc_element {
+  my ($tag, $father, $value) = @_;
+  # provisionary!!
+  printf("------> $tag,$father,$value\n");
+}
+
+##########################################################################
+
 # Preprocessor Part
 
 # mode constants
@@ -1811,10 +1821,11 @@ sub make_ops {
 }
 
 sub parse_lit {
-  my $text = shift;
+  my ($text, $macros, $emit) = @_;
   # currently this just throws away literate programming annotations.
   # we need to write an extra tool for extracting docs.
   $text =~ s/\A${ws}purp(?:ose)?${ws}(.*)\n//;
+  doc_element("purpose", $::current, $1) if $1 and $::parse_level==1;
   if($text =~ s/\A${ws}desc(?:ription)?${ws}//) {
     until ($text =~ s/\A${ws}enddesc(?:ription)?${ws}//) {
       $text =~ s/\A.*\n//;
@@ -2069,6 +2080,9 @@ sub parse_1 {
       $::current_conn_spec = $enhanced_spec;
       $::current .= "(:0:)";
       $text = $POSTMATCH;
+      if($::parse_level == 1) {
+	doc_element($type, sp_part($::current, 1), $level1);
+      }
       my $do_export = ($remember and not defined($local));
       print("spec=$enhanced_spec type=$type do_export=$do_export remember==$remember") if $whew;
       print(" local==$local") if $whew and defined($local);
@@ -2078,7 +2092,7 @@ sub parse_1 {
       make_ops("$::current\$${type}_init", "{\@success = TRUE;}") if $remember;
       my $xname = sp_name(spec_bricktype($enhanced_spec), 2);
       $::extern_type_defs{$xname} = "";
-      $text = parse_lit($text, $macros);
+      $text = parse_lit($text, $macros, 0);
       $text = parse_attr($text, $macros, $do_export);
       $text =~ m/\A$ws(?:(data$ws)?($bracematch))?/;
       my $xdef = $1;
@@ -2158,9 +2172,10 @@ sub parse_1 {
 
 sub parse_all {
   my ($text,$prefix,$suffix,$macros) = @_;
-  if($text =~ m/\A(?:\s*Author:\s[^\n]+\n(?:#line.*\n)?)+\s*Copyright:\s[^\n]+\n(?:#line.*\n)?\s*License: see files ([\w-]+(?:, [\w-]+)*)\s*\n/m) {
+  my ($author, $cright, $licenses);
+  if($text =~ m/\A(?:\s*Author:\s+([^\n]+)\n(?:#line.*\n)?)+\s*Copyright:\s+([^\n]+)\n(?:#line.*\n)?\s*License: see files\s+([\w-]+(?:, [\w-]+)*)\s*\n/m) {
+    ($author, $cright, $licenses) = ($1, $2, $3);
     $copyright = "/*\n$MATCH*/\n";
-    my $licenses = $1;
     $text = $POSTMATCH;
     foreach my $license(split /,\s*/, $licenses) {
       die "license file $license does not exist" unless -s "../$license";
@@ -2169,8 +2184,10 @@ sub parse_all {
     warn "please start your file with Author: Copyright: and License: clauses";
   }
   for(;;) {
-    if($text =~ m/\A${ws}(?:context|defaultbuild).*\n/) {
+    if($text =~ m/\A${ws}(context|defaultbuild)\s*(.*)\n/) {
+      my ($tag, $val) = ($1, $2);
       $text = $POSTMATCH;
+      doc_element($tag, $suffix, $val);
       next;
     }
     if($text =~ m/\A${ws}buildrules(?:.*\n)*?\s*endrules/m) {
@@ -2190,6 +2207,12 @@ sub parse_all {
   $text =~ m/\A${ws}brick$ws($specmatch)/m or die "brick statement missing";
   my $brick = $1;
   $text = $POSTMATCH;
+  if($::parse_level == 1) {
+    doc_element("brick", "", $brick);
+    doc_element("author", $brick, $author);
+    doc_element("copyright", $brick, $cright);
+    doc_element("license", $brick, $licenses);
+  }
   sp_syntax($brick);
   die "bad brick type '$brick'" unless sp_type($brick) == 1;
   if($prefix) {
@@ -2199,7 +2222,7 @@ sub parse_all {
     add_brick($brick);
   }
   $::inst_types{$::current} = $brick;
-  $text = parse_lit($text, $macros);
+  $text = parse_lit($text, $macros, !$prefix);
   $text = parse_attr($text, $macros, not $prefix);
 
   unless($prefix) {
@@ -2253,12 +2276,15 @@ sub parse_all {
 
 sub parse_file {
   my ($name,$prefix,$suffix,$macros) = @_;
+  $::parse_level++;
   my $text = readfile($name, $write_line_directives);
   # this is a kludge! use #brickname instead and change the evaluation order!
   $name =~ s/\.ath//;
   create_subst("BRICK", $name, $macros);
   eval_macros(\$text, 99999, 0, $macros);
-  return (parse_all($text, $prefix, $suffix, $macros), $text);
+  my $res = parse_all($text, $prefix, $suffix, $macros);
+  $::parse_level--;
+  return ($res, $text);
 }
 
 ##########################################################################
@@ -2722,7 +2748,8 @@ $entry_debug = "\@.warn(\@success, \"\@success has unexpected initial value %d u
 $entry_debug =~ s/warn/fatal/ if $debug_level >= 2;
 eval_macros(\$entry_debug, 9999, 1, \%::base_macros);
 
-# parse the input file
+# parse the main input file
+$::parse_level = 0;
 my ($rest, $preprocessed) = parse_file($infile, "", "", \%macros);
 
 open(OUT, "> $prefile") or die "cannot create output file";
