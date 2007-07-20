@@ -1822,21 +1822,26 @@ sub make_ops {
 
 sub parse_lit {
   my ($text, $macros, $emit) = @_;
-  # currently this just throws away literate programming annotations.
-  # we need to write an extra tool for extracting docs.
+  # process the literate programming annotations.
   $text =~ s/\A${ws}purp(?:ose)?${ws}(.*)\n//;
   doc_element("purpose", $::current, $1) if $1 and $::parse_level==1;
   if($text =~ s/\A${ws}desc(?:ription)?${ws}//) {
+    my $lit = "";
     until ($text =~ s/\A${ws}enddesc(?:ription)?${ws}//) {
       $text =~ s/\A.*\n//;
+      $lit .= $MATCH;
       die "description not terminated by enddesc" if($text eq "");
     }
+    doc_element("description", $::current, $lit) if $::parse_level==1;
   }
   if($text =~ s/\A${ws}example${ws}//) {
+    my $lit = "";
     until ($text =~ s/\A${ws}endexample${ws}//) {
       $text =~ s/\A.*\n//;
+      $lit .= $MATCH;
       die "example not terminated by endexample" if($text eq "");
     }
+    doc_element("example", $::current, $lit) if $::parse_level==1;
   }
   return $text;
 }
@@ -2183,11 +2188,13 @@ sub parse_all {
   } else {
     warn "please start your file with Author: Copyright: and License: clauses";
   }
+  my @contexts = ();
   for(;;) {
     if($text =~ m/\A${ws}(context|defaultbuild)\s*(.*)\n/) {
       my ($tag, $val) = ($1, $2);
       $text = $POSTMATCH;
-      doc_element($tag, $suffix, $val);
+      my @tuple = ($tag, $val);
+      push @contexts, \@tuple;
       next;
     }
     if($text =~ m/\A${ws}buildrules(?:.*\n)*?\s*endrules/m) {
@@ -2212,6 +2219,10 @@ sub parse_all {
     doc_element("author", $brick, $author);
     doc_element("copyright", $brick, $cright);
     doc_element("license", $brick, $licenses);
+    foreach my $context (@contexts) {
+      my ($tag, $val) = @$context;
+      doc_element($tag, $brick, $val);
+    }
   }
   sp_syntax($brick);
   die "bad brick type '$brick'" unless sp_type($brick) == 1;
