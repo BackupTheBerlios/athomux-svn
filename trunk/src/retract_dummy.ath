@@ -2,9 +2,6 @@ Author: Roland Niese
 Copyright: Roland Niese
 License: see files SOFTWARE-LICENSE, PATENT-LICENSE
 
-context: pconf .*
-context: cconf .*
-
 brick #retract_dummy
 
 purpose to test correct retract dispatch

@@ -185,9 +185,9 @@ sub embrace_code {
 # documentation output generation
 
 sub doc_element {
-  my ($tag, $father, $value) = @_;
+  my ($tag, $father, $key, $value) = @_;
   # provisionary!!
-  printf("------> $tag,$father,$value\n");
+  printf("------> $tag,$father: $key => $value\n");
 }
 
 ##########################################################################
@@ -1823,8 +1823,8 @@ sub make_ops {
 sub parse_lit {
   my ($text, $macros, $emit) = @_;
   # process the literate programming annotations.
-  $text =~ s/\A${ws}purp(?:ose)?${ws}(.*)\n//;
-  doc_element("purpose", $::current, $1) if $1 and $::parse_level==1;
+  $text =~ s/(?:\A${ws}purp(?:ose)?${ws}(.*)\n)?//;
+  doc_element("purpose", $::current, "", $1) if $1 and $::parse_level==1;
   if($text =~ s/\A${ws}desc(?:ription)?${ws}//) {
     my $lit = "";
     until ($text =~ s/\A${ws}enddesc(?:ription)?${ws}//) {
@@ -1832,7 +1832,7 @@ sub parse_lit {
       $lit .= $MATCH;
       die "description not terminated by enddesc" if($text eq "");
     }
-    doc_element("description", $::current, $lit) if $::parse_level==1;
+    doc_element("description", $::current, "", $lit) if $::parse_level==1;
   }
   if($text =~ s/\A${ws}example${ws}//) {
     my $lit = "";
@@ -1841,7 +1841,7 @@ sub parse_lit {
       $lit .= $MATCH;
       die "example not terminated by endexample" if($text eq "");
     }
-    doc_element("example", $::current, $lit) if $::parse_level==1;
+    doc_element("example", $::current, "", $lit) if $::parse_level==1;
   }
   return $text;
 }
@@ -1852,6 +1852,7 @@ sub parse_attr {
     if($text =~ m/\A${ws}attr(?:ib)?([0-9])?\s+($idmatch)\s*=\s*([^\s]*)\s*\n/) {
       $text = $POSTMATCH;
       add_attr($2, $1, $3) if $do_export;
+      doc_element("attr", $::current, $2, $3) if $::parse_level==1;
       next;
     }
     return $text;
@@ -2086,7 +2087,7 @@ sub parse_1 {
       $::current .= "(:0:)";
       $text = $POSTMATCH;
       if($::parse_level == 1) {
-	doc_element($type, sp_part($::current, 1), $level1);
+	doc_element($type, sp_part($::current, 1), "", $level1);
       }
       my $do_export = ($remember and not defined($local));
       print("spec=$enhanced_spec type=$type do_export=$do_export remember==$remember") if $whew;
@@ -2190,10 +2191,9 @@ sub parse_all {
   }
   my @contexts = ();
   for(;;) {
-    if($text =~ m/\A${ws}(context|defaultbuild)\s*(.*)\n/) {
-      my ($tag, $val) = ($1, $2);
+    if($text =~ m/\A${ws}(context|defaultbuild)\s*(cconf|pconf|target)\s*:\s*(.*)\n/) {
       $text = $POSTMATCH;
-      my @tuple = ($tag, $val);
+      my @tuple = ($1, $2, $3);
       push @contexts, \@tuple;
       next;
     }
@@ -2215,13 +2215,13 @@ sub parse_all {
   my $brick = $1;
   $text = $POSTMATCH;
   if($::parse_level == 1) {
-    doc_element("brick", "", $brick);
-    doc_element("author", $brick, $author);
-    doc_element("copyright", $brick, $cright);
-    doc_element("license", $brick, $licenses);
+    doc_element("brick", "", "", $brick);
+    doc_element("author", $brick, "", $author);
+    doc_element("copyright", $brick, "", $cright);
+    doc_element("license", $brick, "", $licenses);
     foreach my $context (@contexts) {
-      my ($tag, $val) = @$context;
-      doc_element($tag, $brick, $val);
+      my ($tag, $key, $val) = @$context;
+      doc_element($tag, $brick, $key, $val);
     }
   }
   sp_syntax($brick);
