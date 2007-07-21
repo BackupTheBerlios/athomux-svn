@@ -10,6 +10,9 @@ use English;
 use integer;
 use Digest::MD5 qw(md5),qw(md5_hex);
 
+# tag specs for the src docs
+require "doc/tags.pl";
+
 # switches affecting the generated code
 
 # generate #line directives => set to 0 for faster runs or for debugging C code
@@ -183,13 +186,62 @@ sub embrace_code {
 ##########################################################################
 
 # documentation output generation
+my @doc_output = ();
+my $doc_filename = "";
 
 sub doc_element {
   my ($tag, $key, $value) = @_;
   $tag = "" unless defined($tag);
   $key = "" unless defined($key);
-  # provisionary!!
-  printf("$::doc_current ------> $tag : $key => $value\n");
+  
+  # printf("$::doc_current ------> $tag : $key => $value\n");
+  
+  if ($tag eq "tag") {
+    doc_parse_tag($::doc_current, $key, $value);
+  } elsif ($tag eq "attr") {
+    doc_parse_attr($::doc_current, $key, $value);
+  } else {
+    doc_parse_keyword($::doc_current, $tag, $value);
+  }
+}
+
+sub doc_parse_tag {
+  my ($parent, $key, $value) = @_;
+  push(@doc_output, "<$key>$value</$key>");
+}
+
+sub doc_parse_attr {
+  my ($parent, $key, $value) = @_;
+  push(@doc_output, "attr ($parent, $key, $value)");
+}
+
+sub doc_parse_keyword {
+  my ($parent, $keyword, $value) = @_;
+  
+  if ($keyword eq "brick") {
+    $doc_filename = $value;
+    $doc_filename =~ s/^\#//;
+    push(@doc_output, "<brickname>$value</brickname>");
+  
+  } elsif ($keyword eq "input") {
+    $value =~ s/^:<//;
+    push(@doc_output, "<inputlist>\n<input>\n<name>$value</name>\n</input>\n</inputlist>");
+  
+  } elsif ($keyword eq "output") {
+    $value =~ s/^:>//;
+    push(@doc_output, "<outputlist>\n<output>\n<name>$value</name>\n</output>\n</outputlist>");
+  }
+}
+
+sub doc_write {
+  unless (open(DOCFILE, ">doc/$doc_filename.xml")) {
+    die("Can't write doc file.");
+  }
+  
+  print DOCFILE '<?xml version="1.0" encoding="UTF8"?>' . "\n";
+  print DOCFILE '<brick>' . "\n";
+  print DOCFILE join("\n", @doc_output) . "\n";
+  print DOCFILE '</brick>';
 }
 
 ##########################################################################
@@ -2848,5 +2900,7 @@ print OUT "\nconst struct loader loader_$brick = {\n  \"${brick}\",\n  MAGIC_$br
 close(OUT);
 
 warn "please update the connector syntax for the following connectors: $::warn_syntax" if $::warn_syntax;
+
+doc_write();
 
 exit 0;
