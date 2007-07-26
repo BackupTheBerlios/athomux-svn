@@ -4,22 +4,22 @@
 		<brickname></brickname>1
 		<author></author>1
 		<copyright></copyright>1
-		<licenselist>
+		<licenselist>1
 			<file></file>
-		</licenselist>1
-		<contextlist>
-			<context key="pconf|cconf|target">
+		</licenselist>0-1
+		<contextlist>0-*
+			<context key="pconf|cconf|target">0-*
 				<file></file>1-*
-			</context> 0-*
-		</contextlist>0-1
-		<purpose>     kann html drinne stehen, nicht mehrzeilig</purpose>1
-		<description>kann html drinne stehen, kann mehrzeilig sein</description>0-1
-		<example>     kann html drinne stehen, kann mehrzeilig sein</example>0-1
+			</context>
+		</contextlist>
+		<purpose>     <![CDATA[html]]>nicht mehrzeilig</purpose>1
+		<description><![CDATA[html]]>mehrzeilig</description>0-1
+		<example>     <![CDATA[html]]>mehrzeilig</example>0-1
 		<categorylist>0-1
-		    <category name="">value</category>0-*
+		        <category name="">value</category>0-*
 		</catorylist>
 		<taglist>0-1
-		    <tag name="">value</tag>0-*
+		        <tag name="">value</tag>0-*
 		</taglist>
 		<attributelist>0-1
 			<attribute name="">value</attribute>0-*
@@ -28,13 +28,25 @@
 	</header>
 	<inputlist>0-1
 		<input name="" maxsections="default 1">0-*
+		        <categorylist>0-1
+			       <category name="">value</category>0-*
+			</catorylist>
+			<taglist>0-1
+				<tag name="">value</tag>0-*
+			</taglist>
 			<attributelist>0-1
 				<attribute name="">value</attribute>0-*
 			</attributelist>
 		</input>
 	</inputlist>
 	<outputlist>0-1
-		<output name="" maxsections="default 1">0-*
+	        <output name="" maxsections="default 1">0-*
+			<categorylist>0-1
+				<category name="">value</category>0-*
+			</catorylist>
+			<taglist>0-1
+				<tag name="">value</tag>0-*
+			</taglist>	
 			<attributelist>0-1
 				<attribute name="">value</attribute>0-*
 			</attributelist>
