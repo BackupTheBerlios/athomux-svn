@@ -189,6 +189,16 @@ sub embrace_code {
 my @doc_output = ();
 my $doc_filename = "";
 
+my @doc_inputs     = ();
+my @doc_outputs    = ();
+my @doc_instances  = ();
+my @doc_aliases    = ();
+my @doc_wires      = ();
+my @doc_operations = ();
+
+my $doc_mode = "";
+my $doc_header_closed = 0;
+
 sub doc_element {
   my ($tag, $key, $value) = @_;
   $tag = "" unless defined($tag);
@@ -196,18 +206,49 @@ sub doc_element {
   
   # printf("$::doc_current ------> $tag : $key => $value\n");
   
+  # close open context list
+  if ($doc_mode eq "contextlist" and $key !~ m/^(pconf|cconf|target)$/) {
+    push(@doc_output, "</contextlist>");
+    $doc_mode = "";
+  }
+  
+  # close header
+  if (!$doc_header_closed and $tag =~ m/^(input|output|instance|alias|wire|operation)$/) {
+    push(@doc_output, "</header>");
+    $doc_header_closed = 1;
+  }
+  
   if ($tag eq "tag") {
     doc_parse_tag($::doc_current, $key, $value);
   } elsif ($tag eq "attr") {
     doc_parse_attr($::doc_current, $key, $value);
   } else {
-    doc_parse_keyword($::doc_current, $tag, $value);
+    doc_parse_keyword($::doc_current, $tag, $key, $value);
   }
 }
 
 sub doc_parse_tag {
   my ($parent, $key, $value) = @_;
-  push(@doc_output, "<$key>$value</$key>");
+  
+  if ($key eq "license") {
+    $value =~ s/, ?/<\/file>\n<file>/;
+    push(@doc_output, "<licenselist>\n<file>$value</file>\n</licenselist>");
+    
+  } elsif ($key =~ m/^(pconf|cconf|target)$/) {
+    if ($doc_mode eq "") {
+      push(@doc_output, "<contextlist>");
+      $doc_mode = "contextlist";
+    }
+    
+    $value =~ s/, ?/<\/file>\n<file>/;
+    push(@doc_output, "<context key=\"$key\">\n<file>$value</file>\n</context>");
+    
+  } elsif ($key =~ m/^(purpose|description|example)$/) {
+    push(@doc_output, "<$key><![CDATA[$value]]></$key>");
+    
+  } else {
+    push(@doc_output, "<$key>$value</$key>");
+  }
 }
 
 sub doc_parse_attr {
@@ -216,32 +257,70 @@ sub doc_parse_attr {
 }
 
 sub doc_parse_keyword {
-  my ($parent, $keyword, $value) = @_;
+  my ($parent, $keyword, $key, $value) = @_;
   
   if ($keyword eq "brick") {
     $doc_filename = $value;
     $doc_filename =~ s/^\#//;
     push(@doc_output, "<brickname>$value</brickname>");
   
-  } elsif ($keyword eq "input") {
-    $value =~ s/^:<//;
-    push(@doc_output, "<inputlist>\n<input>\n<name>$value</name>\n</input>\n</inputlist>");
-  
-  } elsif ($keyword eq "output") {
-    $value =~ s/^:>//;
-    push(@doc_output, "<outputlist>\n<output>\n<name>$value</name>\n</output>\n</outputlist>");
+  } elsif ($keyword eq "instance") {
+    push(@doc_instances, "<instance type=\"$key\" alias=\"$value\"/>");
+    
+  } elsif ($keyword eq "alias") {
+    push(@doc_aliases, "<alias from=\"$key\" to=\"$value\" />");
+    
+  } elsif ($keyword eq "wire") {
+    push(@doc_wires, "<wire from=\"$key\" to=\"$value\" />");
+    
+  } elsif ($keyword eq "operation") {
+    my $section = "";
+    
+    if (sp_type($parent) > 1) {
+      $section = "section=\"" . sp_part($parent, 3) . "\" ";
+      $parent  = sp_shorten($parent, 2);
+    }
+    
+    push(@doc_operations, "<operation name=\"$value\" parent=\"$parent\" $section/>");
+    
+  } elsif ($keyword =~ m/^(input|output)$/) {
+    my $maxsection = (sp_type($value) == 3) ? sp_part($value, 3, 0) : 1;
+    $value = sp_shorten($value, 2);
+    
+    my $local = ($key eq "local") ? " local=\"local\"" : "";
+    my $entry = "<$keyword name=\"$value\" maxsections=\"$maxsection\"$local>";
+    
+    if ($keyword eq "input") {
+      push(@doc_inputs, $entry);
+    } else {
+      push(@doc_outputs, $entry);
+    }
+    
+  } else {
+    push(@doc_output, "<$keyword>$key $value</$keyword>");
   }
 }
 
+sub doc_write_lists {
+  push(@doc_output, "<inputlist>\n"     . join("\n", @doc_inputs)     . "\n</inputlist>");
+  push(@doc_output, "<outputlist>\n"    . join("\n", @doc_outputs)    . "\n</outputist>");
+  push(@doc_output, "<instancelist>\n"  . join("\n", @doc_instances)  . "\n</instancelist>");
+  push(@doc_output, "<aliaslist>\n"     . join("\n", @doc_aliases)    . "\n</aliaslist>");
+  push(@doc_output, "<wirelist>\n"      . join("\n", @doc_wires)      . "\n</wirelist>");
+  push(@doc_output, "<operationlist>\n" . join("\n", @doc_operations) . "\n</operationlist>");
+}
+
 sub doc_write {
+  doc_write_lists();
+  
   unless (open(DOCFILE, ">doc/$doc_filename.xml")) {
     die("Can't write doc file.");
   }
   
-  print DOCFILE '<?xml version="1.0" encoding="UTF8"?>' . "\n";
-  print DOCFILE '<brick>' . "\n";
+  print DOCFILE '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+  print DOCFILE "<brick>\n<header>\n";
   print DOCFILE join("\n", @doc_output) . "\n";
-  print DOCFILE '</brick>';
+  print DOCFILE "</brick>";
 }
 
 ##########################################################################
