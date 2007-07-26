@@ -40,6 +40,10 @@ example
   Cannot be used at all.
 endexample
 
+category usage=test
+
+tag debug=true
+
 attr attrname1=PCONF
 attr attrname2=16:24
 attr attrname3=16:32:8
@@ -101,6 +105,8 @@ operation $brick_init
 }
 
 input :<in1(:2:)
+category purpose=test
+tag usage=strategy
 attr5 attrname4 = 17
 attr5 attrname5 = 17:19
 attr8 attrname6 = 16:32:16
