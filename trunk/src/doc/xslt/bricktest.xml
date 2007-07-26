@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?> 
-<brick>
+<brick xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="brick.xsd">
 	<header>
 		<brickname>MMU</brickname>
 		<author>Peter Mueler</author>
@@ -15,15 +16,20 @@
 				<file>saasfdsd</file>
 				<file>saasfdsd</file>
 			</context>
+			<context key="pconf">
+				<file>saasfdsd</file>
+				<file>saasfdsd</file>
+				<file>saasfdsd</file>
+			</context>
 		</contextlist>
 		<purpose>     <![CDATA[<code>]]>nicht mehrzeilig<![CDATA[</code>]]></purpose>
-		<description><![CDATA[<b>]]>nicht mehrzeilig<![CDATA[</b>]]></description>
-		<example>     <![CDATA[<strong>]]>nicht mehrzeilig<![CDATA[</stong>]]></example>
+		<description><![CDATA[<em>]]>nicht mehrzeilig<![CDATA[</em>]]></description>
+		<example>     <![CDATA[<strong>]]>nicht mehrzeilig<![CDATA[</strong>]]></example>
 		<categorylist>
 		        <category name="1">value</category>
 						<category name="2">value</category>
 						<category name="3">value</category>
-		</catorylist>
+		</categorylist>
 		<taglist>
 		        <tag name="5">value</tag>
 						<tag name="6">value</tag>
@@ -44,7 +50,7 @@
 			       <category name="df">value</category>
 						 <category name="df">value</category>
 						 <category name="df">value</category>
-			</catorylist>
+			</categorylist>
 			<taglist>
 				<tag name="6">value</tag>
 				<tag name="7">value</tag>
@@ -63,7 +69,7 @@
 			       <category name="df">value</category>
 						 <category name="df">value</category>
 						 <category name="df">value</category>
-			</catorylist>
+			</categorylist>
 			<taglist>
 				<tag name="6">value</tag>
 				<tag name="7">value</tag>
@@ -84,7 +90,7 @@
 			       <category name="df">value</category>
 						 <category name="df">value</category>
 						 <category name="df">value</category>
-			</catorylist>
+			</categorylist>
 			<taglist>
 				<tag name="6">value</tag>
 				<tag name="7">value</tag>
@@ -103,7 +109,7 @@
 			       <category name="df">value</category>
 						 <category name="df">value</category>
 						 <category name="df">value</category>
-			</catorylist>
+			</categorylist>
 			<taglist>
 				<tag name="6">value</tag>
 				<tag name="7">value</tag>
@@ -122,7 +128,7 @@
 			       <category name="df">value</category>
 						 <category name="df">value</category>
 						 <category name="df">value</category>
-			</catorylist>
+			</categorylist>
 			<taglist>
 				<tag name="6">value</tag>
 				<tag name="7">value</tag>

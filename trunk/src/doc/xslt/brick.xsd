@@ -1,0 +1,234 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+					 targetNamespace="http://www.fh-bingen.de/athomux"
+					 xmlns="http://www.www.fh-bingen.de/athomux">
+
+
+  
+  <xs:element name="brick">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:element name="header">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="brickname" type="xs:string" />
+	      <xs:element name="author"    type="xs:string" />
+	      <xs:element name="copyright" type="xs:string" />
+	      <xs:element name="lisencelist">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="file" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+		  </xs:sequence>
+		</xs:complexType>
+	      </xs:element><!-- licenselist end -->
+	      <xs:element name="contextlist" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="context" minOccurs="0" maxOccurs="unbounded">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="file" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+		        </xs:sequence>
+			<xs:attribute name="key">
+			  <xs:simpleType>
+			    <xs:restriction base="xs:string">
+			      <xs:enumeration value="pconf"/>
+			      <xs:enumeration value="cconf"/>
+			      <xs:enumeration value="target"/>
+			    </xs:restriction>
+			  </xs:simpleType>
+			</xs:attribute><!-- key end -->
+		      </xs:complexType>
+		    </xs:element><!-- context end -->
+		  </xs:sequence>
+		</xs:complexType>
+	      </xs:element><!-- contextlist end -->
+	      <xs:element name="purpose" type="xs:string" />
+	      <xs:element name="description" type="xs:string" minOccurs="0" />
+	      <xs:element name="example" type="xs:string" minOccurs="0" />
+	      <xs:element name="categorylist" minOccurs="0">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="category" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+		      <xs:complexType>
+		        <xs:attribute name="name" type="xs:string" use="required" />
+		      </xs:complexType>
+		    </xs:element><!-- category end -->
+		  </xs:sequence>
+		</xs:complexType>
+	      </xs:element><!-- categorylist end -->
+	      <xs:element name="taglist" minOccurs="0">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+		      <xs:complexType>
+		        <xs:attribute name="name" type="xs:string" use="required" />
+		      </xs:complexType>
+		    </xs:element><!-- tag end -->
+		  </xs:sequence>
+		</xs:complexType>
+	      </xs:element><!-- taglist end -->
+	      <xs:element name="attributelist" minOccurs="0">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="attribute" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+		      <xs:complexType>
+		        <xs:attribute name="name" type="xs:string" use="required" />
+		      </xs:complexType>
+		    </xs:element><!-- attribute end -->
+		  </xs:sequence>
+		</xs:complexType>
+	      </xs:element><!-- attributelist end -->
+	   </xs:sequence><!-- header-sequence end -->
+	  </xs:complexType>
+	</xs:element><!-- header end -->
+	<xs:element name="inputlist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="input" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="categorylist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="category" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- category end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- categorylist end -->
+		    <xs:element name="taglist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- tag end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- taglist end -->
+		    <xs:element name="attributelist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="attribute" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- attribute end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- attributelist end -->
+		  </xs:sequence>
+		  <xs:attribute name="name" type="xs:string" use="required" />
+		  <xs:attribute name="maxsections" type="xs:string" default="1" use="required" />
+		  <xs:attribute name="local" type="xs:string" fixed="local" />
+		</xs:complexType>
+	      </xs:element><!-- input end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- inputlist end -->
+	<xs:element name="outputlist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="output" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:sequence>
+		    <xs:element name="categorylist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="category" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- category end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- categorylist end -->
+		    <xs:element name="taglist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- tag end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- taglist end -->
+		    <xs:element name="attributelist" minOccurs="0">
+		      <xs:complexType>
+			<xs:sequence>
+			  <xs:element name="attribute" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+			    <xs:complexType>
+			      <xs:attribute name="name" type="xs:string" use="required" />
+			    </xs:complexType>
+			  </xs:element><!-- attribute end -->
+			</xs:sequence>
+		      </xs:complexType>
+		    </xs:element><!-- attributelist end -->
+		  </xs:sequence>
+		  <xs:attribute name="name" type="xs:string" use="required" />
+		  <xs:attribute name="maxsections" type="xs:string" default="1" use="required" />
+		  <xs:attribute name="local" type="xs:string" fixed="local" />
+		</xs:complexType>
+	      </xs:element><!-- output end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- outputlist end -->
+	<xs:element name="instancelist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="instance" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:attribute name="type" type="xs:string" use="required" />
+		  <xs:attribute name="alias" type="xs:string" use="required" />
+		</xs:complexType>
+	      </xs:element><!-- instance end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- instancelist end -->
+        <xs:element name="aliaslist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="alias" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:attribute name="from" type="xs:string" use="required" />
+		  <xs:attribute name="to" type="xs:string" use="required" />
+		</xs:complexType>
+	      </xs:element><!-- alias end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- aliaslist end -->
+	<xs:element name="wirelist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="wire" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:attribute name="from" type="xs:string" use="required" />
+		  <xs:attribute name="to" type="xs:string" use="required" />
+		</xs:complexType>
+	      </xs:element><!-- wire end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- wirelist end -->
+	<xs:element name="operationlist" minOccurs="0">
+	  <xs:complexType>
+	    <xs:sequence>
+	      <xs:element name="operation" minOccurs="0" maxOccurs="unbounded">
+		<xs:complexType>
+		  <xs:attribute name="name" type="xs:string" use="required" />
+		  <xs:attribute name="parent" type="xs:string" use="required" />
+		  <xs:attribute name="section" type="xs:string" />
+		</xs:complexType>
+	      </xs:element><!-- operation end -->
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element><!-- operationlist end -->
+      </xs:sequence><!-- brick-sequence end -->
+    </xs:complexType>
+  </xs:element><!-- brick end -->
+
+</xs:schema>

@@ -13,7 +13,7 @@
 			<head>
 		    	
 		    	<title>Athomux - <xsl:value-of select="brick/header/brickname"/></title>
-		    	<!--<link rel="stylesheet" type="text/css" href="mystyle.css" />-->
+		    	<link rel="stylesheet" type="text/css" href="style.css" />
 		  </head>
 			
 			<body>
@@ -80,7 +80,7 @@
 		
 		<tr>
 			<td>License</td>
-			<td><xsl:apply-templates select="license"/></td>
+			<td><xsl:apply-templates select="licenselist"/></td>
 		</tr>
 		
 		<tr>
@@ -119,18 +119,19 @@
 		</tr>
 	</xsl:template>
 	
-	
-	<xsl:template match="license|context">
-			<ul>
-				<xsl:for-each select="file">
-					<li><xsl:value-of select="."/></li>
-				</xsl:for-each>
-			</ul>
+	<xsl:template match="context|licenselist">
+				<h3><xsl:value-of select="@key"/></h3>
+				<p>
+					<xsl:for-each select="file">
+						<xsl:value-of select="."/>
+						<xsl:if test="position()!=last()">
+							<xsl:text>, </xsl:text>
+						</xsl:if>
+					</xsl:for-each>
+				</p>
 	</xsl:template>
 	
-	
 	<xsl:template match="contextlist">
-			<h3><xsl:value-of select="@key"/></h3>
 			<xsl:apply-templates select="context"/>
 	</xsl:template>
 	
@@ -159,7 +160,8 @@
 	
 	<xsl:template match="input|output">
 			<tr>
-				<td><xsl:value-of select="name"/></td>
+				<td><xsl:value-of select="@name"/></td>
+				<td><xsl:value-of select="@maxsections"/></td>
 				<td><xsl:apply-templates select="categorylist"/></td>
 				<td><xsl:apply-templates select="taglist"/></td>
 				<td><xsl:apply-templates select="attributelist"/></td>
