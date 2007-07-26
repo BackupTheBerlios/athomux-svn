@@ -10,6 +10,7 @@
 #define foo xxx \
   continued, treat me as whitespace
 
+context pconf: !debug
 context cconf: !debug
 
 buildrules global:
