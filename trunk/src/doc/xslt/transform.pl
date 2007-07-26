@@ -18,7 +18,7 @@ foreach $file (@files) {
    $filename = substr($file, 0, - 4);
 
    # transform bricks
-   system("saxon $filename.xml brick.xsl > $filename.html");
+   system("saxon $filename.xml brick_html.xsl > $filename.html");
 
    # create table of contents
    system("saxon data.toc toc.xsl title=$file > temp.toc");
