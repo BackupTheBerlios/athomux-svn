@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<brick>
+	<header>1
+		<brickname></brickname>1
+		<author></author>1
+		<copyright></copyright>1
+		<licenselist>
+			<file></file>
+		</licenselist>1
+		<contextlist>
+			<context key="pconf|cconf|target">
+				<file></file>1-*
+			</context> 0-*
+		</contextlist>0-1
+		<purpose>     kann html drinne stehen, nicht mehrzeilig</purpose>1
+		<description>kann html drinne stehen, kann mehrzeilig sein</description>0-1
+		<example>     kann html drinne stehen, kann mehrzeilig sein</example>0-1
+		<categorylist>0-1
+		    <category name="">value</category>0-*
+		</catorylist>
+		<taglist>0-1
+		    <tag name="">value</tag>0-*
+		</taglist>
+		<attributelist>0-1
+			<attribute name="">value</attribute>0-*
+		</attributelist>
+		
+	</header>
+	<inputlist>0-1
+		<input name="" maxsections="default 1">0-*
+			<attributelist>0-1
+				<attribute name="">value</attribute>0-*
+			</attributelist>
+		</input>
+	</inputlist>
+	<outputlist>0-1
+		<output name="" maxsections="default 1">0-*
+			<attributelist>0-1
+				<attribute name="">value</attribute>0-*
+			</attributelist>
+		</output>
+	</outputlist>
+	<instancelist>0-1
+	        <instance type="brickname" alias="name"/>0-*
+	</instancelist>
+	<aliaslist>0-1
+	        <alias from="" to="" />0-*
+	</aliaslist>
+	<wirelist>0-1
+	        <wire from="" to="" />0-*
+	</wirelist>
+	<operationlist>0-1
+	        <operation name="" parent="brickname" section="optional" />0-*
+	</operationlist>
+</brick>
