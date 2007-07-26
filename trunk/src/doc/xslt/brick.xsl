@@ -25,68 +25,119 @@
 	
 	<xsl:template match="brick">
 		<h1>Header</h1>
-		<xsl:apply-templates select="header"/>
+		<table>
+			<xsl:apply-templates select="header"/>
+		</table>
 		
 		<h1>Inputs</h1>
-		<xsl:apply-templates select="inputlist"/>
+		<table>
+			<xsl:apply-templates select="inputlist"/>
+		</table>
 		
 		<h1>Outputs</h1>
-		<xsl:apply-templates select="outputlist"/>
+		<table>
+			<xsl:apply-templates select="outputlist"/>
+		</table>
+		
+		<h1>Instances</h1>
+		<table>
+			<xsl:apply-templates select="instancelist"/>
+		</table>
+		
+		<h1>Alias</h1>
+		<table>
+			<xsl:apply-templates select="aliaslist"/>
+		</table>
+		
+		<h1>Wires</h1>
+		<table>
+			<xsl:apply-templates select="wirelist"/>
+		</table>
+		
+		<h1>Operations</h1>
+		<table>
+			<xsl:apply-templates select="operationlist"/>
+		</table>
 	</xsl:template>
 	
 	
 	<xsl:template match="header">
-		<h2>Brick Name</h2>
-		<p><xsl:value-of select="brickname"/></p>
+		<tr>
+			<td>Brick Name</td>
+			<td><xsl:value-of select="brickname" /></td>
+		</tr>
+	
 		
-		<h2>Author</h2>
-		<p><xsl:value-of select="author"/></p>
+		<tr>
+			<td>Author</td>
+			<td><xsl:value-of select="author"/></td>
+		</tr>
 		
-		<h2>Copyright</h2>
-		<p><xsl:value-of select="copyright"/></p>
+		<tr>
+			<td>Copyright</td>
+			<td><xsl:value-of select="copyright"/></td>
+		</tr>
 		
-		<h2>License</h2>
-		<ul>
-			<xsl:apply-templates select="license"/>
-		</ul>
+		<tr>
+			<td>License</td>
+			<td><xsl:apply-templates select="license"/></td>
+		</tr>
 		
-		<h2>Contexts</h2>
-		<ul>
-			<xsl:apply-templates select="contextlist"/>
-		</ul>
+		<tr>
+			<td>Contexts</td>
+			<td><xsl:apply-templates select="contextlist"/></td>
+		</tr>
 		
-		<h2>Purpose</h2>
-		<p><xsl:value-of select="purpose"/></p>
+		<tr>
+			<td>Purpose</td>
+			<td><xsl:value-of select="purpose" disable-output-escaping="yes"/></td>
+		</tr>
 		
-		<h2>Description</h2>
-		<p><xsl:value-of select="description"/></p>
+		<tr>
+			<td>Description</td>
+			<td><xsl:value-of select="description" disable-output-escaping="yes"/></td>
+		</tr>
 		
-		<h2>Example</h2>
-		<p><xsl:value-of select="example"/></p>
+		<tr>
+			<td>Example</td>
+			<td><xsl:value-of select="example" disable-output-escaping="yes"/></td>
+		</tr>
 		
-		<h2>Attributs</h2>
-		<xsl:apply-templates select="attributelist"/>
+		<tr>
+			<td>Categorys</td>
+			<td><xsl:apply-templates select="categorylist"/></td>
+		</tr>
 		
-		<h2>Tags</h2>
-		<xsl:apply-templates select="taglist"/>
+		<tr>
+			<td>Tags</td>
+			<td><xsl:apply-templates select="taglist"/></td>
+		</tr>
+		
+		<tr>
+			<td>Attributs</td>
+			<td><xsl:apply-templates select="attributelist"/></td>
+		</tr>
 	</xsl:template>
 	
 	
 	<xsl:template match="license|context">
-			<xsl:for-each select="file">
-				<li><xsl:value-of select="."/></li>
-			</xsl:for-each>
+			<ul>
+				<xsl:for-each select="file">
+					<li><xsl:value-of select="."/></li>
+				</xsl:for-each>
+			</ul>
 	</xsl:template>
 	
 	
 	<xsl:template match="contextlist">
+			<h3><xsl:value-of select="@key"/></h3>
 			<xsl:apply-templates select="context"/>
 	</xsl:template>
 	
 	
-	<xsl:template match="attributelist|taglist">
+	<xsl:template match="attributelist|taglist|categorylist">
 			<table>
-			<xsl:for-each select="attribute">
+			<xsl:for-each select="attribute|tag|category">
 				<tr>
 					<td><xsl:value-of select="@name"/></td>
 					<td><xsl:value-of select="."/></td>
@@ -107,8 +158,48 @@
 	
 	
 	<xsl:template match="input|output">
-			<h3><xsl:value-of select="name"/></h3>
-			<xsl:apply-templates select="attributelist"/>
+			<tr>
+				<td><xsl:value-of select="name"/></td>
+				<td><xsl:apply-templates select="categorylist"/></td>
+				<td><xsl:apply-templates select="taglist"/></td>
+				<td><xsl:apply-templates select="attributelist"/></td>
+			</tr>
+	</xsl:template>
+	
+	
+	<xsl:template match="instancelist">
+			<xsl:apply-templates select="instance"/>
+	</xsl:template>
+	
+	<xsl:template match="aliaslist|wirelist">
+			<xsl:apply-templates select="alias|wire"/>
+	</xsl:template>
+	
+	<xsl:template match="operationlist">
+			<xsl:apply-templates select="operation"/>
+	</xsl:template>
+	
+	<xsl:template match="instance">
+			<tr>
+				<td><xsl:value-of select="@type"/></td>
+				<td><xsl:value-of select="@alias"/></td>
+			</tr>
+	</xsl:template>
+	
+	
+	<xsl:template match="alias|wire">
+			<tr>
+				<td><xsl:value-of select="@from"/></td>
+				<td><xsl:value-of select="@to"/></td>
+			</tr>
+	</xsl:template>
+	
+	<xsl:template match="operation">
+			<tr>
+				<td><xsl:value-of select="@name"/></td>
+				<td><xsl:value-of select="@parent"/></td>
+				<td><xsl:value-of select="@section"/></td>
+			</tr>
 	</xsl:template>
 	
 </xsl:stylesheet>

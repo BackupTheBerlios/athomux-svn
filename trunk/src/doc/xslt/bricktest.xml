@@ -1,106 +1,163 @@
-<?xml version="1.0" encoding="utf-8"?> 
+<?xml version="1.0" encoding="UTF-8"?> 
 <brick>
-  <header>
-    <brickname>MMU</brickname>
-    <author>Peter Müller</author>
-    <copyright>FH Bingen</copyright>
-    <license>
-        <file>GPL.txt</file>
-				<file>MPL.txt</file>
-				<file>LPGL.txt</file>
-    </license>1
-    <contextlist>
-      <context key="target">
-	  		<file>xxx</file>
-				<file>fff</file>
-				<file>bbb</file>
-				<file>yyy</file>
-      </context>
-    </contextlist>
-    <purpose>kann hmtl drinne stehen, nicht mehrzeilig</purpose>
-    <description>kann hmtl drinne stehen, kann mehrzeilig sein</description>
-    <example>kann hmtl drinne stehen, kann mehrzeilig sein</example>
-    <attributelist>
-			<attribute name="bla">1value</attribute>
-			<attribute name="bla">2value</attribute>
-			<attribute name="bla">3value</attribute>
-			<attribute name="bla">4value</attribute>
-			<attribute name="bla">5value</attribute>
-    </attributelist>
-    <taglist>
-        <tag name="tagbla">1value</tag>
-				<tag name="tagbla">2value</tag>
-				<tag name="tagbla">3value</tag>
-				<tag name="tagbla">4value</tag>
-				<tag name="tagbla">5value</tag>
-				<tag name="tagbla">6value</tag>
-    </taglist>
-  </header>
-  <inputlist>
-    <input>
-      <name>sdfsdffs</name>
-      <attributelist>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-      </attributelist>
-    </input>
-		<input>
-      <name>dfdsfe</name>
-      <attributelist>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-      </attributelist>
-    </input>
-		<input>
-      <name>xxxxsdfsdffs</name>
-      <attributelist>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-				<attribute name="dfsdf">value</attribute>
-      </attributelist>
-    </input>
-  </inputlist>
-  <outputlist>
-    <output>
-      <name>qwwqw</name>
-      <attributelist>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-      </attributelist>
-    </output>
-		<output>
-      <name>23qwwqw</name>
-      <attributelist>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-      </attributelist>
-    </output>
-		<output>
-      <name>122qwwqw</name>
-      <attributelist>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-				<attribute name="trztrztr">value</attribute>
-      </attributelist>
-    </output>
+	<header>
+		<brickname>MMU</brickname>
+		<author>Peter Mueler</author>
+		<copyright>Bingen</copyright>
+		<licenselist>
+			<file>GPL</file>
+			<file>GPL</file>
+			<file>GPL</file>
+		</licenselist>
+		<contextlist>
+			<context key="cconf">
+				<file>saasfdsd</file>
+				<file>saasfdsd</file>
+				<file>saasfdsd</file>
+			</context>
+		</contextlist>
+		<purpose>     <![CDATA[<code>]]>nicht mehrzeilig<![CDATA[</code>]]></purpose>
+		<description><![CDATA[<b>]]>nicht mehrzeilig<![CDATA[</b>]]></description>
+		<example>     <![CDATA[<strong>]]>nicht mehrzeilig<![CDATA[</stong>]]></example>
+		<categorylist>
+		        <category name="1">value</category>
+						<category name="2">value</category>
+						<category name="3">value</category>
+		</catorylist>
+		<taglist>
+		        <tag name="5">value</tag>
+						<tag name="6">value</tag>
+						<tag name="7">value</tag>
+						<tag name="5">value</tag>
+		</taglist>
+		<attributelist>
+			<attribute name="sdfsd">value</attribute>
+			<attribute name="sdfsd">value</attribute>
+			<attribute name="sdfsd">value</attribute>
+			<attribute name="sdfsd">value</attribute>
+		</attributelist>
+		
+	</header>
+	<inputlist>
+		<input name="df" maxsections="default 1">
+      <categorylist>
+			       <category name="df">value</category>
+						 <category name="df">value</category>
+						 <category name="df">value</category>
+			</catorylist>
+			<taglist>
+				<tag name="6">value</tag>
+				<tag name="7">value</tag>
+				<tag name="45">value</tag>
+				<tag name="33">value</tag>
+			</taglist>
+			<attributelist>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+			</attributelist>
+		</input>
+		<input name="aadf" maxsections="default 1">
+      <categorylist>
+			       <category name="df">value</category>
+						 <category name="df">value</category>
+						 <category name="df">value</category>
+			</catorylist>
+			<taglist>
+				<tag name="6">value</tag>
+				<tag name="7">value</tag>
+				<tag name="45">value</tag>
+				<tag name="33">value</tag>
+			</taglist>
+			<attributelist>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+			</attributelist>
+		</input>
+	</inputlist>
+	<outputlist>
+    <output name="out1" maxsections="default 1">
+			<categorylist>
+			       <category name="df">value</category>
+						 <category name="df">value</category>
+						 <category name="df">value</category>
+			</catorylist>
+			<taglist>
+				<tag name="6">value</tag>
+				<tag name="7">value</tag>
+				<tag name="45">value</tag>
+				<tag name="33">value</tag>
+			</taglist>
+			<attributelist>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+			</attributelist>
+		</output>
+		 <output name="out2" maxsections="default 1">
+			<categorylist>
+			       <category name="df">value</category>
+						 <category name="df">value</category>
+						 <category name="df">value</category>
+			</catorylist>
+			<taglist>
+				<tag name="6">value</tag>
+				<tag name="7">value</tag>
+				<tag name="45">value</tag>
+				<tag name="33">value</tag>
+			</taglist>
+			<attributelist>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+			</attributelist>
+		</output>
+		 <output name="out3" maxsections="default 1">
+			<categorylist>
+			       <category name="df">value</category>
+						 <category name="df">value</category>
+						 <category name="df">value</category>
+			</catorylist>
+			<taglist>
+				<tag name="6">value</tag>
+				<tag name="7">value</tag>
+				<tag name="45">value</tag>
+				<tag name="33">value</tag>
+			</taglist>
+			<attributelist>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+				<attribute name="g">value</attribute>
+			</attributelist>
+		</output>
 	</outputlist>
+	<instancelist>
+	        <instance type="brickname1" alias="name"/>
+					<instance type="brickname2" alias="name"/>
+					<instance type="brickname3" alias="name"/>
+					<instance type="brickname4" alias="name"/>
+	</instancelist>
+	<aliaslist>
+	        <alias from="23" to="123" />
+					<alias from="23" to="123" />
+					<alias from="23" to="123" />
+					<alias from="23" to="123" />
+	</aliaslist>
+	<wirelist>
+	        <wire from="2" to="4" />
+					<wire from="2" to="4" />
+					<wire from="3" to="45" />
+	</wirelist>
+	<operationlist>
+	        <operation name="mal" parent="brickname435" section="optional" />
+					<operation name="xx" parent="brickname435" section="optional" />
+					<operation name="yy" parent="brickname45" section="optional" />
+					<operation name="zz" parent="brickname33" section="optional" />
+	</operationlist>
 </brick>

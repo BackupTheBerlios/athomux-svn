@@ -22,9 +22,7 @@ foreach $file (@files) {
    
    # create table of contents
    system("saxon data.toc toc.xsl title=$file > temp.toc");
-   copy("temp.toc", "data.toc"); 
+   system("mv temp.toc data.toc"); 
 }
-
-unlink("temp.toc") or die("couldn't delete temp.toc");
 
 print "finished\n";
