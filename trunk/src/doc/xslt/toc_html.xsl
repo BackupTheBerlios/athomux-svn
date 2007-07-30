@@ -25,8 +25,12 @@
 	
 	
 	<xsl:template match="toc">
-		<xsl:variable name="brickname" select="brickname"/>
-		<li><a href="{$brickname}.html" ><xsl:value-of select="brickname"/></a></li>
+		<xsl:apply-templates select="brickname"/>
+	</xsl:template>
+
+	<xsl:template match="brickname">
+		<xsl:variable name="brickname" select="."/>
+		<li><a href="{$brickname}.html" ><xsl:value-of select="."/></a></li>
 	</xsl:template>
 	
 </xsl:stylesheet>

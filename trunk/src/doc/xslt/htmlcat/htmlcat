@@ -1,0 +1,286 @@
+#!/usr/bin/perl
+#
+# "htmlcat"	K. J. Turner	21/11/98
+#
+# modified by Alexander Herbig, 30/07/2007
+# - anchors: use id instead of name
+# - divider: use <hr /> instead of <p><hr noshade size="5">
+#
+# This script combines the HTML files given on the command line. The beginning
+# of the first file (up to and including "<body...>") is used for all the
+# files since only their bodies are concatenated. An optional divider followed
+# by the label of a file is used between files. Command-line options are:
+# 
+#   -d		print divider between concatenated files (see "customise"
+#		subroutine)
+# 
+#   -h		print help
+# 
+#   -o file	name output file (this will be ignored if present in the
+#		input list, e.g. due to giving "*.html")
+# 
+#   -s		sort input files into case-insensitive alphabetical order
+#		(putting the index file first if necessary, and removing the
+#		file it points to from the inputs if it is a symbolic link)
+# 
+# Note that:
+# 
+#   o the original files must conform to HTML conventions
+# 
+#   o "<body...>" and"</body...>" must be on a line of their own; any other
+#     information on these lines will be lost
+# 
+#   o in anchors, href="..."  and name="..." must be not be split across a
+#     line
+# 
+#   o any material after "</body>" (such as HTML comments) will be lost
+# 
+#   o the script might get confused by a symbolic index link or href's to
+#     files in remote directories
+# 
+#   o if you move the concatenated HTML file, remember to move any other local
+#     files (e.g. images) to the same relative location (e.g. the same
+#     directory)
+# 
+#   o for use with a frame-based collection of files, exclude the frameset
+#     definition file from the list of inputs and probably start with a
+#     contents file
+# 
+# A direct file link (e.g. href="file.html" or href="../file.html") is
+# converted to a link to a label (href="#file.html" or href="#../file.html")
+# on the assumption that this is one of the files being converted in the same
+# run.
+# 
+# Examples of usage are:
+# 
+#   htmlcat -o some.html def.html res.html
+#     concatenate "def.html" and "res.html" to "some.html"
+# 
+#   htmlcat -d -o all.html *.html
+#     concatenate all HTML files to "all.html" with dividers between them
+# 
+#   htmlcat -o -s out.html *.html
+#     sort then concatenate all HTML files to "out.html"
+# 
+#   htmlcat *.html > /tmp/all.html
+#     concatenate all HTML files to standard output (here "/tmp/all.html");
+#     for this method, do not create a concatenated file in the same
+#     directory or the script will run indefinitely on its own output!
+# 
+# Warning messages are sent to standard error.
+
+######################### Declarations #########################
+
+use Getopt::Std;				# load options package
+
+######################### Main Program #########################
+
+&customise;					# customise script
+&initialise;					# initialise script
+&cat_html;					# concatenate HTML files
+&finalise;					# finalise script
+
+######################### Subroutines #########################
+
+# return position of first element parameter in second array parameter
+
+sub arr_pos {
+  local ($elem, @arr) = @_;			# get element and array
+  local ($pos);					# locals
+  for ($pos = 0; $pos <= $#arr; $pos++) {	# cycle through array
+    return ($pos) if ($elem eq $arr[$pos]);	# return position
+  }
+  return (-1);					# not found - position -1
+}
+
+# concatenate HTML files
+
+sub cat_html {
+  local ($do_copy, $file, $fileno, @files, $lab_name);
+  
+  if ($opt_s) {					# sorted file names?
+    @files = sort file_order @ARGV;		# sort file names
+  }
+  else {					# file names as given
+    @files = @ARGV;				# use file names as given
+  }
+  $ind_pos = &arr_pos ($ind_file, @files);	# find index file in list
+  if ($ind_pos >= 0) {				# index file present?
+    $ind_link = readlink ($ind_file);		# check if symbolic link
+    if (defined ($ind_link)) {			# index is symbolic link?
+      $link_pos = &arr_pos ($ind_link, @files);	# find linked file in list
+      if ($link_pos >= 0) {			# linked file in list?
+        if ($link_pos < $ind_pos) {		# linked file earlier?
+	  @files =				# linked file only to start
+	    ($ind_link, @files[0..$link_pos-1],
+	      @files[$link_pos+1..$ind_pos-1],
+	        @files[$ind_pos+1..$#files]);
+	}
+	else {					# index file earlier
+	  @files =				# linked file only to start
+	    ($ind_link, @files[0..$ind_pos-1],
+	      @files[$ind_pos+1..$link_pos-1],
+	        @files[$link_pos+1..$#files]);
+	}
+      }
+    }
+    else {					# index is real file
+      @files =					# index file to start
+	($ind_file, @files[0..$ind_pos-1],
+	  @files[$ind_pos+1..$#files]);
+    }
+  }
+  for ($fileno = 0; $fileno <= $#files; $fileno++) { # process all parameters
+    $file = $files [$fileno];			# get file name
+    next if ($file eq $opt_o);			# ignore output file
+    if (open (HTML, "< $file")) {		# HTML file opened?
+      $do_copy = !$fileno;			# set "copy line" flag
+      while (<HTML>) {				# read HTML file till end
+	if (/<\s*\/\s*body/i) {			# body ends?
+	  last;					# to next file
+	}
+	elsif (/<\s*body/i) {			# body starts?
+	  $do_copy = 1;				# start copying
+	  if ($fileno) {			# not first file?
+	    print $outfile $file_div if ($opt_d); # output divider
+	  }
+	  else {				# first file
+	    print $outfile $_;			# output current line
+	    if ($ind_link) {			# first file symbolic index?
+	      print $outfile "<p><a id=\"$ind_file\"></a></p>\n"; # output label
+	    }
+	  }
+	  $lab_name = "${prog}_${file}";	# make label name
+	  print $outfile "<p><a id=\"$lab_name\"></a></p>\n"; # output label
+	  next;					# to next line
+	}
+	elsif (/<\s*\/\s*html/i) {		# HTML ends?
+	  &warning ("no body for \"$file\" (exclude frameset files)");
+	}
+	if ($do_copy) {				# copy line?
+	  # convert direct file name to label (remove #, prefix program name)
+	  s/href\s*=\s*"((?!http:)[^\#]*)\#(.*)"/href="${1}_${2}"/ig;
+	  s/href\s*=\s*"((?!http:)[\w \.\/\#]+)"/href="#${prog}_${1}"/ig;
+	  # convert anchor name to label (prefix program name and file)
+	  s/name\s*=\s*"([^"]+)"/id="${prog}_${file}_${1}"/ig;
+	  # remove targets
+	  s/target\s*=\s*"([^"]+)"//ig; 
+	  print $outfile $_;			# output current line
+	}
+      }
+      if (!close (HTML)) {			# HTML file not closed?
+	&warning ("could not close \"$file\"");	# report warning
+      }
+    }
+    else {					# file name
+      &warning ("could not open \"$file\"");	# report warning
+    }
+  }
+  print $outfile "</body>\n\n</html>\n";	# finish output file
+  if ($opt_o) {					# output file set?
+    if (!close ($outfile)) {			# output file not closed?
+      &warning ("could not close \"$opt_o\"");	# report warning
+    }
+  }
+}
+
+# customise script
+
+sub customise {
+  $file_div = "<hr />\n\n"; # set file divider
+  $ind_file = "index.html";			# set index file name
+}
+
+# compare file names in alphabetical order; names with the same initial head
+# but differing numerical tails are sorted in numerical order
+# (e.g. "node2.html" comes before "node10.html")
+
+sub file_order {
+  local ($a_chr, $a_dig, $b_chr, $b_dig);
+  if ($a =~ /(\D*)(\d+)\.([^\.]*)/) {		# first name ends in digits?
+    $a_chr = $1; $a_dig = $2;			# separate characters/digits
+    if ($b =~ /(\D*)(\d+)\.([^\.]*)/) {		# second name ends in digits?
+      $b_chr = $1; $b_dig = $2;			# separate characters/digits
+      if (lc ($a_chr) eq lc ($b_chr)) {		# same lower-case letters?
+	$a_dig <=> $b_dig;			# compare digit portions
+      }
+      else {					# different letters
+	lc ($a) cmp lc ($b);			# compare lower-case names
+      }
+    }
+    else {					# second name has no digits
+      lc ($a) cmp lc ($b);			# compare lower-case names
+    }
+  }
+  else {					# first name has no digits
+    lc ($a) cmp lc ($b);			# compare lower-case names
+  }
+}
+
+# report error and stop
+
+sub error {
+  local ($mess) = @_;				# get error message
+  printf STDERR "$prog: $mess\n";		# print it
+  exit (1);					# exit with result of 1
+}
+
+# finalise and tidy up
+
+sub finalise {
+  exit ($code);					# exit with code
+}
+
+# initialise script and options
+
+sub initialise {
+  $prog = $0;					# set program name
+  $prog =~ s/.*\///g;				# remove directories
+  $code = 0;					# exit code
+  $opt_d = 0;					# set no dividers
+  $opt_h = 0;					# set no help
+  $opt_o = "";					# set no output file
+  $opt_s = 0;					# set no sorting
+  $SIG{INT} = \&prog_int;			# set interrupt handler
+  $SIG{QUIT} = \&prog_int;			# set interrupt handler
+  if (!getopts ('dho:s')) {			# options wrong?
+    &usage ();					# print usage
+  }
+  if ($opt_h) {					# help requested?
+    &usage ();					# print usage
+  }
+  elsif ($opt_o) {				# output file set?
+    if (!open (OUT, "> $opt_o")) {		# output file not opened?
+      &error ("could not open \"$opt_o\"");	# report error
+    }
+    $outfile = \*OUT;				# set output file
+  }
+  else {					# standard output needed
+    $outfile = \*STDOUT;			# set output file
+  }
+  if ($#ARGV < 0) {				# no files given?
+    &usage ();					# print usage
+  }
+}
+
+# handle program interrupt
+
+sub prog_int {
+  &error ("abandoned");				# report interrupt
+}
+
+# print script usage
+
+sub usage {
+  print STDERR "usage: $prog [-h(elp)] [-o(utput) file] ";
+  print STDERR "[-s(orted)] file ...\n";
+  exit (1);
+}
+
+# report warning
+
+sub warning {
+  local ($mess) = @_;				# get warning message
+  printf STDERR "$prog: $mess!\n";		# print it
+  $code = 1;					# exit with result of 1
+}

@@ -24,6 +24,8 @@
 	
 	
 	<xsl:template match="brick">
+		<p><a href="__toc.html">Index</a></p>
+		
 		<h1>Header</h1>
 		<table>
 			<xsl:apply-templates select="header"/>

@@ -1,0 +1,166 @@
+<!doctype html public "-//ietf//dtd html 2.0//en">
+
+<html>
+
+<head>
+
+<title>Web Utilities - Concatenate HTML Files</title>
+
+<link rev="made" href="mailto:kjt@cs.stir.ac.uk">
+
+<meta name="keywords" content="cat catenate concatenate HTML join">
+
+</head>
+
+<body>
+
+<center>
+
+<h1>Concatenate HTML Files</h1>
+
+</center>
+
+<!---------------- Description ---------------->
+
+<h2>Description</h2>
+
+<p>
+This script combines a number of HTML files into one. The beginning of the
+first file (up to and including <var>&lt;body ...&gt;</var>) is used for all
+the files since only their bodies are concatenated. An optional divider
+followed by the label of a file is used between files.
+
+<p>
+Note that:
+
+<ul>
+
+<li>
+the original files must conform to HTML conventions; if necessary use
+<var><a href="htmlfix.html">htmlfix</a></var> first to correct major problems
+
+<li>
+<var>&lt;body ...&gt;</var> and <var>&lt;/body&gt;</var> must be on a line
+of their own; any other information on these lines will be lost
+
+<li> in anchors, <var>href="..."</var>  and <var>name="..."</var> must
+be not be split across a line
+
+<li> any material after "&lt;/body&gt;" (such as HTML comments) will
+be lost
+
+<li>
+the script might get confused by a symbolic directory index link or
+references to files in remote directories (though it does its best)
+
+<li>
+if you move the concatenated HTML file, remember to move any other local
+files (e.g. images) to the same relative location (e.g. the same directory)
+
+<li>
+for use with a frame-based collection of files, exclude the
+<var>frameset</var> definition file from the list of inputs and probably
+start with a contents file
+
+</ul>
+
+<!---------------- Options ---------------->
+
+<h2>Options</h2>
+
+<p>
+The command line options are:
+
+<dl>
+
+<dt>
+<var>-d</var>
+<dd>
+print divider between concatenated files
+
+<dt>
+<var>-h</var>
+<dd>
+print usage as help
+
+<dt>
+<var>-o file</var>
+<dd>
+name output file (this will be ignored if present in the input list, e.g.
+due to giving <var>*.html</var>)
+
+<dt>
+<var>-s</var>
+<dd>
+sort input files into case-insensitive alphabetical order (putting the index
+file first if necessary, and removing the file it points to from the inputs
+if it is a symbolic link)
+
+</dl>
+
+<!---------------- Usage ---------------->
+
+<h2>Usage</h2>
+
+<p>
+Run on one or more HTML files. Warning messages are sent to standard error.
+Examples of usage are:
+
+<dl>
+
+<dt>
+<var>htmlcat -o some.html def.html res.html</var>
+<dd>
+concatenate <var>def.html</var> and <var>res.html</var> to
+<var>some.html</var>
+
+<dt>
+<var>htmlcat -d -o all.html *.html</var>
+<dd>
+concatenate all HTML files to <var>all.html</var> with dividers between them
+
+<dt>
+<var>htmlcat -o -s out.html *.html</var>
+<dd>
+sort then concatenate all HTML files to <var>out.html</var>
+
+<dt>
+<var>htmlcat *.html &gt; /tmp/all.html</var>
+<dd>
+concatenate all HTML files to standard output (here
+<var>/tmp/all.html</var>); for this method, do not create a concatenated
+file in the same directory or the script will run indefinitely on its own
+output!
+
+</dl>
+
+<p>
+The only things likely to need changed for installation are the directory
+index filename and the nature of a file divider (see <var>customise</var>
+subroutine in the code). Change the first line of the script according to
+where <var>Perl</var> is located. Although tested with <var>Perl5</var>, the
+script may work with only minor changes for <var>Perl4</var>.
+
+<!---------------- Licence ---------------->
+
+<h2>Licence</h2>
+
+<p>
+<var>htmlcat</var> is free software, distributed under the GNU Public License
+Version 2.  You may re-distribute this software provided you preserve this
+README file.  The contents of this package may be used freely for
+non-commercial purposes provided this README file and copyright notices are
+retained.  Copyright remains with the author. No warranties are given as to
+the accuracy or suitability of this package.
+
+<!---------------- History ---------------->
+
+<h2>History</h2>
+
+<p>
+First public version Ken Turner &lt;kjt@cs.stir.ac.uk&gt;, 21st November
+1998
+
+</body>
+
+</html>
