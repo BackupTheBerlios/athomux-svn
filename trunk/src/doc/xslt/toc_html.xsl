@@ -16,6 +16,7 @@
 			</head>
 			
 			<body>
+				<h1>Table Of Contents</h1>
 				<ul>
 					<xsl:apply-templates select="toc"/>
 				</ul>

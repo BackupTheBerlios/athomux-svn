@@ -23,8 +23,8 @@ xsi:schemaLocation="brick.xsd">
 			</context>
 		</contextlist>
 		<purpose>     <![CDATA[<code>]]>nicht mehrzeilig<![CDATA[</code>]]></purpose>
-		<description><![CDATA[<em>]]>nicht mehrzeilig<![CDATA[</em>]]></description>
-		<example>     <![CDATA[<strong>]]>nicht mehrzeilig<![CDATA[</strong>]]></example>
+		<description><![CDATA[<em>]]>mehrzeilig<![CDATA[</em>]]></description>
+		<example>     <![CDATA[<strong>]]>mehrzeilig<![CDATA[</strong>]]></example>
 		<categorylist>
 		        <category name="1">value</category>
 						<category name="2">value</category>
@@ -75,7 +75,7 @@ xsi:schemaLocation="brick.xsd">
 				<tag name="7">value</tag>
 				<tag name="45">value</tag>
 				<tag name="33">value</tag>
-			</taglist>
+			</taglist>all.html
 			<attributelist>
 				<attribute name="g">value</attribute>
 				<attribute name="g">value</attribute>

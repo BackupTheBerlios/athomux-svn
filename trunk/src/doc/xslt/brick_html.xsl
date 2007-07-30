@@ -65,105 +65,117 @@
 	
 	<xsl:template match="header">
 		<tr>
-			<td>Brick Name</td>
+			<td class="header">Brick Name</td>
 			<td><xsl:value-of select="brickname" /></td>
 		</tr>
 	
 		
 		<tr>
-			<td>Author</td>
+			<td class="header">Author</td>
 			<td><xsl:value-of select="author"/></td>
 		</tr>
 		
 		<tr>
-			<td>Copyright</td>
+			<td class="header">Copyright</td>
 			<td><xsl:value-of select="copyright"/></td>
 		</tr>
 		
 		<tr>
-			<td>License</td>
+			<td class="header">License</td>
 			<td><xsl:apply-templates select="licenselist"/></td>
 		</tr>
 		
 		<tr>
-			<td>Contexts</td>
+			<td class="header">Contexts</td>
 			<td><xsl:apply-templates select="contextlist"/></td>
 		</tr>
 		
 		<tr>
-			<td>Purpose</td>
+			<td class="header">Purpose</td>
 			<td><xsl:value-of select="purpose" disable-output-escaping="yes"/></td>
 		</tr>
 		
 		<tr>
-			<td>Description</td>
+			<td class="header">Description</td>
 			<td><xsl:value-of select="description" disable-output-escaping="yes"/></td>
 		</tr>
 		
 		<tr>
-			<td>Example</td>
+			<td class="header">Example</td>
 			<td><xsl:value-of select="example" disable-output-escaping="yes"/></td>
 		</tr>
 		
 		<tr>
-			<td>Categorys</td>
+			<td class="header">Categoriess</td>
 			<td><xsl:apply-templates select="categorylist"/></td>
 		</tr>
 		
 		<tr>
-			<td>Tags</td>
+			<td class="header">Tags</td>
 			<td><xsl:apply-templates select="taglist"/></td>
 		</tr>
 		
 		<tr>
-			<td>Attributs</td>
+			<td class="header">Attributs</td>
 			<td><xsl:apply-templates select="attributelist"/></td>
 		</tr>
 	</xsl:template>
 	
-	<xsl:template match="context|licenselist">
-				<h3><xsl:value-of select="@key"/></h3>
-				<p>
-					<xsl:for-each select="file">
-						<xsl:value-of select="."/>
-						<xsl:if test="position()!=last()">
-							<xsl:text>, </xsl:text>
-						</xsl:if>
-					</xsl:for-each>
-				</p>
+	<xsl:template match="licenselist">
+			<xsl:apply-templates select="file"/>	
+	</xsl:template>
+	
+	<xsl:template match="context">
+			<tr>
+				<td class="subheader"><xsl:value-of select="@key"/></td>
+				<td><xsl:apply-templates select="file"/></td>
+			</tr>
+	</xsl:template>
+	
+	<xsl:template match="file">
+			<xsl:value-of select="."/>
+			<xsl:if test="position()!=last()">
+				<xsl:text>, </xsl:text>
+			</xsl:if>
 	</xsl:template>
 	
 	<xsl:template match="contextlist">
-			<xsl:apply-templates select="context"/>
+			<table class="sub">
+				<xsl:apply-templates select="context"/>
+			</table>
 	</xsl:template>
 	
 	
 	<xsl:template match="attributelist|taglist|categorylist">
-			<table>
-			<xsl:for-each select="attribute|tag|category">
-				<tr>
-					<td><xsl:value-of select="@name"/></td>
-					<td><xsl:value-of select="."/></td>
-				</tr>
-			</xsl:for-each>
+			<table class="sub">
+				<xsl:for-each select="attribute|tag|category">
+					<tr>
+						<td class="subheader"><xsl:value-of select="@name"/></td>
+						<td><xsl:value-of select="."/></td>
+					</tr>
+				</xsl:for-each>
 			</table>
 	</xsl:template>	
 	
-	
-	<xsl:template match="inputlist">
-			<xsl:apply-templates select="input"/>
-	</xsl:template>
-	
-	
-	<xsl:template match="outputlist">
-			<xsl:apply-templates select="output"/>
+	<xsl:template match="inputlist|outputlist">
+			<tr>
+				<th class="header">Name (Max Sections)</th>
+				<th>Categories</th>
+				<th>Tags</th>
+				<th>Attributes</th>
+			</tr>
+			<xsl:apply-templates select="input|output"/>
 	</xsl:template>
 	
 	
 	<xsl:template match="input|output">
 			<tr>
-				<td><xsl:value-of select="@name"/></td>
-				<td><xsl:value-of select="@maxsections"/></td>
+				<td class="header">
+					<xsl:value-of select="@name"/>
+					<xsl:text> (</xsl:text>
+						<xsl:value-of select="@maxsections"/>
+					<xsl:text>)</xsl:text>
+				</td>
 				<td><xsl:apply-templates select="categorylist"/></td>
 				<td><xsl:apply-templates select="taglist"/></td>
 				<td><xsl:apply-templates select="attributelist"/></td>
@@ -172,20 +184,33 @@
 	
 	
 	<xsl:template match="instancelist">
+			<tr>
+				<th class="header">Type</th>
+				<th>Alias</th>
+			</tr>
 			<xsl:apply-templates select="instance"/>
 	</xsl:template>
 	
 	<xsl:template match="aliaslist|wirelist">
+			<tr>
+				<th>From</th>
+				<th>To</th>
+			</tr>
 			<xsl:apply-templates select="alias|wire"/>
 	</xsl:template>
 	
 	<xsl:template match="operationlist">
+			<tr>
+				<th class="header">Name</th>
+				<th>Parent</th>
+				<th>Section</th>
+			</tr>
 			<xsl:apply-templates select="operation"/>
 	</xsl:template>
 	
 	<xsl:template match="instance">
 			<tr>
-				<td><xsl:value-of select="@type"/></td>
+				<td class="header"><xsl:value-of select="@type"/></td>
 				<td><xsl:value-of select="@alias"/></td>
 			</tr>
 	</xsl:template>
@@ -200,7 +225,7 @@
 	
 	<xsl:template match="operation">
 			<tr>
-				<td><xsl:value-of select="@name"/></td>
+				<td class="header"><xsl:value-of select="@name"/></td>
 				<td><xsl:value-of select="@parent"/></td>
 				<td><xsl:value-of select="@section"/></td>
 			</tr>
