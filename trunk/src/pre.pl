@@ -189,6 +189,7 @@ sub embrace_code {
 my @doc_output = ();
 my $doc_filename = "";
 
+# global lists
 my @doc_inputs     = ();
 my @doc_outputs    = ();
 my @doc_instances  = ();
@@ -196,15 +197,20 @@ my @doc_aliases    = ();
 my @doc_wires      = ();
 my @doc_operations = ();
 
+# local lists
+my @doc_categories = ();
+my @doc_tags       = ();
+my @doc_attributes = ();
+
 my $doc_mode = "";
+my $doc_lastsec = "";
 my $doc_header_closed = 0;
+
 
 sub doc_element {
   my ($tag, $key, $value) = @_;
   $tag = "" unless defined($tag);
   $key = "" unless defined($key);
-  
-  # printf("$::doc_current ------> $tag : $key => $value\n");
   
   # close open context list
   if ($doc_mode eq "contextlist" and $key !~ m/^(pconf|cconf|target)$/) {
@@ -214,23 +220,41 @@ sub doc_element {
   
   # close header
   if (!$doc_header_closed and $tag =~ m/^(input|output|instance|alias|wire|operation)$/) {
-    push(@doc_output, "</header>");
+    doc_close("header", "main");
     $doc_header_closed = 1;
   }
   
+  # invoce subparser
   if ($tag eq "tag") {
-    doc_parse_tag($::doc_current, $key, $value);
-  } elsif ($tag eq "attr") {
-    doc_parse_attr($::doc_current, $key, $value);
+    doc_parse_tag($key, $value);
+  } elsif ($tag =~ m/^(attr|category)$/) {
+    doc_add($tag, $key, $value);
   } else {
     doc_parse_keyword($::doc_current, $tag, $key, $value);
   }
 }
 
-sub doc_parse_tag {
-  my ($parent, $key, $value) = @_;
+
+sub doc_add {
+  my ($type, $key, $value) = @_;
+  $type = ($type eq "attr") ? "attribute" : $type;
+  my $entry = "<$type name=\"$key\">$value</$type>";
   
-  if ($key eq "license") {
+  if    ($type eq "category")  { push(@doc_categories, $entry); }
+  elsif ($type eq "tag")       { push(@doc_tags,       $entry); }
+  elsif ($type eq "attribute") { push(@doc_attributes, $entry); }
+  else 
+    { warn("There is no list type \"$type\"."); }
+}
+
+
+sub doc_parse_tag {
+  my ($key, $value) = @_;
+  
+  if ($key =~ m/^(author|copyright)$/) {
+    push(@doc_output, "<$key>$value</$key>");
+    
+  } elsif ($key eq "license") {
     $value =~ s/, ?/<\/file>\n<file>/;
     push(@doc_output, "<licenselist>\n<file>$value</file>\n</licenselist>");
     
@@ -247,14 +271,10 @@ sub doc_parse_tag {
     push(@doc_output, "<$key><![CDATA[$value]]></$key>");
     
   } else {
-    push(@doc_output, "<$key>$value</$key>");
+    doc_add("tag", $key, $value);
   }
 }
 
-sub doc_parse_attr {
-  my ($parent, $key, $value) = @_;
-  push(@doc_output, "attr ($parent, $key, $value)");
-}
 
 sub doc_parse_keyword {
   my ($parent, $keyword, $key, $value) = @_;
@@ -284,6 +304,16 @@ sub doc_parse_keyword {
     push(@doc_operations, "<operation name=\"$value\" parent=\"$parent\" $section/>");
     
   } elsif ($keyword =~ m/^(input|output)$/) {
+    $doc_mode = $keyword  if ($doc_mode eq "");
+    $doc_lastsec = $value if ($doc_lastsec eq "");
+    
+    if ($keyword ne $doc_mode  or  $doc_lastsec ne $value) {
+      doc_close($doc_mode, $doc_mode);
+      $doc_mode = $keyword;
+      $doc_lastsec = $value;
+    }
+    
+    
     my $maxsection = (sp_type($value) == 3) ? sp_part($value, 3, 0) : 1;
     $value = sp_shorten($value, 2);
     
@@ -297,24 +327,53 @@ sub doc_parse_keyword {
     }
     
   } else {
-    push(@doc_output, "<$keyword>$key $value</$keyword>");
+    # for debug only. this should not occur.
+    push(@doc_output, "<unhandled_$keyword>$key => $value<unhandled_/$keyword>");
   }
 }
 
-sub doc_write_lists {
+
+sub doc_close {
+  my ($close, $list) = @_;
+  
+  my @templist = ();
+  my $doc_categories = @doc_categories;
+  my $doc_tags       = @doc_tags;
+  my $doc_attributes = @doc_attributes;
+  
+  push(@templist, "<categorylist>\n"  . join("\n", @doc_categories) . "\n</categorylist>")  if ($doc_categories);
+  push(@templist, "<taglist>\n"       . join("\n", @doc_tags)       . "\n</taglist>")       if ($doc_tags);
+  push(@templist, "<attributelist>\n" . join("\n", @doc_attributes) . "\n</attributelist>") if ($doc_attributes);
+  push(@templist, "</" . $close . ">");
+  
+  # and i thought, c references where bad. despite multiple howtos i can't figure out how 
+  # to pass a list by reference and use it with push in here. so PLEASE FIX THIS if you can.
+  if ($list eq "main") {
+    push(@doc_output, @templist);
+  } elsif ($list eq "input") {
+    push(@doc_inputs, @templist);
+  } elsif ($list eq "output") {
+    push(@doc_outputs, @templist);
+  }
+  
+  @doc_categories = @doc_tags = @doc_attributes = ();
+}
+
+
+sub doc_write {
+  if ($doc_mode ne "") {
+    doc_close($doc_mode, $doc_mode);
+  }
+  
   push(@doc_output, "<inputlist>\n"     . join("\n", @doc_inputs)     . "\n</inputlist>");
-  push(@doc_output, "<outputlist>\n"    . join("\n", @doc_outputs)    . "\n</outputist>");
+  push(@doc_output, "<outputlist>\n"    . join("\n", @doc_outputs)    . "\n</outputlist>");
   push(@doc_output, "<instancelist>\n"  . join("\n", @doc_instances)  . "\n</instancelist>");
   push(@doc_output, "<aliaslist>\n"     . join("\n", @doc_aliases)    . "\n</aliaslist>");
   push(@doc_output, "<wirelist>\n"      . join("\n", @doc_wires)      . "\n</wirelist>");
   push(@doc_output, "<operationlist>\n" . join("\n", @doc_operations) . "\n</operationlist>");
-}
-
-sub doc_write {
-  doc_write_lists();
   
   unless (open(DOCFILE, ">doc/$doc_filename.xml")) {
-    die("Can't write doc file.");
+    die("Can't write doc file \"doc/$doc_filename.xml\".");
   }
   
   print DOCFILE '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
@@ -2980,6 +3039,6 @@ close(OUT);
 
 warn "please update the connector syntax for the following connectors: $::warn_syntax" if $::warn_syntax;
 
-doc_write();
+doc_write(); # should be called last because it dies if it can't write
 
 exit 0;
