@@ -32,7 +32,7 @@
 	</xsl:template>
 
 	<xsl:template match="brickname">
-		<xsl:variable name="brickname" select="substring-after(.,'#')"/>
+		<xsl:variable name="brickname" select="."/>
 		<li>
 			<a href="{$brickname}.html" >
 				<xsl:value-of select="$brickname"/>
