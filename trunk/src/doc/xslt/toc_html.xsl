@@ -26,12 +26,18 @@
 	
 	
 	<xsl:template match="toc">
-		<xsl:apply-templates select="brickname"/>
+		<xsl:apply-templates select="brickname">
+			<xsl:sort select="."/>
+		</xsl:apply-templates>
 	</xsl:template>
 
 	<xsl:template match="brickname">
-		<xsl:variable name="brickname" select="."/>
-		<li><a href="{$brickname}.html" ><xsl:value-of select="."/></a></li>
+		<xsl:variable name="brickname" select="substring-after(.,'#')"/>
+		<li>
+			<a href="{$brickname}.html" >
+				<xsl:value-of select="$brickname"/>
+			</a>
+		</li>
 	</xsl:template>
 	
 </xsl:stylesheet>

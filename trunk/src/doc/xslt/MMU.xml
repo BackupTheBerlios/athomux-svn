@@ -2,7 +2,7 @@
 <brick xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="brick.xsd">
 	<header>
-		<brickname>MMU</brickname>
+		<brickname>#MMU</brickname>
 		<author>Peter Mueler</author>
 		<copyright>Bingen</copyright>
 		<licenselist>

@@ -64,6 +64,7 @@
 	
 	
 	<xsl:template match="header">
+
 		<tr>
 			<td class="header">Brick Name</td>
 			<td><xsl:value-of select="brickname" /></td>
@@ -97,12 +98,16 @@
 		
 		<tr>
 			<td class="header">Description</td>
-			<td><xsl:value-of select="description" disable-output-escaping="yes"/></td>
+			<td>
+				<pre><xsl:value-of select="description" disable-output-escaping="yes"/></pre>
+			</td>
 		</tr>
 		
 		<tr>
 			<td class="header">Example</td>
-			<td><xsl:value-of select="example" disable-output-escaping="yes"/></td>
+			<td>
+				<pre><xsl:value-of select="example" disable-output-escaping="yes"/></pre>
+			</td>
 		</tr>
 		
 		<tr>
@@ -159,7 +164,8 @@
 	
 	<xsl:template match="inputlist|outputlist">
 			<tr>
-				<th class="header">Name (Max Sections)</th>
+				<th class="header">Name</th>
+				<th>Max Sections</th>
 				<th>Categories</th>
 				<th>Tags</th>
 				<th>Attributes</th>
@@ -172,10 +178,8 @@
 			<tr>
 				<td class="header">
 					<xsl:value-of select="@name"/>
-					<xsl:text> (</xsl:text>
-						<xsl:value-of select="@maxsections"/>
-					<xsl:text>)</xsl:text>
 				</td>
+				<td><xsl:value-of select="@maxsections"/></td>
 				<td><xsl:apply-templates select="categorylist"/></td>
 				<td><xsl:apply-templates select="taglist"/></td>
 				<td><xsl:apply-templates select="attributelist"/></td>
