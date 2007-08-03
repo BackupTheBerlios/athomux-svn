@@ -238,7 +238,7 @@ sub doc_element {
 sub doc_add {
   my ($type, $key, $value) = @_;
   $type = ($type eq "attr") ? "attribute" : $type;
-  my $entry = "<$type name=\"$key\">$value</$type>";
+  my $entry = "<$type name=\"". doc_html($key) . "\">" . doc_html($value) . "</$type>";
   
   if    ($type eq "category")  { push(@doc_categories, $entry); }
   elsif ($type eq "tag")       { push(@doc_tags,       $entry); }
@@ -288,10 +288,10 @@ sub doc_parse_keyword {
     push(@doc_instances, "<instance type=\"$key\" alias=\"$value\"/>");
     
   } elsif ($keyword eq "alias") {
-    push(@doc_aliases, "<alias from=\"$key\" to=\"$value\" />");
+    push(@doc_aliases, "<alias from=\"" . doc_html($key) . "\" to=\"" . doc_html($value) . "\" />");
     
   } elsif ($keyword eq "wire") {
-    push(@doc_wires, "<wire from=\"$key\" to=\"$value\" />");
+    push(@doc_wires, "<wire from=\"" . doc_html($key) . "\" to=\"" . doc_html($value) . "\" />");
     
   } elsif ($keyword eq "operation") {
     my $section = "";
@@ -301,7 +301,7 @@ sub doc_parse_keyword {
       $parent  = sp_shorten($parent, 2);
     }
     
-    push(@doc_operations, "<operation name=\"$value\" parent=\"$parent\" $section/>");
+    push(@doc_operations, "<operation name=\"$value\" parent=\"" . doc_html($parent) . "\" $section/>");
     
   } elsif ($keyword =~ m/^(input|output)$/) {
     $doc_mode = $keyword  if ($doc_mode eq "");
@@ -318,7 +318,7 @@ sub doc_parse_keyword {
     $value = sp_shorten($value, 2);
     
     my $local = ($key eq "local") ? " local=\"local\"" : "";
-    my $entry = "<$keyword name=\"$value\" maxsections=\"$maxsection\"$local>";
+    my $entry = "<$keyword name=\"" . doc_html($value) . "\" maxsections=\"$maxsection\"$local>";
     
     if ($keyword eq "input") {
       push(@doc_inputs, $entry);
@@ -346,7 +346,7 @@ sub doc_close {
   push(@templist, "<attributelist>\n" . join("\n", @doc_attributes) . "\n</attributelist>") if ($doc_attributes);
   push(@templist, "</" . $close . ">");
   
-  # and i thought, c references where bad. despite multiple howtos i can't figure out how 
+  # and i thought, c references were bad. despite multiple howtos i can't figure out how 
   # to pass a list by reference and use it with push in here. so PLEASE FIX THIS if you can.
   if ($list eq "main") {
     push(@doc_output, @templist);
@@ -357,6 +357,14 @@ sub doc_close {
   }
   
   @doc_categories = @doc_tags = @doc_attributes = ();
+}
+
+
+sub doc_html {
+  my ($text) = @_;
+  $text =~ s/</&lt;/; 
+  $text =~ s/>/&gt;/;
+  return $text;
 }
 
 
