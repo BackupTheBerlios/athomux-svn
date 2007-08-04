@@ -111,7 +111,7 @@
 		</tr>
 		
 		<tr>
-			<td class="header">Categoriess</td>
+			<td class="header">Categories</td>
 			<td><xsl:apply-templates select="categorylist"/></td>
 		</tr>
 		
