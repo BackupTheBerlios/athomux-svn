@@ -238,7 +238,7 @@ sub doc_element {
 sub doc_add {
   my ($type, $key, $value) = @_;
   $type = ($type eq "attr") ? "attribute" : $type;
-  my $entry = "<$type name=\"". doc_html($key) . "\">" . doc_html($value) . "</$type>";
+  my $entry = "<$type name=\"$key\">$value</$type>";
   
   if    ($type eq "category")  { push(@doc_categories, $entry); }
   elsif ($type eq "tag")       { push(@doc_tags,       $entry); }
@@ -288,10 +288,10 @@ sub doc_parse_keyword {
     push(@doc_instances, "<instance type=\"$key\" alias=\"$value\"/>");
     
   } elsif ($keyword eq "alias") {
-    push(@doc_aliases, "<alias from=\"" . doc_html($key) . "\" to=\"" . doc_html($value) . "\" />");
+    push(@doc_aliases, "<alias from=\"$key\" to=\"$value\" />");
     
   } elsif ($keyword eq "wire") {
-    push(@doc_wires, "<wire from=\"" . doc_html($key) . "\" to=\"" . doc_html($value) . "\" />");
+    push(@doc_wires, "<wire from=\"$key\" to=\"$value\" />");
     
   } elsif ($keyword eq "operation") {
     my $section = "";
@@ -301,7 +301,7 @@ sub doc_parse_keyword {
       $parent  = sp_shorten($parent, 2);
     }
     
-    push(@doc_operations, "<operation name=\"$value\" parent=\"" . doc_html($parent) . "\" $section/>");
+    push(@doc_operations, "<operation name=\"$value\" parent=\"$parent\" $section/>");
     
   } elsif ($keyword =~ m/^(input|output)$/) {
     $doc_mode = $keyword  if ($doc_mode eq "");
@@ -318,7 +318,7 @@ sub doc_parse_keyword {
     $value = sp_shorten($value, 2);
     
     my $local = ($key eq "local") ? " local=\"local\"" : "";
-    my $entry = "<$keyword name=\"" . doc_html($value) . "\" maxsections=\"$maxsection\"$local>";
+    my $entry = "<$keyword name=\"$value\" maxsections=\"$maxsection\"$local>";
     
     if ($keyword eq "input") {
       push(@doc_inputs, $entry);
@@ -360,14 +360,6 @@ sub doc_close {
 }
 
 
-sub doc_html {
-  my ($text) = @_;
-  $text =~ s/</&lt;/; 
-  $text =~ s/>/&gt;/;
-  return $text;
-}
-
-
 sub doc_write {
   if ($doc_mode ne "") {
     doc_close($doc_mode, $doc_mode);
@@ -379,6 +371,13 @@ sub doc_write {
   push(@doc_output, "<aliaslist>\n"     . join("\n", @doc_aliases)    . "\n</aliaslist>");
   push(@doc_output, "<wirelist>\n"      . join("\n", @doc_wires)      . "\n</wirelist>");
   push(@doc_output, "<operationlist>\n" . join("\n", @doc_operations) . "\n</operationlist>");
+  
+  # replace all :< and :> with html entities to get valid xml
+  my $length = @doc_output;
+  for (my $i = 0; $i < $length; $i++) {
+    $doc_output[$i] =~ s/:</:&lt;/g;
+    $doc_output[$i] =~ s/:>/:&gt;/g;  
+  }
   
   unless (open(DOCFILE, ">doc/$doc_filename.xml")) {
     die("Can't write doc file \"doc/$doc_filename.xml\".");
