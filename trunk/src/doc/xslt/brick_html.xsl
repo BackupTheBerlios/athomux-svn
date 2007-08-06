@@ -87,7 +87,7 @@
 		</tr>
 		
 		<tr>
-			<td class="header">Contexts</td>
+			<td class="header">Context</td>
 			<td><xsl:apply-templates select="contextlist"/></td>
 		</tr>
 		
@@ -121,7 +121,7 @@
 		</tr>
 		
 		<tr>
-			<td class="header">Attributs</td>
+			<td class="header">Attributes</td>
 			<td><xsl:apply-templates select="attributelist"/></td>
 		</tr>
 	</xsl:template>
