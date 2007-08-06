@@ -2024,7 +2024,7 @@ sub parse_lit {
   # process the literate programming annotations.
   $text =~ s/(?:\A${ws}purp(?:ose)?${ws}(.*)\n)?//;
   doc_element("tag", "purpose", $1) if $1 and $::parse_level==1;
-  if($text =~ s/\A${ws}desc(?:ription)?${ws}//) {
+  if($text =~ s/\A${ws}desc(?:ription)?\s*\n//) {
     my $lit = "";
     until ($text =~ s/\A${ws}enddesc(?:ription)?${ws}//) {
       $text =~ s/\A.*\n//;
@@ -2033,7 +2033,7 @@ sub parse_lit {
     }
     doc_element("tag", "description", $lit) if $::parse_level==1;
   }
-  if($text =~ s/\A${ws}example${ws}//) {
+  if($text =~ s/\A${ws}example\s*\n//) {
     my $lit = "";
     until ($text =~ s/\A${ws}endexample${ws}//) {
       $text =~ s/\A.*\n//;
