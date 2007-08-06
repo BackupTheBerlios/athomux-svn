@@ -14,6 +14,7 @@
   <xsl:copy>
   	<xsl:copy-of select="node()" />
   
+  	<xsl:copy>
 		<xsl:element name="brick">
 			<xsl:attribute name="name">
 				<xsl:value-of select="document(concat('../xml/', $title))/brick/header/brickname" />
@@ -21,7 +22,12 @@
 			<xsl:element name="purpose">
 				<xsl:value-of select="document(concat('../xml/', $title))/brick/header/purpose" />
 			</xsl:element>
+			
+				<xsl:copy-of select="document(concat('../xml/', $title))/brick/header/taglist" />
+				<xsl:copy-of select="document(concat('../xml/', $title))/brick/header/categorylist" />
+			
 		</xsl:element>
+		</xsl:copy>
   </xsl:copy>
   
 </xsl:template>

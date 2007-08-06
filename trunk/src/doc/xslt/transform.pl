@@ -65,7 +65,7 @@ sub transHtml {
 		system("saxon $xml_dir/$filename.xml brick_html.xsl > $html_dir/$filename.html");
 			
 		# create table of contents
-   	system("saxon data.toc toc.xsl title=$file > temp.toc");
+   	system("saxon data.toc toc.xsl title=$file > temp_$file.toc");
    	system("mv temp.toc data.toc");
 	}
 			

@@ -29,35 +29,35 @@
 			<xsl:apply-templates select="header"/>
 		</table>
 		
+		<h1>Inputs</h1>
 		<xsl:choose>
 			<xsl:when test="count(inputlist/child::*) > 0">
-				<h1>Inputs</h1>
 				<table>
 					<xsl:apply-templates select="inputlist"/>
 				</table>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Inputs: None</h1>
+				<p>None</p>
 			</xsl:otherwise>
 		</xsl:choose>
 		
+		<h1>Outputs</h1>
 		<xsl:choose>
 			<xsl:when test="count(outputlist/child::*) > 0">
-				<h1>Outputs</h1>
 				<table>
 					<xsl:apply-templates select="outputlist"/>
 				</table>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Outputs: None</h1>
+				<p>None</p>
 			</xsl:otherwise>
 		</xsl:choose>
 		
+		<h1>Internal Structure</h1>
 		<xsl:choose>
 			<xsl:when test="count(instancelist/child::*) > 0">
-				<h1>Internal Structure</h1>
 				
-				<img src="image.png" alt="image" />
+				<p><img src="image.png" alt="image" /></p>
 				
 				<h2>Instances</h2>
 				<table>
@@ -79,19 +79,19 @@
 				</xsl:if>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Internal Structure: None</h1>
+				<p>None</p>
 			</xsl:otherwise>
 		</xsl:choose>
 		
+		<h1>Operations</h1>
 		<xsl:choose>
 			<xsl:when test="count(operationlist/child::*) > 0">
-				<h1>Operations</h1>
 				<table>
 					<xsl:apply-templates select="operationlist"/>
 				</table>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Operations: None</h1>
+				<p>None</p>
 			</xsl:otherwise>
 		</xsl:choose>
 	</xsl:template>
