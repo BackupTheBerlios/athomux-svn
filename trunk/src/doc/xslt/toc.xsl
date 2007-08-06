@@ -16,10 +16,10 @@
   
 		<xsl:element name="brick">
 			<xsl:attribute name="name">
-				<xsl:value-of select="document(concat('../', $title))/brick/header/brickname" />
+				<xsl:value-of select="document(concat('../xml/', $title))/brick/header/brickname" />
 			</xsl:attribute>
 			<xsl:element name="purpose">
-				<xsl:value-of select="document(concat('../', $title))/brick/header/purpose" />
+				<xsl:value-of select="document(concat('../xml/', $title))/brick/header/purpose" />
 			</xsl:element>
 		</xsl:element>
   </xsl:copy>

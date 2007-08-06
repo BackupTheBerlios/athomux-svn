@@ -29,7 +29,7 @@
 				<th>Pupose</th>
 			</tr>
 			<xsl:apply-templates select="brick">
-				<xsl:sort select="."/>
+				<xsl:sort select="@name"/>
 			</xsl:apply-templates>
 		</table>
 	</xsl:template>

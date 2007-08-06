@@ -13,6 +13,7 @@ my $optHtml = 0;
 my $optConcat = 0;
 
 my $html_dir = "../html";
+my $xml_dir = "../xml";
 
 if(scalar(@ARGV) eq 0) {
 	print "-html   :\ttransforming bricks into html\n";
@@ -46,7 +47,7 @@ else {
 }
 
 sub transHtml {
-	opendir(DIR, "../") or die("couldn't open current directory");
+	opendir(DIR, "$xml_dir") or die("couldn't open xml directory");
 	my @files = grep(/\.xml$/,readdir(DIR));
 	closedir(DIR);
 		
@@ -61,7 +62,7 @@ sub transHtml {
 		my $filename = substr($file, 0, -4);
 			
 		# transform bricks
-		system("saxon ../$filename.xml brick_html.xsl > $html_dir/$filename.html");
+		system("saxon $xml_dir/$filename.xml brick_html.xsl > $html_dir/$filename.html");
 			
 		# create table of contents
    	system("saxon data.toc toc.xsl title=$file > temp.toc");
