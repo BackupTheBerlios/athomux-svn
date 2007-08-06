@@ -41,7 +41,7 @@ example
   Cannot be used at all.
 endexample
 
-category purpose=test
+category class=test
 category usage=worker
 
 
@@ -112,8 +112,8 @@ purpose This is the purpose of the input
 desc
   This is the description of the input
 enddesc
-category purpose=test
-category purpose=test/subtest
+category class=test
+category class=test/subtest
 category usage=strategy
 tag testtag=testvalue
 attr5 attrname4 = 17
