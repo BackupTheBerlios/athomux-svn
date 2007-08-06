@@ -106,6 +106,10 @@ operation $brick_init
 }
 
 input :<in1(:2:)
+purpose This is the purpose of the input
+desc
+  This is the description of the input
+enddesc
 category purpose=test
 tag usage=strategy
 attr5 attrname4 = 17
