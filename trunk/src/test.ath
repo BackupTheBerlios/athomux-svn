@@ -41,7 +41,9 @@ example
   Cannot be used at all.
 endexample
 
-category usage=test
+category purpose=test
+category usage=worker
+
 
 tag debug=true
 
@@ -111,7 +113,9 @@ desc
   This is the description of the input
 enddesc
 category purpose=test
-tag usage=strategy
+category purpose=test/subtest
+category usage=strategy
+tag testtag=testvalue
 attr5 attrname4 = 17
 attr5 attrname5 = 17:19
 attr8 attrname6 = 16:32:16
@@ -126,6 +130,7 @@ use PC test;
 use HASH hash[32] on test,test function (x);
 
 local input :<l_in
+category usage=universal
 
 operation $input_init
 {

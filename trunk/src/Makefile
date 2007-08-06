@@ -41,8 +41,13 @@ endif
 
 %/*/*/*.o: %/control*.c %/control*.h %/*/*/defs.h %/*/*/loaders.h
 
+.PHONY: doc
+doc: all_targets
+	(cd doc/xslt/; ./transform.pl -html && ./transform.pl -concat)
+
 .PHONY: clean
 clean:
 	rm -f defs.make debug.* testfile* *~ core* gmon.out
+	rm -f doc/html/* doc/xml/*
 	rm -rf $(pconf_list)
 
