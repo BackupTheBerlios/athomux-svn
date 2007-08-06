@@ -79,7 +79,7 @@
 				</xsl:if>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Instances: None</h1>
+				<h1>Internal Instructions: None</h1>
 			</xsl:otherwise>
 		</xsl:choose>
 		

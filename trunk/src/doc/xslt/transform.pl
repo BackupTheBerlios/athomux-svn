@@ -15,8 +15,8 @@ my $optConcat = 0;
 my $html_dir = "../html";
 
 if(scalar(@ARGV) eq 0) {
-	print "-html\ttransforming bricks into html\n";
-	print "-concat\tconcat html files\n";
+	print "-html   :\ttransforming bricks into html\n";
+	print "-concat :\tconcat html files\n";
 }
 else {
 	
@@ -51,10 +51,13 @@ sub transHtml {
 	closedir(DIR);
 		
 	print "Transforming...\n";
-			
+	my $counter = 0;
+	my $max = scalar(@files);
+	
 	foreach my $file (@files) {
-			
-		print "--> $file\n";
+		$counter++;
+	
+		print "--> $counter / $max : $file\n";
 		my $filename = substr($file, 0, -4);
 			
 		# transform bricks
