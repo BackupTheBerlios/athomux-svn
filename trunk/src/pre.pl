@@ -251,6 +251,10 @@ sub doc_add {
 sub doc_parse_tag {
   my ($key, $value) = @_;
   
+  if (!defined($key) or !defined($value)) {
+    return;
+  }
+  
   if ($key =~ m/^(author|copyright)$/) {
     push(@doc_output, "<$key>$value</$key>");
     
