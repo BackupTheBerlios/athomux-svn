@@ -10,9 +10,6 @@ use English;
 use integer;
 use Digest::MD5 qw(md5),qw(md5_hex);
 
-# tag specs for the src docs
-require "doc/tags.pl";
-
 # switches affecting the generated code
 
 # generate #line directives => set to 0 for faster runs or for debugging C code
