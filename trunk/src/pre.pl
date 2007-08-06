@@ -383,7 +383,7 @@ sub doc_write {
     $doc_output[$i] =~ s/:>/:&gt;/g;  
   }
   
-  unless (open(DOCFILE, ">doc/$doc_filename.xml")) {
+  unless (open(DOCFILE, ">doc/xml/$doc_filename.xml")) {
     die("Can't write doc file \"doc/$doc_filename.xml\".");
   }
   
