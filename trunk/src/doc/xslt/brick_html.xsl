@@ -55,7 +55,7 @@
 		
 		<xsl:choose>
 			<xsl:when test="count(instancelist/child::*) > 0">
-				<h1>Internal Instructions</h1>
+				<h1>Internal Structure</h1>
 				
 				<img src="image.png" alt="image" />
 				
@@ -79,7 +79,7 @@
 				</xsl:if>
 			</xsl:when>
 			<xsl:otherwise>
-				<h1>Internal Instructions: None</h1>
+				<h1>Internal Structure: None</h1>
 			</xsl:otherwise>
 		</xsl:choose>
 		
