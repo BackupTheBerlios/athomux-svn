@@ -17,27 +17,29 @@
 			
 			<body>
 				<h1>Table Of Contents</h1>
-				<ul>
 					<xsl:apply-templates select="toc"/>
-				</ul>
 			</body>
 		</html>
 	</xsl:template>
 	
-	
 	<xsl:template match="toc">
-		<xsl:apply-templates select="brickname">
-			<xsl:sort select="."/>
-		</xsl:apply-templates>
+		<table>
+			<tr>
+				<th>Brick</th>
+				<th>Pupose</th>
+			</tr>
+			<xsl:apply-templates select="brick">
+				<xsl:sort select="."/>
+			</xsl:apply-templates>
+		</table>
 	</xsl:template>
 
-	<xsl:template match="brickname">
-		<xsl:variable name="brickname" select="."/>
-		<li>
-			<a href="{$brickname}.html" >
-				<xsl:value-of select="$brickname"/>
-			</a>
-		</li>
+	<xsl:template match="brick">
+		<xsl:variable name="brickname" select="substring-after(@name,'#')"/>
+		<tr>
+			<td><a href="{$brickname}.html" ><xsl:value-of select="$brickname"/></a></td>
+			<td><xsl:value-of select="purpose"/></td>
+		</tr>
 	</xsl:template>
 	
 </xsl:stylesheet>

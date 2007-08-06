@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-	xmlns="http://www.w3.org/1999/xhtml">
+<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
 <xsl:output method="xml" indent="yes"
 	doctype-system ="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
 	doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN" 
@@ -8,7 +7,7 @@
 	encoding="utf-8" />
 	
 	<xsl:template match="/">
-				
+			
 		<html xmlns="http://www.w3.org/1999/xhtml">
 			<head>
 		    	
@@ -22,44 +21,79 @@
 		</html>
 	</xsl:template>
 	
-	
 	<xsl:template match="brick">
 		<p><a href="__toc.html">Index</a></p>
 		
-		<h1>Header</h1>
+		<h1>Header: <xsl:value-of select="header/brickname" /></h1>
 		<table>
 			<xsl:apply-templates select="header"/>
 		</table>
 		
-		<h1>Inputs</h1>
-		<table>
-			<xsl:apply-templates select="inputlist"/>
-		</table>
+		<xsl:choose>
+			<xsl:when test="count(inputlist/child::*) > 0">
+				<h1>Inputs</h1>
+				<table>
+					<xsl:apply-templates select="inputlist"/>
+				</table>
+			</xsl:when>
+			<xsl:otherwise>
+				<h1>Inputs: None</h1>
+			</xsl:otherwise>
+		</xsl:choose>
 		
-		<h1>Outputs</h1>
-		<table>
-			<xsl:apply-templates select="outputlist"/>
-		</table>
+		<xsl:choose>
+			<xsl:when test="count(outputlist/child::*) > 0">
+				<h1>Outputs</h1>
+				<table>
+					<xsl:apply-templates select="outputlist"/>
+				</table>
+			</xsl:when>
+			<xsl:otherwise>
+				<h1>Outputs: None</h1>
+			</xsl:otherwise>
+		</xsl:choose>
 		
-		<h1>Instances</h1>
-		<table>
-			<xsl:apply-templates select="instancelist"/>
-		</table>
+		<xsl:choose>
+			<xsl:when test="count(instancelist/child::*) > 0">
+				<h1>Internal Instructions</h1>
+				
+				<img src="image.png" alt="image" />
+				
+				<h2>Instances</h2>
+				<table>
+					<xsl:apply-templates select="instancelist"/>
+				</table>
+				
+				<xsl:if test="count(aliaslist/child::*) > 0">
+					<h2>Alias</h2>
+					<table>
+						<xsl:apply-templates select="aliaslist"/>
+					</table>
+				</xsl:if>
+				
+				<xsl:if test="count(wirelist/child::*) > 0">
+					<h2>Wires</h2>
+					<table>
+						<xsl:apply-templates select="wirelist"/>
+					</table>
+				</xsl:if>
+			</xsl:when>
+			<xsl:otherwise>
+				<h1>Instances: None</h1>
+			</xsl:otherwise>
+		</xsl:choose>
 		
-		<h1>Alias</h1>
-		<table>
-			<xsl:apply-templates select="aliaslist"/>
-		</table>
-		
-		<h1>Wires</h1>
-		<table>
-			<xsl:apply-templates select="wirelist"/>
-		</table>
-		
-		<h1>Operations</h1>
-		<table>
-			<xsl:apply-templates select="operationlist"/>
-		</table>
+		<xsl:choose>
+			<xsl:when test="count(operationlist/child::*) > 0">
+				<h1>Operations</h1>
+				<table>
+					<xsl:apply-templates select="operationlist"/>
+				</table>
+			</xsl:when>
+			<xsl:otherwise>
+				<h1>Operations: None</h1>
+			</xsl:otherwise>
+		</xsl:choose>
 	</xsl:template>
 	
 	

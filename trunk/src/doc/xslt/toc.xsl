@@ -13,8 +13,17 @@
 <xsl:template match="toc">
   <xsl:copy>
   	<xsl:copy-of select="node()" />
-  	<xsl:copy-of select="document(concat('../', $title))/brick/header/brickname"/>
+  
+		<xsl:element name="brick">
+			<xsl:attribute name="name">
+				<xsl:value-of select="document(concat('../', $title))/brick/header/brickname" />
+			</xsl:attribute>
+			<xsl:element name="purpose">
+				<xsl:value-of select="document(concat('../', $title))/brick/header/purpose" />
+			</xsl:element>
+		</xsl:element>
   </xsl:copy>
+  
 </xsl:template>
 
 </xsl:stylesheet>

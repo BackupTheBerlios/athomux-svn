@@ -16,7 +16,7 @@ my $html_dir = "../html";
 
 if(scalar(@ARGV) eq 0) {
 	print "-html\ttransforming bricks into html\n";
-	print "-concat\tconcat html files";
+	print "-concat\tconcat html files\n";
 }
 else {
 	
@@ -29,6 +29,9 @@ else {
 			}
 			elsif(($arg cmp "-concat") == 0) {
 				$optConcat = 1;
+				
+				# load empty table of contents
+				system("cp empty.toc data.toc");
 			}
 		}	
 	}
@@ -46,14 +49,6 @@ sub transHtml {
 	opendir(DIR, "../") or die("couldn't open current directory");
 	my @files = grep(/\.xml$/,readdir(DIR));
 	closedir(DIR);
-			
-	# delete old table of contens
-	system("rm data.toc");
-			
-	# init table of contents
-	open(TOC, ">>data.toc") or die ("couldn't create data.toc");
-	print TOC "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-	print TOC "<toc xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
 		
 	print "Transforming...\n";
 			
@@ -66,13 +61,13 @@ sub transHtml {
 		system("saxon ../$filename.xml brick_html.xsl > $html_dir/$filename.html");
 			
 		# create table of contents
-		print TOC "\t<brickname>$filename</brickname>\n";
+   	system("saxon data.toc toc.xsl title=$file > temp.toc");
+   	system("mv temp.toc data.toc");
 	}
 			
 	# transform table of contents
 	print "--> data.toc\n";
-	print TOC "</toc>";
-	close(TOC);
+	
 	system("saxon data.toc toc_html.xsl > ".$html_dir."/__toc.html");
 	
 	print "...finished\n";
