@@ -1,0 +1,18 @@
+brick #demo_besy2
+
+operation $brick_init
+{
+  printf("Hello World\n");
+  @=call :>test$trans(0, 0, 0, direct_read) => (@success);
+}
+
+input :<strat
+
+output :>test
+
+operation $trans,$wait
+{
+  printf("Hello World again\n");
+  @success = TRUE;
+}
+
