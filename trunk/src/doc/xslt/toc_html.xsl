@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+
+# Author: Alexander Herbig
+# Copyright: Alexander Herbig
+# License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+
+-->
+
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns="http://www.w3.org/1999/xhtml">
 	
-	<xsl:import href="menu_html.xsl"/>
+<xsl:import href="menu_html.xsl"/>
 	
 <xsl:output method="xml" indent="yes"
 	doctype-system ="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"

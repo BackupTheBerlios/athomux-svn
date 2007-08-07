@@ -1,11 +1,20 @@
 #!/usr/bin/perl -w
 
+# Author: Alexander Herbig
+# Copyright: Alexander Herbig
+# License: see files SOFTWARE-LICENSE, PATENT-LICENSE
+#
+# transform.pl Options GroupTypes
+# 
 # Option -html: 
 # Transforming bricks from xml to html
 # Creating table of contents
 #
 # Option -concat:
 # concat html files
+#
+# GroupTypes
+# Create TOC which is group by GroupTyp
 
 use strict;
 
@@ -24,7 +33,7 @@ if(scalar(@ARGV) eq 0) {
 	print "-html   :\ttransforming bricks into html\n";
 	print "-concat :\tconcat html files\n";
 	print "# GroupTypes #\n";
-	print "Create TOC which is group by GroupTyp:\n";
+	print "Create TOC which is group by GroupTyp\n";
 }
 else {
 	
