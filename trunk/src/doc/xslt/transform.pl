@@ -15,9 +15,16 @@ my $optConcat = 0;
 my $html_dir = "../html";
 my $xml_dir = "../xml";
 
+my @GROUPS;
+my $group_count = 0;
+
 if(scalar(@ARGV) eq 0) {
+	print "transform.pl Options GroupTypes\n";
+	print "# Options #\n";
 	print "-html   :\ttransforming bricks into html\n";
 	print "-concat :\tconcat html files\n";
+	print "# GroupTypes #\n";
+	print "Create TOC which is group by GroupTyp:\n";
 }
 else {
 	
@@ -33,6 +40,13 @@ else {
 				
 				# load empty table of contents
 				system("cp empty.toc data.toc");
+				
+				# load empty menu
+				system("cp empty.menu data.menu");
+			}
+			else {
+				$GROUPS[$group_count] = $arg;
+				$group_count++;
 			}
 		}	
 	}
@@ -55,6 +69,15 @@ sub transHtml {
 	my $counter = 0;
 	my $max = scalar(@files);
 	
+	# create navigation menu
+	foreach my $group (@GROUPS) {
+		if(defined($group)) {
+			system("xsltproc --stringparam p_title $group -o temp.menu menu.xsl data.menu");
+			system("mv temp.menu data.menu");
+			print "--> Menu: $group\n";
+		}	
+	}
+	
 	foreach my $file (@files) {
 		$counter++;
 	
@@ -62,17 +85,27 @@ sub transHtml {
 		my $filename = substr($file, 0, -4);
 			
 		# transform bricks
-		system("saxon $xml_dir/$filename.xml brick_html.xsl > $html_dir/$filename.html");
+		system("xsltproc -o $html_dir/$filename.html brick_html.xsl $xml_dir/$filename.xml");
 			
 		# create table of contents
-   	system("saxon data.toc toc.xsl title=$file > temp_$file.toc");
-   	system("mv temp.toc data.toc");
+   		system("xsltproc --stringparam title $file -o temp.toc toc.xsl data.toc");
+   		system("mv temp.toc data.toc");
 	}
 			
 	# transform table of contents
 	print "--> data.toc\n";
 	
-	system("saxon data.toc toc_html.xsl > ".$html_dir."/__toc.html");
+	# create TOC index
+	system("xsltproc -o ".$html_dir."/__toc.html toc_html.xsl data.toc");
+	print "--> TOC: index\n";
+	
+	# cretae TOC group by
+	foreach my $group (@GROUPS) {
+		if(defined($group)) {
+			system("xsltproc --stringparam p_type $group -o ".$html_dir."/__toc_$group.html toc_html_group.xsl data.toc");
+			print "--> TOC: Group by $group\n";
+		}	
+	}
 	
 	print "...finished\n";
 }

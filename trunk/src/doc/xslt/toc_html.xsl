@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns="http://www.w3.org/1999/xhtml">
+	
+	<xsl:import href="menu_html.xsl"/>
+	
 <xsl:output method="xml" indent="yes"
 	doctype-system ="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
 	doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN" 
@@ -16,8 +19,9 @@
 			</head>
 			
 			<body>
+				<xsl:apply-templates select="document('data.menu')/menu"/>
 				<h1>Table Of Contents</h1>
-					<xsl:apply-templates select="toc"/>
+				<xsl:apply-templates select="toc"/>
 			</body>
 		</html>
 	</xsl:template>

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+
+<xsl:import href="menu_html.xsl"/>
+
 <xsl:output method="xml" indent="yes"
 	doctype-system ="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
 	doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN" 
@@ -22,7 +25,7 @@
 	</xsl:template>
 	
 	<xsl:template match="brick">
-		<p><a href="__toc.html">Index</a></p>
+		<xsl:apply-templates select="document('data.menu')/menu"/>
 		
 		<h1>Header: <xsl:value-of select="header/brickname" /></h1>
 		<table>
