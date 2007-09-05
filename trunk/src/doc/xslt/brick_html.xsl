@@ -18,6 +18,8 @@
 	omit-xml-declaration="no"
 	encoding="utf-8" />
 	
+	<xsl:param name="title" /> 
+	
 	<xsl:template match="/">
 			
 		<html xmlns="http://www.w3.org/1999/xhtml">
@@ -65,11 +67,24 @@
 			</xsl:otherwise>
 		</xsl:choose>
 		
-		<h1>Internal Structure</h1>
+		<h1>Structure</h1>
 		<xsl:choose>
 			<xsl:when test="count(instancelist/child::*) > 0">
 				
-				<p><img src="image.png" alt="image" /></p>
+				<p>
+					<xsl:copy-of select="document(concat('graphviz/', $title, '.cmapx'))/map" />
+					<xsl:element name="img">
+						<xsl:attribute name="src">
+							<xsl:value-of select="concat($title, '.png')" />
+						</xsl:attribute>
+						<xsl:attribute name="usemap">
+							<xsl:value-of select="concat('#', $title)" />
+						</xsl:attribute>
+						<xsl:attribute name="alt">
+							<xsl:value-of select="'graphviz_image'" />
+						</xsl:attribute>					
+					</xsl:element>
+				</p>
 				
 				<h2>Instances</h2>
 				<table>

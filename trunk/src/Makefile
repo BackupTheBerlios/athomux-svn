@@ -48,6 +48,6 @@ doc: all_targets
 .PHONY: clean
 clean:
 	rm -f defs.make debug.* testfile* *~ core* gmon.out
-	rm -f doc/html/*.html doc/xml/* doc/xslt/data.*
+	rm -f doc/html/*.html doc/html/*.png doc/xml/* doc/xslt/data.* doc/xslt/graphviz/*.cmapx doc/xslt/graphviz/*.dot
 	rm -rf $(pconf_list)
 

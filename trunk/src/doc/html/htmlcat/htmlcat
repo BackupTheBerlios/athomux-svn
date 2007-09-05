@@ -3,7 +3,8 @@
 # "htmlcat"	K. J. Turner	21/11/98
 #
 # modified by Alexander Herbig, 30/07/2007
-# - anchors: use id instead of name; only <a href=".."> links will be replaced
+# - anchors: use id instead of name
+# - href's: <link rel="stylesheet"..> links will be not replaced
 # - divider: use <hr /> instead of <p><hr noshade size="5">
 #
 # This script combines the HTML files given on the command line. The beginning
@@ -158,13 +159,17 @@ sub cat_html {
 	  &warning ("no body for \"$file\" (exclude frameset files)");
 	}
 	if ($do_copy) {				# copy line?
-	  # convert direct file name to label (remove #, prefix program name)
-	  s/href\s*=\s*"((?!http:)[^\#]*)\#(.*)"/href="${1}_${2}"/ig;
-	  s/a\ href\s*=\s*"((?!http:)[\w \.\/\#]+)"/a\ href="#${prog}_${1}"/ig;
-	  # convert anchor name to label (prefix program name and file)
-	  s/name\s*=\s*"([^"]+)"/id="${prog}_${file}_${1}"/ig;
-	  # remove targets
-	  s/target\s*=\s*"([^"]+)"//ig; 
+	  if($_ !~ m/link\ rel=\"stylesheet\"/) {
+		  # convert direct file name to label (remove #, prefix program name)
+		  s/href\s*=\s*"((?!http:)[^\#]*)\#(.*)"/href="${1}_${2}"/ig;
+		  s/href\s*=\s*"((?!http:)[\w \.\/\#]+)"/href="#${prog}_${1}"/ig;
+		  
+		  # convert anchor name to label (prefix program name and file)
+		  # s/name\s*=\s*"([^"]+)"/id="${prog}_${file}_${1}"/ig;
+		  # remove targets
+		  s/target\s*=\s*"([^"]+)"//ig; 
+	  }
+	  
 	  print $outfile $_;			# output current line
 	}
       }

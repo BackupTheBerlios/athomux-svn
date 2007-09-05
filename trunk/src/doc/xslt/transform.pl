@@ -23,6 +23,7 @@ my $optConcat = 0;
 
 my $html_dir = "../html";
 my $xml_dir = "../xml";
+my $graphviz_dir = "graphviz";
 
 my @GROUPS;
 my $group_count = 0;
@@ -92,9 +93,12 @@ sub transHtml {
 	
 		print "--> $counter / $max : $file\n";
 		my $filename = substr($file, 0, -4);
-			
+		
+		# create graphviz image
+		system("xsltproc -o $graphviz_dir/$filename.dot $graphviz_dir/graphviz.xsl $xml_dir/$filename.xml");		system("dot -Tpng -o$html_dir/$filename.png -Tcmapx -o$graphviz_dir/$filename.cmapx $graphviz_dir/$filename.dot");
+		
 		# transform bricks
-		system("xsltproc -o $html_dir/$filename.html brick_html.xsl $xml_dir/$filename.xml");
+		system("xsltproc --stringparam title $filename -o $html_dir/$filename.html brick_html.xsl $xml_dir/$filename.xml");
 			
 		# create table of contents
    		system("xsltproc --stringparam title $file -o temp.toc toc.xsl data.toc");
