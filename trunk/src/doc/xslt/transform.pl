@@ -124,8 +124,10 @@ sub transHtml {
 }
 
 sub concatHtml {
-	# remove old concated html file
-	system("rm $html_dir/all.html");
+	# remove old concated html file, if exists
+	if(-e "$html_dir/all.html") {
+		system("rm $html_dir/all.html");
+	}
 	
 	# concate all html files ofr print version
 	print "concat html files...\n";
