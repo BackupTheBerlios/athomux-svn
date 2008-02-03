@@ -40,19 +40,19 @@ else {
 	
 	my @ARGS;
 	
+	# load empty table of contents
+	system("cp empty.toc data.toc");
+	
+	# load empty menu
+	system("cp empty.menu data.menu");
+	
 	foreach my $arg (@ARGV) {
 		if(defined($arg)) {
 			if(($arg cmp "-html") == 0) {
-				$optHtml = 1;
+				$optHtml = 1;	
 			}
 			elsif(($arg cmp "-concat") == 0) {
 				$optConcat = 1;
-				
-				# load empty table of contents
-				system("cp empty.toc data.toc");
-				
-				# load empty menu
-				system("cp empty.menu data.menu");
 			}
 			else {
 				$GROUPS[$group_count] = $arg;
