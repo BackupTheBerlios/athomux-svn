@@ -221,7 +221,7 @@ sub doc_element {
     $doc_header_closed = 1;
   }
   
-  # invoce subparser
+  # invoke subparser
   if ($tag eq "tag") {
     doc_parse_tag($key, $value);
   } elsif ($tag =~ m/^(attr|category)$/) {
@@ -347,8 +347,6 @@ sub doc_close {
   push(@templist, "<attributelist>\n" . join("\n", @doc_attributes) . "\n</attributelist>") if ($doc_attributes);
   push(@templist, "</" . $close . ">");
   
-  # and i thought, c references were bad. despite multiple howtos i can't figure out how 
-  # to pass a list by reference and use it with push in here. so PLEASE FIX THIS if you can.
   if ($list eq "main") {
     push(@doc_output, @templist);
   } elsif ($list eq "input") {
@@ -381,13 +379,14 @@ sub doc_write {
   }
   
   unless (open(DOCFILE, ">doc/xml/$doc_filename.xml")) {
-    die("Can't write doc file \"doc/$doc_filename.xml\".");
+    die("Can't write doc file \"doc/xml/$doc_filename.xml\".");
   }
   
   print DOCFILE '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
   print DOCFILE "<brick>\n<header>\n";
   print DOCFILE join("\n", @doc_output) . "\n";
   print DOCFILE "</brick>";
+  close(DOCFILE);
 }
 
 ##########################################################################
